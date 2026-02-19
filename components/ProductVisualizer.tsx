@@ -589,18 +589,17 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                     </>
                 )}
 
-                {/* PRODUCT INFO (NOW TOP RIGHT) */}
-                <div className="absolute top-6 right-6 z-20 hidden md:flex flex-col items-end gap-4 bg-white/10 dark:bg-black/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg min-w-[300px]">
-                    <div className="text-right">
-                        <h3 className="text-4xl font-google font-bold uppercase tracking-wide text-zinc-900 dark:text-white drop-shadow-sm select-none leading-none mb-1">{product.name}</h3>
-                        <span className="text-xs font-black bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-3 py-1 rounded-full uppercase tracking-widest">{isClientItem ? 'SERVICIO PROPIO' : 'PRODUCTO STOCK'}</span>
+                {/* PRODUCT INFO (NOW TOP LEFT) */}
+                <div className="absolute top-6 left-20 z-20 hidden md:flex flex-col items-start gap-3 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl p-5 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-2xl min-w-[280px] max-w-[320px]">
+                    <div className="text-left">
+                        <h3 className="text-2xl font-black uppercase tracking-tight text-zinc-900 dark:text-white drop-shadow-sm select-none leading-tight mb-2">{product.name}</h3>
+                        <span className="text-[10px] font-black bg-amber-500/20 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/30">{isClientItem ? 'SERVICIO PROPIO' : 'PRODUCTO STOCK'}</span>
                     </div>
-                    <div className="flex flex-col gap-2 w-full">
-                        <div className="flex justify-between items-center text-sm font-bold text-zinc-800 dark:text-zinc-200 border-b border-white/20 pb-1"><span>Color:</span><span>{selectedColor}</span></div>
-                        <div className="flex justify-between items-center text-sm font-bold text-zinc-800 dark:text-zinc-200 border-b border-white/20 pb-1"><span>Disponibilidad:</span><span className={`uppercase font-black ${isClientItem ? 'text-blue-400' : isOutOfStock ? 'text-red-500' : currentStock < 5 ? 'text-yellow-500' : 'text-green-500'}`}>{isClientItem ? 'N/A (Servicio)' : isOutOfStock ? 'AGOTADO' : currentStock < 5 ? `¡Últimas ${currentStock} pzas!` : `${currentStock} Disponibles`}</span></div>
-                        <div className="flex justify-between items-center text-sm font-bold text-zinc-800 dark:text-zinc-200 border-b border-white/20 pb-1"><span>Precio Base:</span><span>${isClientItem ? 0 : product.price}</span></div>
-                        <div className="flex justify-between items-center text-sm font-bold text-zinc-800 dark:text-zinc-200 border-b border-white/20 pb-1"><span>Costo Grabado:</span><span>${calculatePrice() - (isClientItem ? 0 : product.price)}</span></div>
-                        {(frontText || backText) && <div className="flex justify-between items-center text-sm font-bold text-zinc-800 dark:text-zinc-200 pt-1"><span>Fuente 1:</span><div className="flex items-center gap-2"><span>{fonts.find(f => f.id === (view === 'FRONT' ? frontFontId : backFontId))?.name || 'Standard'}</span><span className="text-[10px] bg-yellow-400 text-black px-1.5 py-0.5 rounded font-black">#{view === 'FRONT' ? frontFontId : backFontId}</span></div></div>}
+                    <div className="flex flex-col gap-1.5 w-full text-xs">
+                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">Color:</span><span className="font-bold text-zinc-900 dark:text-white">{selectedColor}</span></div>
+                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">Disponibilidad:</span><span className={`uppercase font-black ${isClientItem ? 'text-blue-500' : isOutOfStock ? 'text-red-500' : currentStock < 5 ? 'text-amber-500' : 'text-emerald-500'}`}>{isClientItem ? 'N/A (Servicio)' : isOutOfStock ? 'AGOTADO' : currentStock < 5 ? `¡Últimas ${currentStock}!` : `${currentStock} Disponibles`}</span></div>
+                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">Precio Base:</span><span className="font-bold text-zinc-900 dark:text-white">${isClientItem ? 0 : product.price}</span></div>
+                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300"><span className="text-zinc-400">+ Grabado:</span><span className="font-bold text-amber-500">${calculatePrice() - (isClientItem ? 0 : product.price)}</span></div>
                     </div>
                 </div>
 

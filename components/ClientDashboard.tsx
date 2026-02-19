@@ -61,7 +61,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, orders, 
   };
 
   return (
-    <div className="h-full w-full bg-zinc-50 dark:bg-black p-4 md:p-10 overflow-y-auto relative">
+    <div className="h-full w-full p-4 md:p-10 overflow-y-auto relative bg-white/60 dark:bg-zinc-950/70 backdrop-blur-2xl">
         <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4">
             
             {/* HEADER WELCOME */}

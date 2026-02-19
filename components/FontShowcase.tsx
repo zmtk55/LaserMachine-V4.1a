@@ -23,7 +23,7 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont 
   }, [fonts, activeCategory]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black p-6 md:p-12 font-mono-tech">
+    <div className="view-container font-mono-tech">
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6 text-center md:text-left">

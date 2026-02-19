@@ -3,6 +3,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 // --- IMPORTANTE: CONFIGURACIÓN DE FIREBASE ---
 // 1. Intenta leer desde el almacenamiento local (Configurado desde el Modal de Login)
@@ -36,6 +37,7 @@ let app;
 let auth: Auth | null = null;
 let googleProvider: GoogleAuthProvider | null = null;
 let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
 
 try {
   // Verificación: Si tiene la llave placeholder y NO hay config local, es inválido.
@@ -45,6 +47,7 @@ try {
       app = initializeApp(finalConfig);
       auth = getAuth(app);
       db = getFirestore(app);
+      storage = getStorage(app);
       googleProvider = new GoogleAuthProvider();
   } else {
       console.warn("⚠️ Firebase no configurado. Se requiere configuración manual o edición de archivo.");
@@ -58,4 +61,4 @@ try {
   }
 }
 
-export { auth, googleProvider, db };
+export { auth, googleProvider, db, storage };

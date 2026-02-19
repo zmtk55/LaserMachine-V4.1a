@@ -527,42 +527,36 @@ const App = () => {
         )}
 
         {view === 'SHOP' && (
-          <div className="max-w-[95%] mx-auto px-6 md:px-10 py-24 animate-in fade-in duration-700 bg-white/90 dark:bg-black/80 backdrop-blur-sm min-h-full">
+          <div className="view-container">
             {preSelectedFontId && (
-                <div className="mb-8 p-4 bg-yellow-400/10 border border-yellow-400 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
-                    <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 uppercase tracking-widest flex items-center gap-2">
+                <div className="mb-8 p-4 bg-amber-500/10 border border-amber-500/40 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-2">
                         <Zap size={14}/> Tipografía #{preSelectedFontId} seleccionada.
                     </span>
                     <button onClick={() => setPreSelectedFontId(null)} className="text-[10px] font-black uppercase underline hover:text-black dark:hover:text-white">Cancelar</button>
                 </div>
             )}
-            <div className="flex flex-col md:flex-row justify-between items-end mb-16 border-b border-zinc-200 dark:border-zinc-900 pb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-16 pb-8 gap-4 border-b border-zinc-200/30 dark:border-zinc-800/50">
                <div>
-                  <h3 className="nike-title text-4xl italic text-zinc-900 dark:text-white uppercase tracking-tighter">Catálogo</h3>
-                  <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mt-2">Selecciona un producto para comenzar a diseñar</p>
+                  <h3 className="nike-title text-4xl italic uppercase tracking-tighter text-zinc-900 dark:text-white">Catálogo</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest mt-2 text-zinc-500 dark:text-zinc-400">Selecciona un producto para comenzar a diseñar</p>
                </div>
-               <span className="text-[10px] font-black bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">{products.length} Modelos Disponibles</span>
+               <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400">{products.length} Modelos Disponibles</span>
             </div>
             
-            {/* UPDATED GRID: MORE COMPACT FOR DESKTOP (UP TO 6 COLUMNS) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {/* CATALOG GRID - CLEAN DESIGN */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
               {products.map(p => (
-                <div key={p.id} onClick={() => { setSelectedProduct(p); setEditingItem(null); setView('CUSTOMIZER'); }} className="group cursor-pointer bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                  <div className="h-40 bg-zinc-100 dark:bg-black relative overflow-hidden flex items-center justify-center p-3">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0)_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_0%,rgba(0,0,0,0)_70%)]"></div>
-                    <img src={p.imageUrl} className="max-w-full max-h-full object-contain drop-shadow-lg group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute top-2 right-2 bg-white dark:bg-black rounded-full p-1.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Edit2 size={10} className="text-zinc-900 dark:text-white"/>
-                    </div>
+                <div key={p.id} onClick={() => { setSelectedProduct(p); setEditingItem(null); setView('CUSTOMIZER'); }} className="group cursor-pointer rounded-2xl overflow-hidden transition-all duration-300 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/5 hover:-translate-y-1">
+                  <div className="aspect-square relative overflow-hidden flex items-center justify-center p-4 bg-white dark:bg-zinc-950">
+                    <img src={p.imageUrl} className="max-w-[85%] max-h-[85%] object-contain group-hover:scale-105 transition-transform duration-500" />
                   </div>
-                  <div className="p-3">
-                    <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-black text-[8px] uppercase text-zinc-400 dark:text-zinc-500 tracking-widest">{p.brand}</h4>
-                    </div>
-                    <h3 className="font-black text-xs text-zinc-900 dark:text-white tracking-tight uppercase leading-tight mb-2 truncate">{p.name}</h3>
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                        <p className="font-black text-zinc-900 dark:text-white text-sm tracking-tighter">${p.price}</p>
-                        <span className="text-[8px] font-bold text-yellow-600 dark:text-yellow-500 uppercase tracking-widest group-hover:underline">Diseñar</span>
+                  <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{p.brand}</span>
+                    <h3 className="font-bold text-sm uppercase tracking-tight mt-1 text-zinc-900 dark:text-white truncate">{p.name}</h3>
+                    <div className="flex items-center justify-between mt-3">
+                        <p className="font-black text-base text-zinc-900 dark:text-white">${p.price}</p>
+                        <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Diseñar</span>
                     </div>
                   </div>
                 </div>
@@ -639,7 +633,7 @@ const App = () => {
         )}
 
         {view === 'CART' && (
-          <div className="max-w-[95%] mx-auto px-4 md:px-10 py-12 md:py-24 min-h-screen bg-white/90 dark:bg-black/80 backdrop-blur-sm">
+          <div className="view-container">
             <h2 className="nike-title text-4xl md:text-5xl italic mb-10 text-zinc-900 dark:text-white uppercase tracking-tighter">Checkout Final</h2>
             {cart.length === 0 ? (
                <div className="py-40 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/10 rounded-3xl">

@@ -1,6 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
+import { BackgroundProvider } from './contexts/BackgroundContext';
 import { NavBar } from './components/NavBar';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ClientDashboard } from './components/ClientDashboard';
@@ -79,31 +80,25 @@ const DEFAULT_STORE: StoreConfig = {
 const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () => void }) => {
     const [loaded, setLoaded] = useState(false);
     return (
-        <div onClick={onClick} className="group cursor-pointer bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-            <div className="h-40 bg-zinc-100 dark:bg-black relative overflow-hidden flex items-center justify-center p-3">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0)_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_0%,rgba(0,0,0,0)_70%)]"></div>
+        <div onClick={onClick} className="group cursor-pointer rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1">
+            <div className="aspect-square bg-white dark:bg-zinc-950 relative overflow-hidden flex items-center justify-center p-4">
                 {!loaded && (
                     <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 z-10 animate-pulse">
-                        <Loader2 className="animate-spin text-zinc-300 w-6 h-6"/>
+                        <Loader2 className="animate-spin text-zinc-400 w-5 h-5"/>
                     </div>
                 )}
                 <img 
                     src={product.imageUrl} 
                     onLoad={() => setLoaded(true)}
-                    className={`max-w-full max-h-full object-contain drop-shadow-lg group-hover:scale-110 transition-all duration-500 ${loaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'}`} 
+                    className={`max-w-[85%] max-h-[85%] object-contain group-hover:scale-105 transition-transform duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`} 
                 />
-                <div className="absolute top-2 right-2 bg-white dark:bg-black rounded-full p-1.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <Edit2 size={10} className="text-zinc-900 dark:text-white"/>
-                </div>
             </div>
-            <div className="p-3">
-                <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-black text-[8px] uppercase text-zinc-400 dark:text-zinc-500 tracking-widest">{product.brand}</h4>
-                </div>
-                <h3 className="font-black text-xs text-zinc-900 dark:text-white tracking-tight uppercase leading-tight mb-2 truncate">{product.name}</h3>
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                    <p className="font-black text-zinc-900 dark:text-white text-sm tracking-tighter">${product.price}</p>
-                    <span className="text-[8px] font-bold text-yellow-600 dark:text-yellow-500 uppercase tracking-widest group-hover:underline">Diseñar</span>
+            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{product.brand}</span>
+                <h3 className="font-bold text-sm uppercase tracking-tight mt-1 text-zinc-900 dark:text-white truncate">{product.name}</h3>
+                <div className="flex items-center justify-between mt-3">
+                    <p className="font-black text-base text-zinc-900 dark:text-white">${product.price}</p>
+                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Diseñar</span>
                 </div>
             </div>
         </div>
@@ -535,8 +530,9 @@ const App = () => {
       }
   };
 
-  return (
-    <div className={`min-h-screen flex flex-col font-mono-tech ${isDarkMode ? 'dark bg-black text-white' : 'bg-zinc-50 text-zinc-900'}`}>
+    return (
+                <BackgroundProvider>
+                        <div className={`min-h-screen flex flex-col font-mono-tech ${isDarkMode ? 'dark text-white' : 'text-zinc-900'}`}>
       {view !== 'CUSTOMIZER' && view !== 'PUBLIC_TRACKING' && (
         <NavBar 
           user={user} cartCount={cart.length} 
@@ -548,7 +544,7 @@ const App = () => {
         />
       )}
       
-      <main className={`flex-1 w-full overflow-y-auto no-scrollbar bg-white dark:bg-black ${getPatternClass()}`}>
+    <main className={`flex-1 w-full overflow-y-auto no-scrollbar bg-transparent ${getPatternClass()}`}>
         {view === 'LANDING' && (
           <div className="min-h-[90vh] flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-white to-zinc-50 dark:from-black dark:to-zinc-900 backdrop-blur-sm relative overflow-hidden">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-yellow-400/20 rounded-full blur-[100px] pointer-events-none"></div>
@@ -594,11 +590,11 @@ const App = () => {
                <span className="text-[10px] font-black bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">{products.length} Modelos Disponibles</span>
             </div>
             
-            {/* UPDATED GRID: MORE COMPACT FOR DESKTOP (UP TO 6 COLUMNS) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {/* CATALOG GRID */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
               {products.map(p => (
                 <ShopProductCard 
-                    key={p.id} 
+                    key={p.id}
                     product={p} 
                     onClick={() => { setSelectedProduct(p); setEditingItem(null); setView('CUSTOMIZER'); }}
                 />
@@ -958,7 +954,8 @@ const App = () => {
             </div>
         )}
       </main>
-    </div>
+            </div>
+        </BackgroundProvider>
   );
 };
 
