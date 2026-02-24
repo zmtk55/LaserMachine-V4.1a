@@ -2738,14 +2738,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="flex flex-col md:flex-row gap-6 h-full">
                     {/* CLIENT LIST */}
                     <div className={`flex flex-col gap-4 overflow-y-auto pr-2 pb-12 ${selectedClient ? 'hidden md:flex md:w-[320px] shrink-0' : 'w-full md:w-[400px]'}`}>
+                        {/* Header Compacto */}
+                        <div className="flex items-center justify-between pb-2">
+                            <div>
+                                <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Clientes</h3>
+                                <p className="text-xs text-zinc-500">{filteredClients.length} clientes</p>
+                            </div>
+                        </div>
+                        
                         {/* SEARCH */}
-                        <div className="sticky top-0 z-10 pb-3">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
                             <input 
-                                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3 rounded-xl text-sm outline-none focus:border-amber-500 dark:text-white placeholder:text-zinc-400"
+                                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-amber-500 dark:text-white placeholder:text-zinc-400"
                                 placeholder="Buscar cliente..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
+                            {searchQuery && (
+                                <button 
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                                >
+                                    <X size={14}/>
+                                </button>
+                            )}
                         </div>
                         
                         {/* CLIENT LIST */}

@@ -372,128 +372,124 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
   const hasActiveFilters = searchQuery || filterCategory !== 'TODAS' || filterBrand !== 'TODAS' || filterStock !== 'ALL';
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Stats - Estilo AdminDashboard */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-              <Package size={18} className="text-zinc-500"/>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-zinc-500 uppercase">Productos</p>
-              <p className="text-xl font-black text-zinc-900 dark:text-white">{stats.totalProducts}</p>
-            </div>
-          </div>
+    <div className="h-full flex flex-col space-y-6">
+      {/* Header Compacto */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Inventario</h3>
+          <p className="text-xs text-zinc-500 mt-1">{filteredProducts.length} de {products.length} productos</p>
         </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-              <Warehouse size={18} className="text-zinc-500"/>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-zinc-500 uppercase">Stock Total</p>
-              <p className="text-xl font-black text-zinc-900 dark:text-white">{stats.totalStock}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
-              <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400"/>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Stock Bajo</p>
-              <p className="text-xl font-black text-amber-600 dark:text-amber-400">{stats.lowStock}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
-              <X size={18} className="text-red-600 dark:text-red-400"/>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">Agotados</p>
-              <p className="text-xl font-black text-red-600 dark:text-red-400">{stats.outOfStock}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
-              <DollarSign size={18} className="text-green-600 dark:text-green-400"/>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Valor Inventario</p>
-              <p className="text-lg font-black text-green-600 dark:text-green-400">{formatCurrency(stats.totalValue)}</p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <button onClick={onBulkDistributor} className="px-4 py-2.5 bg-zinc-900 dark:bg-zinc-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2">
+            <Layers size={14}/> Bulk
+          </button>
+          <button onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }} className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-500/80 shadow-lg shadow-black/20 transition-all flex items-center gap-2">
+            <Plus size={16}/> Nuevo
+          </button>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      {/* Stats Compactos */}
+      <div className="flex flex-wrap gap-3">
+        {[
+          { label: 'Productos', value: stats.totalProducts, icon: Package, color: 'text-zinc-600' },
+          { label: 'Stock', value: stats.totalStock, icon: Warehouse, color: 'text-blue-600' },
+          { label: 'Bajo Stock', value: stats.lowStock, icon: AlertTriangle, color: 'text-amber-600' },
+          { label: 'Agotados', value: stats.outOfStock, icon: X, color: 'text-red-600' },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <div key={label} className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2">
+            <Icon size={14} className={color} />
+            <span className="text-xs font-bold text-zinc-500 uppercase">{label}</span>
+            <span className="text-sm font-black text-zinc-900 dark:text-white">{value}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2">
+          <DollarSign size={14} className="text-green-600" />
+          <span className="text-xs font-bold text-zinc-500 uppercase">Valor</span>
+          <span className="text-sm font-black text-green-600">{formatCurrency(stats.totalValue)}</span>
+        </div>
+      </div>
+
+      {/* Toolbar Compacta */}
+      <div className="flex flex-col md:flex-row gap-3">
+        {/* Búsqueda */}
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18}/>
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar por nombre, marca, categoría, SKU..." className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 pl-12 pr-4 py-3 rounded-xl text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none focus:border-amber-500 transition-colors"/>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowFilters(!showFilters)} className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${hasActiveFilters ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-300 dark:hover:border-zinc-700'}`}>
-            <Filter size={18}/>
-            <span className="text-xs font-bold uppercase hidden md:inline">Filtros</span>
-            {hasActiveFilters && <span className="w-2 h-2 bg-white rounded-full"/>}
-          </button>
-          <div className="flex rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
-            <button onClick={() => setViewMode('GALLERY')} className={`px-4 py-3 transition-all ${viewMode === 'GALLERY' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900' : 'bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
-              <Grid size={18}/>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
+          <input 
+            type="text" 
+            value={searchQuery} 
+            onChange={e => setSearchQuery(e.target.value)} 
+            placeholder="Buscar productos..." 
+            className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 pl-10 pr-9 text-sm font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none focus:border-amber-500 transition-colors"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+            >
+              <X size={14}/>
             </button>
-            <button onClick={() => setViewMode('LIST')} className={`px-4 py-3 transition-all ${viewMode === 'LIST' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900' : 'bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
-              <List size={18}/>
+          )}
+        </div>
+        
+        {/* Filtros en dropdowns */}
+        <div className="flex gap-2">
+          <select 
+            value={filterCategory} 
+            onChange={e => setFilterCategory(e.target.value)} 
+            className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+          >
+            <option value="TODAS">Todas las categorías</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          
+          <select 
+            value={filterBrand} 
+            onChange={e => setFilterBrand(e.target.value)} 
+            className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+          >
+            <option value="TODAS">Todas las marcas</option>
+            {Array.from(new Set(products.map(p => p.brand))).map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          
+          <select 
+            value={filterStock} 
+            onChange={e => setFilterStock(e.target.value as any)} 
+            className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+          >
+            <option value="ALL">Todo el stock</option>
+            <option value="LOW">Stock bajo</option>
+            <option value="OUT">Agotados</option>
+            <option value="OK">Disponible</option>
+          </select>
+          
+          {/* Vista toggle */}
+          <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-xl p-1">
+            <button 
+              onClick={() => setViewMode('GALLERY')} 
+              className={`p-2 rounded-lg transition-all ${viewMode === 'GALLERY' ? 'bg-white dark:bg-zinc-700 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+            >
+              <Grid size={14}/>
+            </button>
+            <button 
+              onClick={() => setViewMode('LIST')} 
+              className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white dark:bg-zinc-700 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+            >
+              <List size={14}/>
             </button>
           </div>
-          <button onClick={onBulkDistributor} className="px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-xl flex items-center gap-2 transition-colors">
-            <Layers size={18}/>
-            <span className="text-xs font-bold uppercase hidden md:inline">Carga Masiva</span>
-          </button>
-          <button onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }} className="px-6 py-3 bg-amber-500 text-white rounded-xl flex items-center gap-2 hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20">
-            <Plus size={18}/>
-            <span className="text-xs font-bold uppercase">Nuevo</span>
-          </button>
+          
+          {hasActiveFilters && (
+            <button 
+              onClick={clearFilters}
+              className="p-2.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-500 hover:text-red-500 transition-colors"
+              title="Limpiar filtros"
+            >
+              <X size={16}/>
+            </button>
+          )}
         </div>
       </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 mb-6">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="min-w-[150px]">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-2">Categoría</label>
-              <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-2.5 rounded-lg text-zinc-900 dark:text-white text-sm outline-none focus:border-amber-500 transition-colors">
-                <option value="TODAS">Todas</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="min-w-[150px]">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-2">Marca</label>
-              <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-2.5 rounded-lg text-zinc-900 dark:text-white text-sm outline-none focus:border-amber-500 transition-colors">
-                <option value="TODAS">Todas</option>
-                {Object.values(ProductBrand).map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div className="min-w-[150px]">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-2">Stock</label>
-              <select value={filterStock} onChange={e => setFilterStock(e.target.value as any)} className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-2.5 rounded-lg text-zinc-900 dark:text-white text-sm outline-none focus:border-amber-500 transition-colors">
-                <option value="ALL">Todos</option>
-                <option value="OK">En Stock</option>
-                <option value="LOW">Stock Bajo</option>
-                <option value="OUT">Agotados</option>
-              </select>
-            </div>
-            {hasActiveFilters && <button onClick={clearFilters} className="px-4 py-2.5 text-xs font-bold text-red-500 hover:text-red-600 uppercase flex items-center gap-2 transition-colors"><X size={14}/> Limpiar</button>}
-          </div>
-        </div>
-      )}
 
       {/* Results */}
       <div className="flex justify-between items-center mb-4">
