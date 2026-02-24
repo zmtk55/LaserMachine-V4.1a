@@ -13,12 +13,12 @@ import {
   Phone, Tag, Truck, Filter, Gift, Send, ExternalLink, Info, Check, BarChart3, 
   TrendingUp, AlertCircle, ShieldCheck, Mail, MapPin, Briefcase, Images, MoreVertical, 
   LayoutGrid, List, Eye, Wallet, FileType, Star, ArrowLeft, Activity, ArrowUpRight, 
-  ArrowDownRight, ArrowRight, Zap, Calculator, CalendarDays, ClipboardList, PieChart,
+  ArrowDownRight, ArrowRight, ArrowUp, ArrowDown, Zap, Calculator, CalendarDays, ClipboardList, PieChart,
   HardDrive, AlertOctagon, RotateCcw, DownloadCloud, UploadCloud, Database, Hash, Award,
   Flame, Ban, CheckCheck, Timer, CheckCircle, Play, MoreHorizontal, ChevronLeft, StickyNote,
   Layers, Forward, CheckSquare, Square, FileJson, EyeOff, ChevronUp, ImagePlus, Pencil, Crop,
   Paperclip, Lock, PhoneCall, Bell, CalendarClock, ShoppingBag, TrendingDown, PanelRight,
-  History, Banknote, QrCode
+  History, Banknote, QrCode, Grid3X3, AlignLeft
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
 import { ImageCropper } from './ImageCropper';
@@ -161,6 +161,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [defaultCategory, setDefaultCategory] = useState<FontCategory>('FONTS 2026');
+    const [startFontNumber, setStartFontNumber] = useState<number>(Math.max(0, ...existingFonts.map(f => f.id)) + 1);
     const [isDragOver, setIsDragOver] = useState(false);
     const [processedFonts, setProcessedFonts] = useState<FontOption[]>([]);
     const [previewText, setPreviewText] = useState('AaBbCc 123');
@@ -244,12 +245,12 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                 reader.onload = (e) => {
                     const result = e.target?.result as string;
                     const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").toUpperCase();
-                    const timestampId = Date.now() + i;
+                    const fontNumber = startFontNumber + i;
                     newFonts.push({
-                        id: timestampId,
+                        id: fontNumber,
                         name: cleanName,
                         category: defaultCategory,
-                        cssFamily: `font-custom-${timestampId}`,
+                        cssFamily: `font-custom-${fontNumber}`,
                         isCustom: true,
                         fileData: result,
                         active: false
@@ -364,16 +365,28 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                     </div>
                 )}
 
-                {/* Selector de categoría */}
-                <div className="mt-4">
-                    <label className="text-sm text-zinc-400 mb-2 block">Categoría por defecto</label>
-                    <select 
-                        value={defaultCategory} 
-                        onChange={(e) => setDefaultCategory(e.target.value as any)} 
-                        className="w-full bg-black border border-zinc-700 p-3 rounded-xl text-white text-sm"
-                    >
-                        {['BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                {/* Selector de categoría y número inicial */}
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm text-zinc-400 mb-2 block">Categoría por defecto</label>
+                        <select 
+                            value={defaultCategory} 
+                            onChange={(e) => setDefaultCategory(e.target.value as any)} 
+                            className="w-full bg-black border border-zinc-700 p-3 rounded-xl text-white text-sm"
+                        >
+                            {['BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'].map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-sm text-zinc-400 mb-2 block">Número de fuente inicial</label>
+                        <input 
+                            type="number" 
+                            value={startFontNumber} 
+                            onChange={(e) => setStartFontNumber(parseInt(e.target.value) || 1)} 
+                            className="w-full bg-black border border-zinc-700 p-3 rounded-xl text-white text-sm font-mono"
+                            min={1}
+                        />
+                    </div>
                 </div>
 
                 {/* Previsualización de fuentes */}
@@ -691,13 +704,22 @@ const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
                         onChange={e => setData({...data, name: e.target.value})} 
                         placeholder="Nombre de la Fuente"
                     />
-                    <select 
-                        className="w-full bg-black border border-zinc-700 p-3 rounded text-white" 
-                        value={data.category} 
-                        onChange={e => setData({...data, category: e.target.value as any})}
-                    >
-                        {['BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <input 
+                            type="number"
+                            className="w-full bg-black border border-zinc-700 p-3 rounded text-white" 
+                            value={data.id} 
+                            onChange={e => setData({...data, id: parseInt(e.target.value) || Date.now()})} 
+                            placeholder="Número de Fuente"
+                        />
+                        <select 
+                            className="w-full bg-black border border-zinc-700 p-3 rounded text-white" 
+                            value={data.category} 
+                            onChange={e => setData({...data, category: e.target.value as any})}
+                        >
+                            {['BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'].map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
                     
                     {/* Preview */}
                     {fontFile && data.name && (
@@ -816,6 +838,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newPricing, setNewPricing] = useState(pricing);
   const [messages, setMessages] = useState(storeConfig.messageTemplates);
   const [activeFontCategory, setActiveFontCategory] = useState<FontCategory | 'TODAS'>('TODAS');
+  const [fontViewMode, setFontViewMode] = useState<'GRID' | 'LIST' | 'COMPACT'>('GRID');
+  const [fontSearchQuery, setFontSearchQuery] = useState('');
+  const [fontSortBy, setFontSortBy] = useState<'name' | 'id' | 'category'>('id');
+  const [fontSortOrder, setFontSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [fontStatusFilter, setFontStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [bankInfo, setBankInfo] = useState(storeConfig.bankInfo || '');
   const [clientCouponData, setClientCouponData] = useState({ code: '', discount: 10 });
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -1001,7 +1028,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [orders, searchQuery, statusFilter, dateFilter]);
 
   const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())), [products, searchQuery]);
-  const filteredFonts = useMemo(() => { if (activeFontCategory === 'TODAS') return fonts; return fonts.filter(f => (f.category || 'BASICAS') === activeFontCategory); }, [fonts, activeFontCategory]);
+  const filteredFonts = useMemo(() => { 
+    let result = fonts;
+    
+    // Filtrar por categoría
+    if (activeFontCategory !== 'TODAS') {
+      result = result.filter(f => (f.category || 'BASICAS') === activeFontCategory);
+    }
+    
+    // Filtrar por estado
+    if (fontStatusFilter === 'ACTIVE') {
+      result = result.filter(f => f.active !== false);
+    } else if (fontStatusFilter === 'INACTIVE') {
+      result = result.filter(f => f.active === false);
+    }
+    
+    // Filtrar por búsqueda
+    if (fontSearchQuery) {
+      const query = fontSearchQuery.toLowerCase();
+      result = result.filter(f => 
+        f.name.toLowerCase().includes(query) || 
+        f.id.toString().includes(query) ||
+        (f.category || '').toLowerCase().includes(query)
+      );
+    }
+    
+    // Ordenar
+    result = [...result].sort((a, b) => {
+      let comparison = 0;
+      if (fontSortBy === 'name') {
+        comparison = a.name.localeCompare(b.name);
+      } else if (fontSortBy === 'id') {
+        comparison = a.id - b.id;
+      } else if (fontSortBy === 'category') {
+        comparison = (a.category || '').localeCompare(b.category || '');
+      }
+      return fontSortOrder === 'asc' ? comparison : -comparison;
+    });
+    
+    return result;
+  }, [fonts, activeFontCategory, fontStatusFilter, fontSearchQuery, fontSortBy, fontSortOrder]);
   
   const filteredClients = useMemo(() => {
       const clientMap = new Map();
@@ -1275,44 +1341,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </button>
                     </div>
 
-                    {/* RAB Widget - Moved to top */}
-                    <div className="backdrop-blur-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-sm flex flex-col sm:flex-row items-stretch">
-                        {/* LEFT — branding */}
-                        <div className="flex items-center gap-3 px-5 py-4 sm:border-r border-b sm:border-b-0 border-zinc-200/40 dark:border-zinc-700/40 shrink-0">
-                            <img src="/assets/icons/2svgagenticon.svg" alt="RAB" className="w-8 h-8 shrink-0"/>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Asistente IA</p>
-                                <p className="text-base font-black tracking-tight text-zinc-900 dark:text-white leading-none">RAB</p>
+                    {/* RAB Widget */}
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+                        <div className="flex flex-col sm:flex-row items-stretch">
+                            {/* LEFT — branding */}
+                            <div className="flex items-center gap-3 px-4 py-3 sm:border-r border-b sm:border-b-0 border-zinc-200 dark:border-zinc-800 shrink-0">
+                                <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center">
+                                    <img src="/assets/icons/2svgagenticon.svg" alt="RAB" className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Asistente IA</p>
+                                    <p className="text-sm font-bold text-zinc-900 dark:text-white">RAB</p>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* RIGHT — input */}
-                        <div className="flex-1 flex items-center px-4 py-3">
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    if (rabInputValue.trim()) {
-                                        onOpenAssistant?.(rabInputValue.trim());
-                                        setRabInputValue('');
-                                    }
-                                }}
-                                className="flex items-center gap-3 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 focus-within:border-amber-400 dark:focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-400/30 transition-all"
-                            >
-                                <input
-                                    type="text"
-                                    value={rabInputValue}
-                                    onChange={(e) => setRabInputValue(e.target.value)}
-                                    placeholder="Pregúntale algo a RAB…"
-                                    className="flex-1 bg-transparent text-sm text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none"
-                                />
-                                {rabInputValue.trim() ? (
-                                    <button type="submit" className="text-xs bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg transition-colors shrink-0">
-                                        Enviar
-                                    </button>
-                                ) : (
-                                    <kbd className="text-[10px] bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md font-mono text-zinc-400 shrink-0">⌘K</kbd>
-                                )}
-                            </form>
+                            {/* RIGHT — input + suggestions */}
+                            <div className="flex-1 flex flex-col px-4 py-3 gap-2">
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        if (rabInputValue.trim()) {
+                                            onOpenAssistant?.(rabInputValue.trim());
+                                            setRabInputValue('');
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 focus-within:border-amber-500 transition-all"
+                                >
+                                    <input
+                                        type="text"
+                                        value={rabInputValue}
+                                        onChange={(e) => setRabInputValue(e.target.value)}
+                                        placeholder="Pregúntale algo a RAB…"
+                                        className="flex-1 bg-transparent text-sm text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 outline-none"
+                                    />
+                                    {rabInputValue.trim() ? (
+                                        <button type="submit" className="text-xs bg-amber-500 hover:bg-amber-400 text-white font-bold px-3 py-1.5 rounded-md transition-colors shrink-0">
+                                            Enviar
+                                        </button>
+                                    ) : (
+                                        <kbd className="text-[10px] bg-zinc-200 dark:bg-zinc-700 px-2 py-1 rounded font-mono text-zinc-500 shrink-0">
+                                            ⌘K
+                                        </kbd>
+                                    )}
+                                </form>
+                                
+                                {/* Quick actions */}
+                                <div className="flex flex-wrap gap-1.5">
+                                    {[
+                                        { label: 'Ventas hoy', icon: TrendingUp },
+                                        { label: 'Pedidos pendientes', icon: Clock },
+                                        { label: 'Stock bajo', icon: Package },
+                                    ].map(({ label, icon: Icon }) => (
+                                        <button
+                                            key={label}
+                                            onClick={() => onOpenAssistant?.(label.toLowerCase())}
+                                            className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-100 dark:hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-zinc-200 dark:border-zinc-700"
+                                        >
+                                            <Icon size={10}/>
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2355,82 +2445,292 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
 
             {activeTab === 'FONTS' && (
-                <div>
-                    <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
+                <div className="space-y-6">
+                    {/* Header Compacto */}
+                    <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-3xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Fonts</h3>
-                            <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-                                {['TODAS', 'BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'].map((cat) => (
+                            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Fonts</h3>
+                            <p className="text-xs text-zinc-500 mt-1">{filteredFonts.length} de {fonts.length} fuentes</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => setIsBulkFontModalOpen(true)} 
+                                className="px-4 py-2.5 bg-zinc-900 dark:bg-zinc-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2"
+                            >
+                                <Layers size={14}/> Bulk
+                            </button>
+                            <button 
+                                onClick={() => { setEditingFont(null); setIsFontModalOpen(true); }} 
+                                className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-500/80 shadow-lg shadow-black/20 transition-all flex items-center gap-2"
+                            >
+                                <Plus size={16}/> Nueva
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Toolbar Compacta */}
+                    <div className="flex flex-col md:flex-row gap-3">
+                        {/* Búsqueda */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
+                            <input
+                                type="text"
+                                value={fontSearchQuery}
+                                onChange={(e) => setFontSearchQuery(e.target.value)}
+                                placeholder="Buscar fuentes..."
+                                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 pl-10 pr-9 text-sm font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
+                            />
+                            {fontSearchQuery && (
+                                <button 
+                                    onClick={() => setFontSearchQuery('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                                >
+                                    <X size={14}/>
+                                </button>
+                            )}
+                        </div>
+                        
+                        {/* Filtros en dropdowns */}
+                        <div className="flex gap-2">
+                            <select 
+                                value={activeFontCategory} 
+                                onChange={(e) => setActiveFontCategory(e.target.value as any)}
+                                className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+                            >
+                                {['TODAS', 'BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'].map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                            
+                            <select 
+                                value={fontStatusFilter} 
+                                onChange={(e) => setFontStatusFilter(e.target.value as any)}
+                                className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+                            >
+                                <option value="ALL">Todas</option>
+                                <option value="ACTIVE">Activas</option>
+                                <option value="INACTIVE">Inactivas</option>
+                            </select>
+                            
+                            <div className="flex items-center gap-1 bg-zinc-200 dark:bg-zinc-800 rounded-xl p-1">
+                                <select 
+                                    value={fontSortBy} 
+                                    onChange={(e) => setFontSortBy(e.target.value as any)}
+                                    className="bg-transparent border-none py-1.5 px-2 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
+                                >
+                                    <option value="id">#</option>
+                                    <option value="name">Nombre</option>
+                                    <option value="category">Cat.</option>
+                                </select>
+                                <button 
+                                    onClick={() => setFontSortOrder(fontSortOrder === 'asc' ? 'desc' : 'asc')}
+                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                                    title={fontSortOrder === 'asc' ? 'Asc' : 'Desc'}
+                                >
+                                    {fontSortOrder === 'asc' ? <ArrowUp size={14}/> : <ArrowDown size={14}/>}
+                                </button>
+                            </div>
+                            
+                            {/* Vista toggle */}
+                            <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-xl p-1">
+                                {[
+                                    { mode: 'GRID', icon: LayoutGrid },
+                                    { mode: 'LIST', icon: List },
+                                    { mode: 'COMPACT', icon: AlignLeft }
+                                ].map(({ mode, icon: Icon }) => (
                                     <button 
-                                        key={cat} 
-                                        onClick={() => setActiveFontCategory(cat as any)} 
-                                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all ${activeFontCategory === cat ? 'bg-amber-500 text-white' : 'bg-zinc-200/20 dark:bg-zinc-800/30 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'}`}
+                                        key={mode}
+                                        onClick={() => setFontViewMode(mode as any)}
+                                        className={`p-2 rounded-lg transition-all ${fontViewMode === mode ? 'bg-white dark:bg-zinc-700 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+                                        title={mode}
                                     >
-                                        {cat}
+                                        <Icon size={14}/>
                                     </button>
                                 ))}
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => setIsBulkFontModalOpen(true)} className="px-6 py-3 bg-zinc-900 dark:bg-zinc-800 text-white dark:text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2"><Layers size={16}/> Carga Bulk</button>
-                            <button onClick={() => { setEditingFont(null); setIsFontModalOpen(true); }} className="px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-500/80 shadow-lg shadow-black/20 transition-all flex items-center gap-2"><Plus size={18}/> Nueva Fuente</button>
-                        </div>
                     </div>
 
-                    <div className="mb-8">
-                        <div className="relative">
-                            <Type className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-400" size={20}/>
-                            <input 
-                                value={fontPreviewText}
-                                onChange={(e) => setFontPreviewText(e.target.value)}
-                                placeholder="ESCRIBE AQUÍ PARA PROBAR TUS FUENTES..."
-                                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-6 pl-16 rounded-2xl text-2xl font-bold uppercase text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
-                            />
-                        </div>
+                    {/* Preview Input */}
+                    <div className="relative">
+                        <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18}/>
+                        <input 
+                            value={fontPreviewText}
+                            onChange={(e) => setFontPreviewText(e.target.value)}
+                            placeholder="Escribe aquí para probar tus fuentes..."
+                            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-12 pr-4 rounded-xl text-lg font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                        />
                     </div>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {filteredFonts.map(font => (
-                            <div
-                                key={font.id}
-                                className={`bg-white/50 dark:bg-zinc-900/50 border border-zinc-200/40 dark:border-zinc-700/40 rounded-2xl overflow-hidden flex flex-col cursor-pointer group hover:border-amber-500 hover:shadow-lg transition-all ${font.active === false ? 'opacity-40' : ''}`}
-                                onClick={() => { setEditingFont(font); setIsFontModalOpen(true); }}
-                            >
-                                {/* Preview area */}
-                                <div className="flex-1 flex items-center justify-center px-6 pt-8 pb-6 min-h-[160px]">
-                                    <span className={`${font.cssFamily} text-6xl md:text-7xl text-zinc-900 dark:text-white text-center leading-none select-none`}>
-                                        {fontPreviewText || 'Aa'}
-                                    </span>
-                                </div>
-
-                                {/* Footer */}
-                                <div className="border-t border-zinc-200/40 dark:border-zinc-700/40 px-5 py-3 flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-black text-amber-500 tabular-nums">#{font.id}</span>
-                                            <p className="font-bold text-xs text-zinc-900 dark:text-white uppercase tracking-wide truncate">{font.name}</p>
-                                        </div>
-                                        <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-0.5">{font.category || 'BÁSICA'}</p>
+                    {/* Vista de fonts según el modo seleccionado */}
+                    {fontViewMode === 'GRID' && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {filteredFonts.map(font => (
+                                <div
+                                    key={font.id}
+                                    className={`bg-white/50 dark:bg-zinc-900/50 border border-zinc-200/40 dark:border-zinc-700/40 rounded-2xl overflow-hidden flex flex-col cursor-pointer group hover:border-amber-500 hover:shadow-lg transition-all ${font.active === false ? 'opacity-40' : ''}`}
+                                    onClick={() => { setEditingFont(font); setIsFontModalOpen(true); }}
+                                >
+                                    {/* Preview area */}
+                                    <div className="flex-1 flex items-center justify-center px-6 pt-8 pb-6 min-h-[160px]">
+                                        <span className={`${font.cssFamily} text-6xl md:text-7xl text-zinc-900 dark:text-white text-center leading-none select-none`}>
+                                            {fontPreviewText || 'Aa'}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-1 shrink-0">
+
+                                    {/* Footer */}
+                                    <div className="border-t border-zinc-200/40 dark:border-zinc-700/40 px-5 py-3 flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-black text-amber-500 tabular-nums">#{font.id}</span>
+                                                <p className="font-bold text-xs text-zinc-900 dark:text-white uppercase tracking-wide truncate">{font.name}</p>
+                                            </div>
+                                            <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-0.5">{font.category || 'BÁSICA'}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setEditingFont(font); setIsFontModalOpen(true); }}
+                                                className="p-2 rounded-lg text-zinc-400 hover:text-amber-500 transition-colors"
+                                                title="Editar"
+                                            >
+                                                <Edit size={15}/>
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); toggleFontActive(font); }}
+                                                className={`p-2 rounded-lg transition-colors ${font.active === false ? 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200' : 'text-green-500 hover:text-green-600'}`}
+                                                title={font.active === false ? 'Activar' : 'Desactivar'}
+                                            >
+                                                {font.active === false ? <EyeOff size={15}/> : <Eye size={15}/>}
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar esta fuente?')) onDeleteFont(font.id); }}
+                                                className="p-2 rounded-lg text-zinc-400 hover:text-red-500 transition-colors"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 size={15}/>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {fontViewMode === 'LIST' && (
+                        <div className="space-y-3">
+                            {filteredFonts.map(font => (
+                                <div
+                                    key={font.id}
+                                    className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 flex items-center gap-4 cursor-pointer group hover:border-amber-500 hover:shadow-md transition-all ${font.active === false ? 'opacity-40' : ''}`}
+                                    onClick={() => { setEditingFont(font); setIsFontModalOpen(true); }}
+                                >
+                                    <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
+                                        <span className={`${font.cssFamily} text-4xl text-zinc-900 dark:text-white`}>
+                                            {fontPreviewText ? fontPreviewText.charAt(0) : 'A'}
+                                        </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-sm font-black text-amber-500 tabular-nums">#{font.id}</span>
+                                            <p className="font-bold text-sm text-zinc-900 dark:text-white uppercase truncate">{font.name}</p>
+                                        </div>
+                                        <p className="text-xs text-zinc-500 uppercase">{font.category || 'BÁSICA'}</p>
+                                        <p className={`${font.cssFamily} text-lg text-zinc-700 dark:text-zinc-300 mt-1 truncate`}>
+                                            {fontPreviewText || ' preview text'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setEditingFont(font); setIsFontModalOpen(true); }}
+                                            className="p-2 rounded-lg text-zinc-400 hover:text-amber-500 transition-colors"
+                                            title="Editar"
+                                        >
+                                            <Edit size={18}/>
+                                        </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); toggleFontActive(font); }}
-                                            className={`p-2 rounded-lg transition-colors ${font.active === false ? 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200' : 'text-green-500 hover:text-green-600'}`}
+                                            className={`p-2 rounded-lg transition-colors ${font.active === false ? 'text-zinc-400 hover:text-zinc-600' : 'text-green-500 hover:text-green-600'}`}
                                             title={font.active === false ? 'Activar' : 'Desactivar'}
                                         >
-                                            {font.active === false ? <EyeOff size={15}/> : <Eye size={15}/>}
+                                            {font.active === false ? <EyeOff size={18}/> : <Eye size={18}/>}
                                         </button>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); onDeleteFont(font.id); }}
+                                            onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar esta fuente?')) onDeleteFont(font.id); }}
                                             className="p-2 rounded-lg text-zinc-400 hover:text-red-500 transition-colors"
+                                            title="Eliminar"
                                         >
-                                            <Trash2 size={15}/>
+                                            <Trash2 size={18}/>
                                         </button>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {fontViewMode === 'COMPACT' && (
+                        <div className="space-y-1">
+                            {/* Encabezados */}
+                            <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] font-bold text-zinc-500 uppercase">
+                                <div className="col-span-2">#</div>
+                                <div className="col-span-4">Nombre</div>
+                                <div className="col-span-3">Categoría</div>
+                                <div className="col-span-2 text-center">Estado</div>
+                                <div className="col-span-1"></div>
                             </div>
-                        ))}
-                    </div>
+                            {filteredFonts.map(font => (
+                                <div
+                                    key={font.id}
+                                    className={`grid grid-cols-12 gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg items-center cursor-pointer group hover:border-amber-500 transition-all ${font.active === false ? 'opacity-40' : ''}`}
+                                    onClick={() => { setEditingFont(font); setIsFontModalOpen(true); }}
+                                >
+                                    <div className="col-span-2">
+                                        <span className="text-sm font-black text-amber-500 tabular-nums">#{font.id}</span>
+                                    </div>
+                                    <div className="col-span-4">
+                                        <p className="font-bold text-xs text-zinc-900 dark:text-white uppercase truncate">{font.name}</p>
+                                    </div>
+                                    <div className="col-span-3">
+                                        <span className="text-[10px] text-zinc-500 uppercase">{font.category || 'BÁSICA'}</span>
+                                    </div>
+                                    <div className="col-span-2 flex justify-center">
+                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${font.active !== false ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-zinc-100 text-zinc-500'}`}>
+                                            {font.active !== false ? 'Activa' : 'Inactiva'}
+                                        </span>
+                                    </div>
+                                    <div className="col-span-1 flex justify-end gap-1">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setEditingFont(font); setIsFontModalOpen(true); }}
+                                            className="p-1.5 rounded text-zinc-400 hover:text-amber-500 transition-colors"
+                                            title="Editar"
+                                        >
+                                            <Edit size={14}/>
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); toggleFontActive(font); }}
+                                            className={`p-1.5 rounded transition-colors ${font.active === false ? 'text-zinc-400 hover:text-zinc-600' : 'text-green-500 hover:text-green-600'}`}
+                                            title={font.active === false ? 'Activar' : 'Desactivar'}
+                                        >
+                                            {font.active === false ? <EyeOff size={14}/> : <Eye size={14}/>}
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar esta fuente?')) onDeleteFont(font.id); }}
+                                            className="p-1.5 rounded text-zinc-400 hover:text-red-500 transition-colors"
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 size={14}/>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {filteredFonts.length === 0 && (
+                        <div className="text-center py-12">
+                            <Type size={48} className="mx-auto text-zinc-300 mb-4"/>
+                            <p className="text-zinc-500 font-medium">No hay fuentes en esta categoría</p>
+                        </div>
+                    )}
                 </div>
             )}
 
