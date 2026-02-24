@@ -1,20 +1,30 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BackgroundProvider } from './contexts/BackgroundContext';
+import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
+import { CartProvider, useCartPanel } from './contexts/CartContext';
 import { NavBar } from './components/NavBar';
 import { AdminDashboard } from './components/AdminDashboard';
+import CommandAssistant from './components/CommandAssistant';
 import { ClientDashboard } from './components/ClientDashboard';
 import { ProductVisualizer } from './components/ProductVisualizer';
 import { FontShowcase } from './components/FontShowcase';
 import { TechnicalPreview } from './components/TechnicalPreview';
-import { LoginModal } from './components/LoginModal';
+import { AuthModal } from './components/AuthModal';
 import { PublicTracking } from './components/PublicTracking';
-import { ViewState, User, Product, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction } from './types';
+import { LandingPage } from './components/LandingPage';
+import { NotificationPanel } from './components/NotificationPanel';
+import { NotificationManager } from './components/NotificationManager';
+import { CartPanel } from './components/CartPanel';
+// import { LottieAnimation } from './components/LottieAnimation';
+import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction } from './types';
 import { PRODUCTS as CONST_PRODUCTS, FONTS as CONST_FONTS, ADMIN_USER, MOCK_ORDERS } from './constants';
 import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, CreditCard, QrCode, Ticket, Eye, Banknote, CreditCard as CardIcon, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2 } from 'lucide-react';
-import { auth } from './firebaseConfig'; 
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthChange, logoutUser, isFirebaseConfigured } from './services/auth';
+
+// Import Lottie animation
+// import playfulAnimation from './src/lotties/playful.json';
 
 // --- FIXED PRICING ---
 const DEFAULT_PRICING: PricingConfig = {
@@ -71,13 +81,13 @@ const DEFAULT_STORE: StoreConfig = {
   brandingAssets: [],
   galleryAssets: DEFAULT_GALLERY_ASSETS as any,
   messageTemplates: {
-      confirmation: "Hola {NOMBRE}, tu orden #{ID} ha sido recibida. Total: {TOTAL}. Estamos validando detalles.",
-      production: "Hola {NOMBRE}, ¡Buenas noticias! Tu orden #{ID} ya entró a proceso de grabado 🛠️. Te avisaremos cuando esté lista.",
-      ready: "Hola {NOMBRE}, tu pedido #{ID} está LISTO para entrega/recolección ✅. ¡Quedó genial!"
+      confirmation: "Hola {NOMBRE}, tu orden #{ID} ha sido recibida. Total: {TOTAL}. Seguimiento: {LINK}",
+      production: "Hola {NOMBRE}, ¡Tu orden #{ID} está en producción! 🛠️. Sigue tu pedido aquí: {LINK}",
+      ready: "Hola {NOMBRE}, tu pedido #{ID} está LISTO ✅. Recógelo o consulta detalles: {LINK}"
   }
 };
 
-const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () => void }) => {
+const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () => void, key?: React.Key }) => {
     const [loaded, setLoaded] = useState(false);
     return (
         <div onClick={onClick} className="group cursor-pointer rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1">
@@ -107,15 +117,73 @@ const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () =
 
 const App = () => {
   const [view, setView] = useState<ViewState>('LANDING');
-  const [user, setUser] = useState<User | null>(null);
+  // TEMPORAL: Auth desactivado para desarrollo - usar admin por defecto
+  const [user, setUser] = useState<User | null>({
+    id: 'admin-temp',
+    name: 'Admin',
+    email: 'admin@lasermachine.com',
+    role: UserRole.ADMIN,
+    avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=facc15&color=000000',
+    laserPoints: 0,
+    pointsHistory: []
+  });
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [preSelectedOrderId, setPreSelectedOrderId] = useState<string | null>(null);
+  
+  // Admin Dashboard Tab State (for NavBar title)
+  const [adminActiveTab, setAdminActiveTab] = useState<string>('DASHBOARD');
+  
+  // Command Assistant State
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [assistantQuery, setAssistantQuery] = useState('');
+  
+  // Open assistant with optional query
+  const openAssistant = useCallback((query?: string) => {
+    if (query) setAssistantQuery(query);
+    setIsAssistantOpen(true);
+  }, []);
+  
+  // Cmd+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsAssistantOpen(prev => !prev);
+      }
+      if (e.key === 'Escape') {
+        setIsAssistantOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   
   // Persistent State Initialization
+  // Bumped to v13 to force image refresh with YETI product images
   const [products, setProducts] = useState<Product[]>(() => {
       try {
-          const saved = localStorage.getItem('lm_products_v10');
-          return saved ? JSON.parse(saved) : CONST_PRODUCTS;
+          const saved = localStorage.getItem('lm_products_v13');
+          if (saved) {
+              // Merge saved products with default images to ensure images are updated
+              const parsed = JSON.parse(saved);
+              return parsed.map((savedProduct: Product) => {
+                  const defaultProduct = CONST_PRODUCTS.find(p => p.id === savedProduct.id);
+                  if (defaultProduct) {
+                      // Update images from default while preserving stock and other data
+                      return {
+                          ...savedProduct,
+                          imageUrl: defaultProduct.imageUrl,
+                          colors: savedProduct.colors.map((savedColor: ProductColor) => {
+                              const defaultColor = defaultProduct.colors.find(c => c.name === savedColor.name);
+                              return defaultColor ? { ...savedColor, imageUrl: defaultColor.imageUrl } : savedColor;
+                          })
+                      };
+                  }
+                  return savedProduct;
+              });
+          }
+          return CONST_PRODUCTS;
       } catch (e) { return CONST_PRODUCTS; }
   });
   
@@ -179,7 +247,7 @@ const App = () => {
 
   // Persistence Effect
   useEffect(() => {
-    localStorage.setItem('lm_products_v10', JSON.stringify(products));
+    localStorage.setItem('lm_products_v13', JSON.stringify(products));
     localStorage.setItem('lm_orders_v10', JSON.stringify(orders));
     localStorage.setItem('lm_store_v10', JSON.stringify(storeConfig));
     localStorage.setItem('lm_pricing_v10', JSON.stringify(pricing));
@@ -238,48 +306,68 @@ const App = () => {
     styleTag.textContent = cssRules;
   }, [fonts, storeConfig.themeDarkModeBg, storeConfig.customLogoFontData]);
 
-  // Session Persistence Listener
+  // Session Persistence Listener - DESACTIVADO para desarrollo
+  // TODO: Reactivar cuando se termine de probar
+  // useEffect(() => {
+  //   const unsubscribe = onAuthChange((userData) => {
+  //     setUser(userData);
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
+
+  // Handle URL Parameters for Tracking
   useEffect(() => {
-      if (!auth) return; // Prevent crash if auth is not initialized
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          if (firebaseUser) {
-              handleAuth(firebaseUser);
-          } else {
-              setUser(null);
-          }
-      });
-      return () => unsubscribe();
-  }, [storeConfig.adminEmails]);
-
-  const handleAuth = (firebaseUser: any) => {
-    const email = firebaseUser.email || '';
-    const lowerEmail = email.toLowerCase().trim();
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    const orderIdParam = urlParams.get('id');
     
-    // Combine hardcoded fallback admins with dynamic config admins
-    const adminEmails = [
-        'info.lasermachine@gmail.com', 
-        'julian.insignia@gmail.com',
-        'admin@lasermachine.com',
-        ...(storeConfig.adminEmails || [])
-    ].map(e => e.toLowerCase());
+    if (viewParam === 'TRACKING' && orderIdParam) {
+      setView('PUBLIC_TRACKING');
+      setPreSelectedOrderId(orderIdParam);
+    }
+  }, []);
 
-    const isAdmin = adminEmails.includes(lowerEmail);
-    
-    const newUser: User = {
-      id: firebaseUser.uid,
-      name: firebaseUser.displayName || lowerEmail.split('@')[0],
-      email: lowerEmail,
-      role: isAdmin ? UserRole.ADMIN : UserRole.CLIENT,
-      avatarUrl: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${lowerEmail}&background=random&color=000000&background=facc15`,
-      laserPoints: isAdmin ? 0 : 150, // Mock points for new users
-      pointsHistory: [] 
+  // Notification Navigation Handler
+  useEffect(() => {
+    const handleNotificationNavigate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url: string; data?: any }>;
+      const { url, data } = customEvent.detail || {};
+      
+      if (url === '#inventory') {
+        setView('ADMIN');
+        // Small delay to ensure view is set first
+        setTimeout(() => {
+          // Trigger inventory tab via custom event
+          window.dispatchEvent(new CustomEvent('navigateToTab', { detail: 'INVENTORY' }));
+        }, 100);
+      } else if (url === '#orders') {
+        setView('ADMIN');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('navigateToTab', { detail: 'ORDERS' }));
+        }, 100);
+      }
     };
 
-    setUser(newUser);
+    window.addEventListener('notificationNavigate', handleNotificationNavigate);
+    return () => window.removeEventListener('notificationNavigate', handleNotificationNavigate);
+  }, []);
+
+  // Auth Guard - Redirect to login if accessing protected routes without user
+  useEffect(() => {
+    const protectedViews = ['SHOP', 'FONTS_SHOWCASE', 'CUSTOMIZER', 'CLIENT_DASHBOARD', 'ADMIN_DASHBOARD'];
+    if (protectedViews.includes(view) && !user) {
+      setView('LANDING');
+      setIsLoginOpen(true);
+    }
+  }, [view, user]);
+
+  // Handle login from LoginModal - now receives properly formatted User
+  const handleAuth = (loggedInUser: User) => {
+    setUser(loggedInUser);
     setIsLoginOpen(false);
     
     if (view === 'LANDING') {
-        if (isAdmin) {
+        if (loggedInUser.role === UserRole.ADMIN) {
             setView('ADMIN_DASHBOARD');
         } else {
             setView('CLIENT_DASHBOARD');
@@ -288,9 +376,9 @@ const App = () => {
   };
 
   const handleLogout = async () => {
-      if (auth) await signOut(auth);
-      setUser(null);
-      setView('LANDING');
+    await logoutUser();
+    setUser(null);
+    setView('LANDING');
   };
 
   const handleApplyCoupon = () => {
@@ -515,6 +603,14 @@ const App = () => {
      }
   };
 
+  const handleResetProducts = () => {
+    localStorage.removeItem('lm_products_v12');
+    localStorage.removeItem('lm_products_v11');
+    localStorage.removeItem('lm_products_v10');
+    setProducts(CONST_PRODUCTS);
+    alert("Productos reseteados a valores por defecto. Recarga la página para ver los cambios.");
+  };
+
   const filteredCustomers = customerSearch 
     ? Array.from(new Set(orders.map(o => JSON.stringify({name: o.customerName, phone: o.customerPhone, email: o.customerEmail || ''}))))
         .map(s => JSON.parse(s as string))
@@ -530,9 +626,23 @@ const App = () => {
       }
   };
 
+    // Apply dark class to document for global theming
+    React.useEffect(() => {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }, [isDarkMode]);
+
     return (
-                <BackgroundProvider>
-                        <div className={`min-h-screen flex flex-col font-mono-tech ${isDarkMode ? 'dark text-white' : 'text-zinc-900'}`}>
+      <NotificationProvider>
+        <CartProvider>
+        <BackgroundProvider>
+          <div className={`min-h-screen flex flex-col font-mono-tech bg-zinc-50 dark:bg-zinc-950 ${isDarkMode ? 'dark' : ''}`}>
+      {/* Notification Manager - Solo cuando hay usuario logueado */}
+      {user && <NotificationManager products={products} orders={orders} user={user} />}
+      
       {view !== 'CUSTOMIZER' && view !== 'PUBLIC_TRACKING' && (
         <NavBar 
           user={user} cartCount={cart.length} 
@@ -541,54 +651,36 @@ const App = () => {
           onLogout={handleLogout}
           isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} 
           storeConfig={storeConfig}
+          currentView={view}
+          adminActiveTab={adminActiveTab}
         />
       )}
       
     <main className={`flex-1 w-full overflow-y-auto no-scrollbar bg-transparent ${getPatternClass()}`}>
         {view === 'LANDING' && (
-          <div className="min-h-[90vh] flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-white to-zinc-50 dark:from-black dark:to-zinc-900 backdrop-blur-sm relative overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-yellow-400/20 rounded-full blur-[100px] pointer-events-none"></div>
-            
-            <div className="relative z-10 max-w-2xl">
-                <span className="inline-block px-4 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    Personalización Premium
-                </span>
-                <h1 className="nike-title text-6xl md:text-8xl italic leading-[0.9] mb-8 tracking-tighter text-zinc-900 dark:text-white uppercase select-none drop-shadow-sm animate-in fade-in slide-in-from-bottom-6 duration-1000">
-                  LASER<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">MACHINE</span>
-                </h1>
-                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                  Diseña termos, botellas y accesorios con tu estilo personal. Grabado láser de alta precisión en tiempo real.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200">
-                    <button onClick={() => setView('SHOP')} className="bg-zinc-900 dark:bg-white text-white dark:text-black px-8 py-4 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3">
-                        <Plus size={16}/> Nuevo Proyecto
-                    </button>
-                </div>
-            </div>
-          </div>
+          <LandingPage 
+            storeConfig={storeConfig}
+            products={products}
+            onNavigate={(view) => setView(view)}
+            onLogin={() => setIsLoginOpen(true)}
+          />
         )}
 
         {view === 'PUBLIC_TRACKING' && (
-            <PublicTracking orders={orders} onBack={() => setView('LANDING')} />
+            <PublicTracking orders={orders} onBack={() => setView('LANDING')} preSelectedOrderId={preSelectedOrderId} />
         )}
 
         {view === 'SHOP' && (
           <div className="max-w-[95%] mx-auto px-6 md:px-10 py-24 animate-in fade-in duration-700 bg-white/90 dark:bg-black/80 backdrop-blur-sm min-h-full">
             {preSelectedFontId && (
-                <div className="mb-8 p-4 bg-yellow-400/10 border border-yellow-400 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
-                    <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 uppercase tracking-widest flex items-center gap-2">
+                <div className="mb-8 p-4 bg-amber-500/10 border border-amber-500 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2">
                         <Zap size={14}/> Tipografía #{preSelectedFontId} seleccionada.
                     </span>
                     <button onClick={() => setPreSelectedFontId(null)} className="text-[10px] font-black uppercase underline hover:text-black dark:hover:text-white">Cancelar</button>
                 </div>
             )}
-            <div className="flex flex-col md:flex-row justify-between items-end mb-16 border-b border-zinc-200 dark:border-zinc-900 pb-8 gap-4">
-               <div>
-                  <h3 className="nike-title text-4xl italic text-zinc-900 dark:text-white uppercase tracking-tighter">Catálogo</h3>
-                  <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mt-2">Selecciona un producto para comenzar a diseñar</p>
-               </div>
-               <span className="text-[10px] font-black bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">{products.length} Modelos Disponibles</span>
-            </div>
+            {/* Título removido - ahora en NavBar */}
             
             {/* CATALOG GRID */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
@@ -680,7 +772,7 @@ const App = () => {
                <div className="py-40 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/10 rounded-3xl">
                   <ShoppingBag size={64} className="mx-auto text-zinc-400 dark:text-zinc-800 mb-8" />
                   <p className="text-[11px] font-black uppercase tracking-[0.6em] text-zinc-500 dark:text-zinc-600 mb-8">Cola de activos vacía</p>
-                  <button onClick={() => setView('SHOP')} className="text-yellow-500 dark:text-yellow-400 uppercase font-black text-[10px] tracking-[0.4em] border-b border-yellow-500 dark:border-yellow-400 pb-2">Regresar al catálogo</button>
+                  <button onClick={() => setView('SHOP')} className="text-amber-500 dark:text-amber-500 uppercase font-black text-[10px] tracking-[0.4em] border-b border-amber-500 dark:border-amber-500 pb-2">Regresar al catálogo</button>
                </div>
             ) : (
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
@@ -712,7 +804,7 @@ const App = () => {
                               </div>
                               
                               <div className="mt-3 flex flex-wrap gap-2">
-                                  <button onClick={() => setPreviewItem(item)} className="px-4 py-2 bg-yellow-400/10 hover:bg-yellow-400 text-yellow-700 dark:text-yellow-400 hover:text-black border border-yellow-400/50 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors">
+                                  <button onClick={() => setPreviewItem(item)} className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-500 hover:text-black border border-amber-500/50 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors">
                                       <Eye size={12}/> Ver Diseño Final
                                   </button>
                                   <button onClick={() => handleEditCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors">
@@ -750,15 +842,15 @@ const App = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Nombre Completo*</label>
-                                <input value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value.toUpperCase()})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-sm outline-none focus:border-yellow-400 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" placeholder="NOMBRE Y APELLIDO"/>
+                                <input value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value.toUpperCase()})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-sm outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" placeholder="NOMBRE Y APELLIDO"/>
                             </div>
                             <div>
                                 <label className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">WhatsApp / Teléfono*</label>
-                                <input value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-sm outline-none focus:border-yellow-400 transition-colors font-mono placeholder:text-zinc-300 dark:placeholder:text-zinc-700" type="tel" placeholder="10 DÍGITOS"/>
+                                <input value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-sm outline-none focus:border-amber-500 transition-colors font-mono placeholder:text-zinc-300 dark:placeholder:text-zinc-700" type="tel" placeholder="10 DÍGITOS"/>
                             </div>
                             <div>
                                 <label className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Email (Opcional)</label>
-                                <input value={customerInfo.email} onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold text-sm outline-none focus:border-yellow-400 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" type="email" placeholder="PARA REGISTRO CLIENTE"/>
+                                <input value={customerInfo.email} onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold text-sm outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" type="email" placeholder="PARA REGISTRO CLIENTE"/>
                             </div>
                         </div>
 
@@ -786,9 +878,9 @@ const App = () => {
 
                             {/* LASER POINTS REDEMPTION UI */}
                             {user && (
-                                <div className="bg-yellow-50 dark:bg-yellow-900/10 p-4 rounded-xl border border-yellow-200 dark:border-yellow-800 flex justify-between items-center">
+                                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-800 flex justify-between items-center">
                                     <div>
-                                        <span className="text-xs font-black uppercase text-yellow-700 dark:text-yellow-500 flex items-center gap-2">
+                                        <span className="text-xs font-black uppercase text-amber-700 dark:text-amber-500 flex items-center gap-2">
                                             <Wallet size={14}/> LaserPoints
                                         </span>
                                         <p className="text-[10px] text-zinc-500 font-bold mt-1">
@@ -798,7 +890,7 @@ const App = () => {
                                     <button 
                                         onClick={() => setUsePoints(!usePoints)}
                                         disabled={user.laserPoints <= 0}
-                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${usePoints ? 'bg-yellow-400 text-black shadow-lg' : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${usePoints ? 'bg-amber-500 text-black shadow-lg' : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}
                                     >
                                         {usePoints ? 'Canjeados' : 'Canjear'}
                                     </button>
@@ -811,7 +903,7 @@ const App = () => {
                                     <input 
                                         value={couponCode}
                                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                                        className="flex-1 bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl font-bold uppercase text-xs outline-none focus:border-yellow-400"
+                                        className="flex-1 bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl font-bold uppercase text-xs outline-none focus:border-amber-500"
                                         placeholder="CÓDIGO"
                                     />
                                     <button onClick={handleApplyCoupon} className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-black dark:text-white px-4 rounded-xl font-bold text-xs uppercase"><Ticket size={16}/></button>
@@ -837,7 +929,7 @@ const App = () => {
                                 </div>
                             )}
                             {usePoints && user?.laserPoints && user.laserPoints > 0 && (
-                                <div className="flex justify-between text-sm text-yellow-600 dark:text-yellow-500">
+                                <div className="flex justify-between text-sm text-amber-600 dark:text-amber-500">
                                     <span className="font-bold uppercase">Canje Puntos</span>
                                     <span className="font-bold">-${user.laserPoints.toFixed(2)}</span>
                                 </div>
@@ -917,10 +1009,13 @@ const App = () => {
             onDeleteClient={deleteClientHistory}
             onResetOrdersAndClients={handleResetOrdersAndClients}
             onResetInventoryCounts={handleResetInventoryCounts}
+            onResetProducts={handleResetProducts}
+            onOpenAssistant={openAssistant}
+            onTabChange={setAdminActiveTab}
           />
         )}
 
-        {view === 'CLIENT_DASHBOARD' && user?.role === UserRole.CLIENT && (
+        {view === 'CLIENT_DASHBOARD' && (user?.role === UserRole.CLIENT || user?.role === UserRole.ADMIN) && (
             <ClientDashboard 
               user={user} 
               orders={orders} 
@@ -928,25 +1023,42 @@ const App = () => {
               onCreateReferral={handleCreateReferral}
               products={products}
               fonts={fonts}
+              isDarkMode={isDarkMode}
+              toggleTheme={toggleTheme}
             />
         )}
 
         {/* Login Modal Integration */}
-        <LoginModal 
+        <AuthModal 
             isOpen={isLoginOpen} 
             onClose={() => setIsLoginOpen(false)} 
             onLogin={handleAuth} 
         />
 
+        {/* Command Assistant (RAB) */}
+        <CommandAssistant
+          isOpen={isAssistantOpen}
+          onClose={() => setIsAssistantOpen(false)}
+          initialQuery={assistantQuery}
+          orders={orders}
+          products={products}
+          onNavigate={(tab, opts) => {
+            setIsAssistantOpen(false);
+            if (tab === 'ORDERS') setView('ADMIN_DASHBOARD');
+            if (tab === 'INVENTORY') setView('ADMIN_DASHBOARD');
+            if (tab === 'SETTINGS') setView('ADMIN_DASHBOARD');
+          }}
+        />
+
         {/* MercadoPago Mock Modal */}
         {showMercadoPagoModal && (
             <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
-                <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center">
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-sm w-full text-center border border-zinc-200 dark:border-zinc-800">
                     <img src="https://logotipoz.com/wp-content/uploads/2021/10/versiones-del-logo-de-mercado-pago-1.png" className="h-8 mx-auto mb-6" alt="MercadoPago"/>
-                    <div className="w-48 h-48 bg-zinc-100 mx-auto rounded-xl flex items-center justify-center mb-6">
-                        <QrCode size={120} className="text-zinc-800"/>
+                    <div className="w-48 h-48 bg-zinc-100 dark:bg-zinc-800 mx-auto rounded-xl flex items-center justify-center mb-6">
+                        <QrCode size={120} className="text-zinc-800 dark:text-zinc-200"/>
                     </div>
-                    <p className="text-zinc-900 font-bold text-lg mb-2">Escanea para pagar</p>
+                    <p className="text-zinc-900 dark:text-white font-bold text-lg mb-2">Escanea para pagar</p>
                     <p className="text-zinc-500 text-xs mb-6">Abre tu app de banco o MercadoPago y escanea este código.</p>
                     <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
                     <p className="text-[10px] text-zinc-400 mt-4 uppercase tracking-widest">Esperando confirmación...</p>
@@ -954,8 +1066,36 @@ const App = () => {
             </div>
         )}
       </main>
-            </div>
-        </BackgroundProvider>
+          
+          {/* Notification Panel */}
+          <NotificationPanel />
+          
+          {/* Cart Panel */}
+          <CartPanel 
+            cartItems={cart.map(item => ({
+              id: item.id,
+              productName: item.productName,
+              colorName: item.colorName,
+              quantity: item.quantity,
+              price: item.price,
+              imageUrl: item.imageUrl
+            }))}
+            onUpdateQuantity={(id, qty) => {
+              if (qty === 0) {
+                setCart(cart.filter(i => i.id !== id));
+              } else {
+                setCart(cart.map(i => i.id === id ? { ...i, quantity: qty } : i));
+              }
+            }}
+            onRemoveItem={(id) => setCart(cart.filter(i => i.id !== id))}
+            onCheckout={() => setView('CHECKOUT')}
+            total={cart.reduce((sum, i) => sum + i.price * i.quantity, 0)}
+          />
+          
+        </div>
+      </BackgroundProvider>
+      </CartProvider>
+      </NotificationProvider>
   );
 };
 

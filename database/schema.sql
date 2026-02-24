@@ -1,190 +1,298 @@
--- LaserMachine Database Schema for Neon PostgreSQL
--- Run this in your Neon SQL Editor to create all tables
+-- ============================================================
+-- LASERMACHINE DATABASE SCHEMA
+-- PostgreSQL para Neon
+-- ============================================================
+-- Organizado por dominios de negocio:
+--   1. System Setup
+--   2. Catálogo (Products, Fonts)
+--   3. Clientes (Customers)
+--   4. Transacciones (Orders, Items)
+--   5. Marketing (Coupons, Points)
+--   6. Configuración (Store)
+--   7. Vistas y Índices
+-- ============================================================
 
--- Enable UUID extension
+-- ============================================================
+-- 1. SYSTEM SETUP
+-- ============================================================
+
+-- Habilitar extensión UUID para generar IDs únicos
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- =============================================
--- PRODUCTS TABLE
--- =============================================
+-- ============================================================
+-- 2. CATÁLOGO - PRODUCTS
+-- ============================================================
+
+-- Productos principales de la tienda
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    brand VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,              -- Reducido de 255 a 100
+    brand VARCHAR(50) NOT NULL,              -- Reducido de 100 a 50
     price DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    category VARCHAR(100),
+    category VARCHAR(50),                    -- Reducido de 100 a 50
     image_url TEXT,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),    -- TIMESTAMPTZ es más corto que TIMESTAMP WITH TIME ZONE
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Product colors (one product can have multiple colors)
+-- Variantes de color por producto (stock por color)
 CREATE TABLE IF NOT EXISTS product_colors (
     id SERIAL PRIMARY KEY,
     product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    hex VARCHAR(7) NOT NULL,
+    name VARCHAR(50) NOT NULL,               -- Reducido de 100 a 50 (ej: "ROJO", "AZUL MARINO")
+    hex VARCHAR(7) NOT NULL,                 -- Código hex color: #FFFFFF
     image_url TEXT,
     stock INTEGER DEFAULT 0
 );
 
--- =============================================
--- FONTS TABLE
--- =============================================
+-- ============================================================
+-- 2. CATÁLOGO - FONTS
+-- ============================================================
+
+-- Tipografías disponibles para diseños
 CREATE TABLE IF NOT EXISTS fonts (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    css_family VARCHAR(255) NOT NULL,
-    category VARCHAR(50) DEFAULT 'BASICAS',
+    name VARCHAR(100) NOT NULL,              -- Reducido de 255 a 100
+    css_family VARCHAR(150) NOT NULL,        -- Reducido de 255 a 150
+    category VARCHAR(30) DEFAULT 'BASICAS',  -- Reducido de 50 a 30
     preview_url TEXT,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =============================================
--- CUSTOMERS TABLE
--- =============================================
+-- ============================================================
+-- 3. CLIENTES - CUSTOMERS
+-- ============================================================
+
+-- Información de clientes
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
-    phone VARCHAR(20) UNIQUE NOT NULL,
-    name VARCHAR(255),
-    email VARCHAR(255),
+    phone VARCHAR(20) UNIQUE NOT NULL,       -- Teléfono es el identificador único
+    name VARCHAR(100),                       -- Reducido de 255 a 100
+    email VARCHAR(150),                      -- Reducido de 255 a 150
     laser_points INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =============================================
--- ORDERS TABLE
--- =============================================
+-- ============================================================
+-- 4. TRANSACCIONES - ORDERS
+-- ============================================================
+
+-- Cabecera de órdenes
+-- Nota: Los campos customer_name/phone/email están duplicados
+-- intencionalmente para snapshots históricos y consultas rápidas
 CREATE TABLE IF NOT EXISTS orders (
-    id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(20) PRIMARY KEY,              -- Formato: "LM-1001" (reducido de 50)
     customer_id INTEGER REFERENCES customers(id),
-    customer_name VARCHAR(255) NOT NULL,
-    customer_phone VARCHAR(20) NOT NULL,
-    customer_email VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'PENDING_PAYMENT',
-    payment_status VARCHAR(50) DEFAULT 'PENDING',
-    payment_method VARCHAR(50),
-    delivery_method VARCHAR(50) DEFAULT 'PICKUP',
-    shipping_address TEXT,
-    shipping_tracking VARCHAR(255),
+    customer_name VARCHAR(100) NOT NULL,     -- Reducido de 255 a 100
+    customer_phone VARCHAR(20) NOT NULL,     -- Teléfono del cliente
+    customer_email VARCHAR(150),             -- Reducido de 255 a 150
+    status VARCHAR(20) DEFAULT 'PENDING_PAYMENT',    -- Reducido de 50 a 20
+    payment_status VARCHAR(20) DEFAULT 'PENDING',    -- Reducido de 50 a 20
+    payment_method VARCHAR(20),              -- Reducido de 50 a 20 (cash, transfer, card)
+    delivery_method VARCHAR(20) DEFAULT 'PICKUP',    -- Reducido de 50 a 20 (pickup, shipping)
+    shipping_address TEXT,                   -- Dirección completa de envío
+    shipping_tracking VARCHAR(50),           -- Número de guía (reducido de 255)
     subtotal DECIMAL(10, 2) DEFAULT 0,
     discount DECIMAL(10, 2) DEFAULT 0,
     total DECIMAL(10, 2) DEFAULT 0,
-    coupon_code VARCHAR(50),
+    coupon_code VARCHAR(30),                 -- Reducido de 50 a 30
     points_used INTEGER DEFAULT 0,
     points_earned INTEGER DEFAULT 0,
     notes TEXT,
     is_priority BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =============================================
--- ORDER ITEMS TABLE
--- =============================================
+-- Items de cada orden (productos + diseño)
 CREATE TABLE IF NOT EXISTS order_items (
     id SERIAL PRIMARY KEY,
-    order_id VARCHAR(50) REFERENCES orders(id) ON DELETE CASCADE,
+    order_id VARCHAR(20) REFERENCES orders(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES products(id),
-    color_name VARCHAR(100),
+    color_name VARCHAR(50),                  -- Reducido de 100 a 50
+    
+    -- Cantidad y precios
     quantity INTEGER DEFAULT 1,
     unit_price DECIMAL(10, 2) DEFAULT 0,
     total_price DECIMAL(10, 2) DEFAULT 0,
-    -- Design data (stored as JSONB for flexibility)
-    front_text VARCHAR(255),
-    front_text_2 VARCHAR(255),
-    front_font_id INTEGER,
-    front_font_id_2 INTEGER,
-    front_design_state JSONB,
-    front_design_state_2 JSONB,
-    front_logos JSONB,
-    back_text VARCHAR(255),
-    back_text_2 VARCHAR(255),
-    back_font_id INTEGER,
+    
+    -- Diseño FRENTE
+    front_text VARCHAR(100),                 -- Reducido de 255 a 100
+    front_text_2 VARCHAR(100),               -- Texto secundario frente
+    front_font_id INTEGER REFERENCES fonts(id),
+    front_font_id_2 INTEGER,                 -- Segunda fuente
+    front_design_state JSONB,                -- Estado del diseño (posiciones, tamaños)
+    front_design_state_2 JSONB,              -- Estado diseño secundario
+    front_logos JSONB,                       -- Logos aplicados
+    
+    -- Diseño TRASERA
+    back_text VARCHAR(100),                  -- Reducido de 255 a 100
+    back_text_2 VARCHAR(100),
+    back_font_id INTEGER REFERENCES fonts(id),
     back_font_id_2 INTEGER,
     back_design_state JSONB,
     back_design_state_2 JSONB,
     back_logos JSONB,
+    
+    -- Item de cliente (producto que trae el cliente)
     is_client_item BOOLEAN DEFAULT false,
-    client_item_brand VARCHAR(100),
-    client_item_color VARCHAR(100),
+    client_item_brand VARCHAR(50),           -- Reducido de 100 a 50
+    client_item_color VARCHAR(50),           -- Reducido de 100 a 50
     notes TEXT
 );
 
--- =============================================
--- STORE CONFIG TABLE
--- =============================================
-CREATE TABLE IF NOT EXISTS store_config (
-    id INTEGER PRIMARY KEY DEFAULT 1,
-    business_name VARCHAR(255) DEFAULT 'LASERMACHINE',
-    logo_url TEXT,
-    accent_color VARCHAR(7) DEFAULT '#facc15',
-    theme_dark_mode_bg VARCHAR(7) DEFAULT '#000000',
-    bg_pattern VARCHAR(50) DEFAULT 'dots',
-    next_order_id INTEGER DEFAULT 1000,
-    points_percentage DECIMAL(5, 2) DEFAULT 5,
-    whatsapp VARCHAR(20),
-    instagram_url VARCHAR(255),
-    facebook_url VARCHAR(255),
-    bank_info TEXT,
-    shipping_info TEXT,
-    message_templates JSONB,
-    global_colors JSONB,
-    branding_assets JSONB,
-    gallery_assets JSONB,
-    product_categories JSONB,
-    admin_emails JSONB,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT single_config CHECK (id = 1)
-);
+-- ============================================================
+-- 5. MARKETING - COUPONS & POINTS
+-- ============================================================
 
--- =============================================
--- COUPONS TABLE
--- =============================================
+-- Cupones de descuento
 CREATE TABLE IF NOT EXISTS coupons (
     id SERIAL PRIMARY KEY,
-    code VARCHAR(50) UNIQUE NOT NULL,
+    code VARCHAR(30) UNIQUE NOT NULL,        -- Reducido de 50 a 30
     discount_percent DECIMAL(5, 2) DEFAULT 0,
-    max_uses INTEGER DEFAULT -1,
+    max_uses INTEGER DEFAULT -1,             -- -1 = ilimitado
     used_count INTEGER DEFAULT 0,
-    assigned_to_phone VARCHAR(20),
-    expiry_date TIMESTAMP WITH TIME ZONE,
+    assigned_to_phone VARCHAR(20),           -- Cupón asignado a cliente específico
+    expiry_date TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =============================================
--- POINTS TRANSACTIONS TABLE
--- =============================================
+-- Historial de puntos (ganados y canjeados)
 CREATE TABLE IF NOT EXISTS point_transactions (
     id SERIAL PRIMARY KEY,
     customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
-    order_id VARCHAR(50) REFERENCES orders(id),
-    amount INTEGER NOT NULL,
-    type VARCHAR(20) NOT NULL, -- 'EARNED' or 'REDEEMED'
+    order_id VARCHAR(20) REFERENCES orders(id),
+    amount INTEGER NOT NULL,                 -- Positivo = ganado, Negativo = canjeado
+    type VARCHAR(20) NOT NULL,               -- 'EARNED' o 'REDEEMED'
     description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =============================================
--- INDEXES FOR PERFORMANCE
--- =============================================
+-- ============================================================
+-- 6. CONFIGURACIÓN - STORE
+-- ============================================================
+
+-- Configuración general de la tienda
+-- Nota: Esta tabla tiene solo 1 registro (singleton)
+CREATE TABLE IF NOT EXISTS store_config (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    
+    -- Identidad
+    business_name VARCHAR(50) DEFAULT 'LASERMACHINE',
+    logo_url TEXT,
+    accent_color VARCHAR(7) DEFAULT '#facc15',       -- Color principal
+    theme_dark_mode_bg VARCHAR(7) DEFAULT '#000000',
+    bg_pattern VARCHAR(20) DEFAULT 'dots',           -- Reducido de 50
+    
+    -- Contadores
+    next_order_id INTEGER DEFAULT 1000,              -- Para generar "LM-1001"
+    points_percentage DECIMAL(5, 2) DEFAULT 5,        -- % de puntos por compra
+    
+    -- Contacto
+    whatsapp VARCHAR(15),                            -- Reducido de 20
+    instagram_url VARCHAR(150),                      -- Reducido de 255
+    facebook_url VARCHAR(150),                       -- Reducido de 255
+    
+    -- Información adicional
+    bank_info TEXT,                                  -- Datos bancarios
+    shipping_info TEXT,                              -- Info de envíos
+    
+    -- Configuraciones JSON (flexibles)
+    message_templates JSONB,                         -- Plantillas WhatsApp
+    global_colors JSONB,                             -- Colores disponibles
+    branding_assets JSONB,                           -- Logos y assets
+    gallery_assets JSONB,                            -- Galería de imágenes
+    product_categories JSONB,                        -- Categorías de productos
+    admin_emails JSONB,                              -- Emails de administradores
+    
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT single_config CHECK (id = 1)
+);
+
+-- ============================================================
+-- 7. ÍNDICES PARA RENDIMIENTO
+-- ============================================================
+
+-- Órdenes: consultas frecuentes
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders(customer_phone);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
-CREATE INDEX IF NOT EXISTS idx_fonts_category ON fonts(category);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
 
--- =============================================
--- INSERT DEFAULT CONFIG
--- =============================================
-INSERT INTO store_config (id, business_name, points_percentage, global_colors, product_categories, message_templates)
-VALUES (
+-- Clientes: búsqueda por teléfono
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+
+-- Order items: join con órdenes
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
+
+-- Productos: filtros por categoría
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
+
+-- Fuentes: filtros por categoría
+CREATE INDEX IF NOT EXISTS idx_fonts_category ON fonts(category);
+CREATE INDEX IF NOT EXISTS idx_fonts_active ON fonts(is_active);
+
+-- ============================================================
+-- 8. VISTAS ÚTILES
+-- ============================================================
+
+-- Resumen de cliente (órdenes, gasto total, último pedido)
+CREATE OR REPLACE VIEW customer_summary AS
+SELECT 
+    c.id,
+    c.phone,
+    c.name,
+    c.email,
+    c.laser_points,
+    COUNT(DISTINCT o.id) as total_orders,
+    COALESCE(SUM(o.total), 0) as total_spent,
+    MAX(o.created_at) as last_order_date
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+GROUP BY c.id, c.phone, c.name, c.email, c.laser_points;
+
+-- Ventas diarias
+CREATE OR REPLACE VIEW daily_sales AS
+SELECT 
+    DATE(created_at) as date,
+    COUNT(*) as order_count,
+    SUM(total) as total_sales,
+    AVG(total) as average_order_value
+FROM orders
+WHERE status NOT IN ('CANCELLED')
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+
+-- Productos más vendidos
+CREATE OR REPLACE VIEW top_products AS
+SELECT 
+    p.id,
+    p.name,
+    p.brand,
+    p.category,
+    COUNT(oi.id) as times_ordered,
+    SUM(oi.quantity) as total_quantity,
+    SUM(oi.total_price) as total_revenue
+FROM products p
+LEFT JOIN order_items oi ON p.id = oi.product_id
+GROUP BY p.id, p.name, p.brand, p.category
+ORDER BY total_revenue DESC;
+
+-- ============================================================
+-- 9. DATOS INICIALES
+-- ============================================================
+
+-- Insertar configuración por defecto (si no existe)
+INSERT INTO store_config (
+    id, business_name, points_percentage, 
+    global_colors, product_categories, message_templates
+) VALUES (
     1,
     'LASERMACHINE',
     5,
@@ -203,31 +311,10 @@ VALUES (
     }'::jsonb
 ) ON CONFLICT (id) DO NOTHING;
 
--- =============================================
--- HELPFUL VIEWS
--- =============================================
-CREATE OR REPLACE VIEW customer_summary AS
-SELECT 
-    c.id,
-    c.phone,
-    c.name,
-    c.email,
-    c.laser_points,
-    COUNT(DISTINCT o.id) as total_orders,
-    COALESCE(SUM(o.total), 0) as total_spent,
-    MAX(o.created_at) as last_order_date
-FROM customers c
-LEFT JOIN orders o ON c.id = o.customer_id
-GROUP BY c.id, c.phone, c.name, c.email, c.laser_points;
-
--- Daily sales view
-CREATE OR REPLACE VIEW daily_sales AS
-SELECT 
-    DATE(created_at) as date,
-    COUNT(*) as order_count,
-    SUM(total) as total_sales,
-    AVG(total) as average_order_value
-FROM orders
-WHERE status NOT IN ('CANCELLED')
-GROUP BY DATE(created_at)
-ORDER BY date DESC;
+-- ============================================================
+-- NOTAS DE MIGRACIÓN
+-- ============================================================
+-- Si ya tienes datos, PostgreSQL permite reducir VARCHAR sin pérdida:
+-- ALTER TABLE products ALTER COLUMN name TYPE VARCHAR(100);
+-- ALTER TABLE orders ALTER COLUMN status TYPE VARCHAR(20);
+-- Estos cambios son seguros y no afectan los datos existentes.

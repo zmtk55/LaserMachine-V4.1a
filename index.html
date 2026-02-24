@@ -25,6 +25,14 @@
             colors: {
               yellow: { 400: '#facc15', 500: '#eab308' },
               zinc: { 
+                50: '#fafafa',
+                100: '#f4f4f5',
+                200: '#e4e4e7',
+                300: '#d4d4d8',
+                400: '#a1a1aa',
+                500: '#71717a',
+                600: '#52525b',
+                700: '#3f3f46',
                 800: '#27272a',
                 900: '#18181b',
                 950: '#09090b' 
@@ -59,13 +67,25 @@
       }
     </script>
     <style>
+      html, body, #root {
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      
       body {
-        background: transparent; /* allow the dynamic background pseudo-element to show */
+        background: var(--bg-primary);
         color: var(--text-primary);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overflow-x: hidden;
-        font-family: 'Plus Jakarta Sans', sans-serif; /* Global Font Override */
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      
+      /* Dark mode applied to body when .dark class is present on html or body */
+      html.dark, html.dark body {
+        background: #030712;
+        color: #f3f4f6;
       }
       
       .google-title {
@@ -82,6 +102,7 @@
       .font-google { font-family: 'Plus Jakarta Sans', sans-serif; }
       .font-bold1 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; }
       .font-industrial { font-family: 'Anton', sans-serif; letter-spacing: 0.05em; }
+      .font-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
       .font-script1 { font-family: 'Permanent Marker', cursive; }
       .font-serif1 { font-family: 'Playfair Display', serif; }
       .font-display1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; }

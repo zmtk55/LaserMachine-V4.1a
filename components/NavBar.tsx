@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
-import { ShoppingBag, Sun, Moon, UserCircle, LogOut, LayoutDashboard, Package, Type, Menu, X } from 'lucide-react';
+import { ShoppingBag, Sun, Moon, UserCircle, LogOut, LayoutDashboard, Package, Type, Menu, X, Bell } from 'lucide-react';
+import { useNotifications } from '../contexts/NotificationContext';
+import { useCartPanel } from '../contexts/CartContext';
 import { User, ViewState, StoreConfig, UserRole } from '../types';
 
 interface NavBarProps {
@@ -12,10 +14,45 @@ interface NavBarProps {
   isDarkMode: boolean;
   toggleTheme: () => void;
   storeConfig: StoreConfig;
+  currentView?: ViewState;
+  adminActiveTab?: string;
 }
 
-export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onLogin, onLogout, isDarkMode, toggleTheme, storeConfig }) => {
+export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onLogin, onLogout, isDarkMode, toggleTheme, storeConfig, currentView, adminActiveTab }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { setIsCartOpen } = useCartPanel();
+  
+  // Get page title based on current view
+  const getPageTitle = (): string => {
+    // If in admin dashboard, show the active tab name
+    if (currentView === 'ADMIN_DASHBOARD' && adminActiveTab) {
+      switch (adminActiveTab) {
+        case 'DASHBOARD': return 'Dashboard';
+        case 'ORDERS': return 'Órdenes';
+        case 'CALENDAR': return 'Calendario';
+        case 'INVENTORY': return 'Inventario';
+        case 'CLIENTS': return 'CRM Clientes';
+        case 'FONTS': return 'Fuentes';
+        case 'GALERIA': return 'Galería';
+        case 'FINANCE': return 'Finanzas';
+        case 'SETTINGS': return 'Configuración';
+        default: return 'Dashboard';
+      }
+    }
+    
+    switch (currentView) {
+      case 'LANDING': return '';
+      case 'SHOP': return 'Catálogo';
+      case 'CART': return 'Carrito';
+      case 'CUSTOMIZER': return 'Diseñar';
+      case 'FONTS_SHOWCASE': return 'Fuentes';
+      case 'ADMIN_DASHBOARD': return 'Dashboard';
+      case 'CLIENT_DASHBOARD': return 'Mis Pedidos';
+      case 'PUBLIC_TRACKING': return 'Rastrear';
+      default: return '';
+    }
+  };
+  const { unreadCount, setIsPanelOpen } = useNotifications();
 
   const handleNav = (view: ViewState) => {
     onNavigate(view);
@@ -33,18 +70,30 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
            )}
            <span 
              className={`text-xl md:text-2xl font-black tracking-tighter text-zinc-900 dark:text-white uppercase ${storeConfig.logoFont || 'nike-title'}`}
-             style={{ fontFamily: storeConfig.logoFont ? undefined : 'Montserrat, sans-serif' }}
+             style={{ fontFamily: storeConfig.logoFont ? undefined : 'Plus Jakarta Sans, sans-serif' }}
            >
              {storeConfig.businessName}
            </span>
         </div>
         
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-2 bg-zinc-100/50 dark:bg-zinc-800/50 p-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
-           <button onClick={() => handleNav('SHOP')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md">Catálogo</button>
-           <button onClick={() => handleNav('FONTS_SHOWCASE')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md">Fuentes</button>
-           <button onClick={() => handleNav('CART')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md">Carrito</button>
-        </div>
+        {/* Page Title - Between logo and menu - BIGGER & AMBER */}
+        {getPageTitle() && (
+          <div className="hidden md:flex items-center">
+            <div className="h-8 w-px bg-zinc-300 dark:bg-zinc-700 mx-5" />
+            <span className="text-xl md:text-2xl font-black text-amber-500 uppercase tracking-tight">
+              {getPageTitle()}
+            </span>
+          </div>
+        )}
+        
+        {/* Desktop Menu - Solo visible con login */}
+        {user && (
+          <div className="hidden md:flex items-center gap-2 bg-zinc-100/50 dark:bg-zinc-800/50 p-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
+             <button onClick={() => handleNav('SHOP')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md">Catálogo</button>
+             <button onClick={() => handleNav('FONTS_SHOWCASE')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md">Fuentes</button>
+             <button onClick={() => handleNav('CUSTOMIZER')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest bg-yellow-400 text-black hover:bg-yellow-300 transition-all shadow-sm hover:shadow-md">Personalizar</button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 md:gap-5">
@@ -57,24 +106,49 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
         
-        <button onClick={() => handleNav('CART')} className="relative w-12 h-12 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90 group">
-           <ShoppingBag size={22} className="group-hover:fill-current transition-all"/>
-           {cartCount > 0 && (
-             <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-black shadow-sm transform scale-100 animate-in zoom-in">
-               {cartCount}
-             </span>
-           )}
+        {/* Notification Bell */}
+        <button 
+          onClick={() => setIsPanelOpen(true)}
+          className="relative flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90"
+        >
+          <Bell size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 bg-amber-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-zinc-950 animate-in zoom-in">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+        
+        {/* Cart Button - Opens slide panel */}
+        <button 
+          onClick={() => setIsCartOpen(true)}
+          className="relative flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90"
+        >
+          <ShoppingBag size={20} />
+          {cartCount > 0 && (
+            <span className="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-zinc-950 animate-in zoom-in">
+              {cartCount > 9 ? '9+' : cartCount}
+            </span>
+          )}
         </button>
 
         {user ? (
            <div className="hidden md:flex items-center gap-4 pl-6 border-l border-zinc-200 dark:border-zinc-700">
              {user.role === UserRole.ADMIN ? (
-                <button 
-                  onClick={() => handleNav('ADMIN_DASHBOARD')} 
-                  className="bg-amber-500 text-white border border-transparent px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 hover:scale-105 hover:shadow-lg hover:shadow-amber-500/20 transition-all flex items-center gap-2"
-                >
-                  <LayoutDashboard size={14}/> Admin
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleNav('ADMIN_DASHBOARD')} 
+                    className="bg-amber-500 text-white border border-transparent px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 hover:scale-105 hover:shadow-lg hover:shadow-amber-500/20 transition-all flex items-center gap-2"
+                  >
+                    <LayoutDashboard size={14}/> Admin
+                  </button>
+                  <button 
+                    onClick={() => handleNav('CLIENT_DASHBOARD')} 
+                    className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2 hover:scale-105"
+                  >
+                    <Package size={14}/> Vista Cliente
+                  </button>
+                </div>
              ) : (
                 <button 
                   onClick={() => handleNav('CLIENT_DASHBOARD')} 
@@ -98,14 +172,25 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
           <div className="fixed inset-0 top-0 w-full h-screen bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl z-[150] flex flex-col p-10 pt-32 gap-8 animate-in slide-in-from-right duration-300 md:hidden">
-              <button onClick={() => handleNav('SHOP')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">Catálogo</button>
-              <button onClick={() => handleNav('FONTS_SHOWCASE')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">Fuentes</button>
-              
               {user ? (
                   <>
-                    <button onClick={() => handleNav(user.role === UserRole.ADMIN ? 'ADMIN_DASHBOARD' : 'CLIENT_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all">
-                        {user.role === UserRole.ADMIN ? 'Panel Admin' : 'Mis Pedidos'}
-                    </button>
+                    <button onClick={() => handleNav('SHOP')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">Catálogo</button>
+                    <button onClick={() => handleNav('FONTS_SHOWCASE')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">Fuentes</button>
+                    <button onClick={() => handleNav('CUSTOMIZER')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all">Personalizar</button>
+                    {user.role === UserRole.ADMIN ? (
+                      <>
+                        <button onClick={() => handleNav('ADMIN_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all">
+                          Panel Admin
+                        </button>
+                        <button onClick={() => handleNav('CLIENT_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">
+                          Vista Cliente
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => handleNav('CLIENT_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all">
+                        Mis Pedidos
+                      </button>
+                    )}
                     <button onClick={() => { onLogout(); setIsMenuOpen(false); }} className="text-left font-bold uppercase tracking-widest text-red-500 py-4 text-sm hover:pl-2 transition-all">Cerrar Sesión</button>
                   </>
               ) : (

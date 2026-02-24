@@ -40,6 +40,7 @@ export const VintageRollInput: React.FC<VintageRollInputProps> = ({
                         w-full 
                         pl-14 pr-4 py-3
                         bg-transparent
+                        font-sans
                         font-bold
                         text-sm
                         text-zinc-900 dark:text-white

@@ -70,7 +70,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
            </div>
            <button 
              onClick={() => setShowGuides(!showGuides)} 
-             className={`p-1.5 rounded-md transition-colors ${showGuides ? 'bg-yellow-400 text-black' : 'text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} 
+             className={`p-1.5 rounded-md transition-colors ${showGuides ? 'bg-amber-500 text-white' : 'text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} 
              title="Alternar Guías"
            >
              <Ruler size={12}/>
@@ -102,7 +102,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                     height: `${STAGE_HEIGHT}px`,
                     transform: `scale(${scaleFactor})`,
                     transformOrigin: 'center center',
-                    boxShadow: showGuides ? '0 0 0 1px rgba(250, 204, 21, 0.3)' : 'none'
+                    boxShadow: showGuides ? '0 0 0 1px rgba(245, 158, 11, 0.3)' : 'none'
                 }}
                 className="relative flex items-center justify-center select-none"
            >

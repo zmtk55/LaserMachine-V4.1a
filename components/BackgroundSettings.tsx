@@ -78,23 +78,51 @@ export const BackgroundSettings: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-bold">Fondo del sistema (global)</h3>
-      <div className="flex items-center gap-3">
-        <button onClick={() => fileRef.current?.click()} className="px-4 py-2 bg-zinc-900 text-white rounded">Subir desde Mac</button>
+      <h3 className="text-lg font-black uppercase tracking-widest text-zinc-900 dark:text-white">
+        Fondo del sistema (global)
+      </h3>
+      <div className="flex flex-wrap items-center gap-3">
+        <button 
+          onClick={() => fileRef.current?.click()} 
+          className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl font-bold text-sm uppercase tracking-wider shadow-lg hover:shadow-xl transition-shadow"
+        >
+          Subir desde Mac
+        </button>
         <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Unsplash: ej. city, abstract, pattern" className="px-3 py-2 rounded border" />
-        <button onClick={chooseUnsplash} className="px-4 py-2 bg-yellow-400 text-black rounded">Usar Unsplash</button>
-        <button onClick={resetBackground} className="px-4 py-2 border rounded">Restablecer</button>
+        <input 
+          value={query} 
+          onChange={e => setQuery(e.target.value)} 
+          placeholder="Unsplash: ej. city, abstract, pattern" 
+          className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" 
+        />
+        <button 
+          onClick={chooseUnsplash} 
+          className="px-4 py-2 bg-amber-500 text-white rounded-xl font-bold text-sm uppercase tracking-wider shadow-lg hover:shadow-xl transition-shadow"
+        >
+          Usar Unsplash
+        </button>
+        <button 
+          onClick={resetBackground} 
+          className="px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm uppercase tracking-wider text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+        >
+          Restablecer
+        </button>
       </div>
-      <label className="flex items-center gap-2">
-        <input type="checkbox" checked={patternOn} onChange={e => setPatternOn(e.target.checked)} /> Mostrar patrón de dots
+      <label className="flex items-center gap-2 text-sm text-zinc-900 dark:text-white">
+        <input 
+          type="checkbox" 
+          checked={patternOn} 
+          onChange={e => setPatternOn(e.target.checked)} 
+          className="rounded border-zinc-300 dark:border-zinc-600 text-amber-500 focus:ring-amber-500" 
+        /> 
+        <span className="font-bold uppercase text-xs tracking-widest">Mostrar patrón de dots</span>
       </label>
       <div className="mt-2">
-        <small className="text-zinc-500">Preview:</small>
-        <div className="mt-2 w-60 h-32 bg-zinc-100 flex items-center justify-center rounded overflow-hidden">
-          {bgUrl ? <img src={bgUrl} className="w-full h-full object-cover" /> : <span className="text-zinc-400">No hay fondo</span>}
+        <small className="text-zinc-500 dark:text-zinc-400 font-bold uppercase text-xs tracking-widest">Preview:</small>
+        <div className="mt-2 w-60 h-32 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-xl overflow-hidden shadow-lg">
+          {bgUrl ? <img src={bgUrl} className="w-full h-full object-cover" /> : <span className="text-zinc-400 dark:text-zinc-500 text-sm">No hay fondo</span>}
         </div>
-        {statusMessage && <div className="mt-2 text-xs text-zinc-400">{statusMessage}</div>}
+        {statusMessage && <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 font-medium">{statusMessage}</div>}
       </div>
     </div>
   );

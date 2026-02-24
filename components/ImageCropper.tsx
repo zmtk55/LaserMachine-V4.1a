@@ -1,5 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
+import { removeBackground } from '../utils/imageUtils';
 import Cropper from 'react-easy-crop';
 import { X, Check, ZoomIn, RotateCw, Wand2, Loader2 } from 'lucide-react';
 
@@ -86,30 +87,19 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  const handleRemoveBackground = async () => {
+    const handleRemoveBackground = async () => {
       setIsProcessing(true);
       try {
-          // Dynamic import to avoid static analysis issues with some CDNs
-          const imgly = await import("@imgly/background-removal");
-          
-          // Resolve the function safely (handles named export or default export from CDN)
-          const removeBackgroundFn = imgly.removeBackground || (imgly as any).default?.removeBackground || (imgly as any).default;
-          
-          if (typeof removeBackgroundFn !== 'function') {
-              throw new Error("Could not load background removal library function.");
-          }
-
-          // Using the blob directly
-          const blob = await removeBackgroundFn(currentImage);
-          const url = URL.createObjectURL(blob);
-          setCurrentImage(url);
-      } catch (error) {
-          console.error("Background removal failed:", error);
-          alert("No se pudo remover el fondo. Asegúrate de tener conexión a internet para descargar los modelos IA.");
+        const url = await removeBackground(currentImage);
+        setCurrentImage(url);
+      } catch (error: any) {
+        console.error('Error removing background:', error);
+        const errorMessage = error?.message || 'Error desconocido al remover el fondo';
+        alert(errorMessage);
       } finally {
-          setIsProcessing(false);
+        setIsProcessing(false);
       }
-  };
+    };
 
   const handleSave = async () => {
     try {

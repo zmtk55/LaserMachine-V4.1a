@@ -23,6 +23,8 @@ export interface User {
   avatarUrl?: string;
   laserPoints?: number; // Sistema de Lealtad
   pointsHistory?: PointTransaction[]; // Historial de puntos
+  phone?: string; // Teléfono para usuarios invitados
+  isGuest?: boolean; // Indica si es usuario invitado
 }
 
 export enum ProductBrand {
@@ -95,7 +97,7 @@ export interface BrandingAsset {
   id: string;
   name: string;
   url: string; // Base64 o URL
-  type: 'LOGO' | 'ICON' | 'OTHER' | 'CLIPART';
+  type: 'LOGO' | 'ICON' | 'ILUSTRACION' | 'FORMS' | 'OTHER' | 'CLIPART';
 }
 
 export interface StoreConfig {
@@ -241,6 +243,13 @@ export interface OrderEvent {
   note?: string;
 }
 
+export interface OrderInternalNote {
+  id: string;
+  text: string;
+  timestamp: string;
+  author: string;
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -270,6 +279,7 @@ export interface Order {
   history: OrderEvent[];
   createdAt: string;
   mockupUrl?: string; // URL para aprobación visual
+  internalNotes?: OrderInternalNote[]; // Notas internas del staff
 }
 
 export interface CustomerProfile {
@@ -286,4 +296,4 @@ export interface CustomerProfile {
   tags: string[];
 }
 
-export type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMIZER' | 'CART' | 'ADMIN_DASHBOARD' | 'CLIENT_DASHBOARD' | 'FONTS_SHOWCASE' | 'PUBLIC_TRACKING';
+export type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMIZER' | 'CART' | 'ADMIN_DASHBOARD' | 'CLIENT_DASHBOARD' | 'FONTS_SHOWCASE' | 'PUBLIC_TRACKING' | 'TRACKING';

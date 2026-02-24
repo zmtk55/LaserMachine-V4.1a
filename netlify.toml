@@ -6,27 +6,23 @@
   command = "npm run build"
   # Output directory (Vite default)
   publish = "dist"
-  # Functions directory (not used - we use Edge Functions)
-  # functions = "netlify/functions"
 
 # Edge Functions configuration
 [functions]
   node_bundler = "esbuild"
+  directory = "netlify/functions"
 
-# Environment variables (set these in Netlify Dashboard > Site Settings > Environment Variables)
-# DATABASE_URL = "your-neon-connection-string"
-
-# SPA redirect - all routes go to index.html
+# SPA redirect - all routes go to index.html (must be first)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Role = ["admin", "user", "guest"]}
 
 # API routes go to Edge Function
-[[edge_functions]]
-  path = "/api/*"
-  function = "api"
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
 
 # Security headers
 [[headers]]
@@ -52,10 +48,3 @@
   for = "*.css"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# Dev server configuration for local testing
-[dev]
-  command = "npm run dev"
-  port = 3000
-  targetPort = 5173
-  autoLaunch = false

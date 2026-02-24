@@ -32,6 +32,28 @@ const createSql = () => {
   return neon(url);
 };
 
+// Map English status keys (from AI) → Spanish DB values
+const STATUS_MAP: Record<string, string> = {
+  RECEIVED:          'RECIBIDO',
+  WAITING_APPROVAL:  'ESPERANDO_APROBACIÓN',
+  IN_PRODUCTION:     'EN_PRODUCCIÓN',
+  READY:             'LISTO',
+  COMPLETED:         'ENTREGADO',
+  CANCELLED:         'CANCELADO',
+};
+export function mapStatus(s: string): string {
+  return STATUS_MAP[s.toUpperCase()] ?? s;
+}
+
+// Run a parameterized query using neon's function-call form
+// neon() returns a tagged-template function but also supports sql(string, params[])
+const runSql = async (query: string, params: any[] = []): Promise<any[]> => {
+  const url = getDatabaseUrl();
+  if (!url) return [];
+  const client = neon(url) as any;
+  return client(query, params) as any[];
+};
+
 // =============================================
 // PRODUCTS
 // =============================================
@@ -511,9 +533,9 @@ export async function createOrder(order: Order): Promise<Order | null> {
 export async function updateOrderStatus(id: string, status: string): Promise<boolean> {
   const sql = createSql();
   if (!sql) return false;
-  
+  const dbStatus = mapStatus(status);
   try {
-    await sql`UPDATE orders SET status = ${status}, updated_at = NOW() WHERE id = ${id}`;
+    await sql`UPDATE orders SET status = ${dbStatus}, updated_at = NOW() WHERE id = ${id}`;
     return true;
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -686,6 +708,29 @@ export async function validateCoupon(code: string, phone?: string): Promise<{ va
   }
 }
 
+export async function createCoupon(coupon: Omit<Coupon, 'id' | 'used_count' | 'is_active'>): Promise<Coupon | null> {
+  const sql = createSql();
+  if (!sql) return null;
+
+  try {
+    const [newCoupon] = await sql`
+      INSERT INTO coupons (code, discount_percent, max_uses, assigned_to_phone, expiry_date)
+      VALUES (
+        ${coupon.code}, 
+        ${coupon.discount_percent}, 
+        ${coupon.max_uses || null}, 
+        ${coupon.assigned_to_phone || null},
+        ${coupon.expiry_date || null}
+      )
+      RETURNING *
+    `;
+    return newCoupon as Coupon;
+  } catch (error) {
+    console.error('Error creating coupon:', error);
+    return null;
+  }
+}
+
 export async function useCoupon(code: string): Promise<boolean> {
   const sql = createSql();
   if (!sql) return false;
@@ -696,6 +741,214 @@ export async function useCoupon(code: string): Promise<boolean> {
   } catch (error) {
     console.error('Error using coupon:', error);
     return false;
+  }
+}
+
+// =============================================
+// GLOBAL SEARCH
+// =============================================
+export interface SearchResult {
+  type: 'order' | 'product' | 'customer' | 'coupon';
+  id: string | number;
+  title: string;
+  description: string;
+  url: string;
+}
+
+export async function searchAll(term: string): Promise<SearchResult[]> {
+  const sql = createSql();
+  if (!sql || !term) return [];
+
+  const searchTerm = `%${term}%`;
+
+  try {
+    const results = await sql`
+      (
+        SELECT 
+          'order' as type, 
+          id, 
+          'Pedido #' || id as title, 
+          'Cliente: ' || customer_name || ' - Estado: ' || status as description,
+          '/produccion?order=' || id as url
+        FROM orders 
+        WHERE id ILIKE ${searchTerm} OR customer_name ILIKE ${searchTerm} OR customer_phone ILIKE ${searchTerm}
+        LIMIT 5
+      )
+      UNION ALL
+      (
+        SELECT 
+          'product' as type, 
+          id, 
+          name as title, 
+          'Marca: ' || brand || ' - Precio: $' || price as description,
+          '/inventario?product=' || id as url
+        FROM products 
+        WHERE name ILIKE ${searchTerm} OR brand ILIKE ${searchTerm}
+        LIMIT 5
+      )
+      UNION ALL
+      (
+        SELECT 
+          'customer' as type, 
+          id, 
+          name as title, 
+          'Tel: ' || phone || ' - Puntos: ' || laser_points as description,
+          '/clientes?phone=' || phone as url
+        FROM customers 
+        WHERE name ILIKE ${searchTerm} OR phone ILIKE ${searchTerm} OR email ILIKE ${searchTerm}
+        LIMIT 5
+      )
+      UNION ALL
+      (
+        SELECT 
+          'coupon' as type, 
+          id, 
+          'Cupón: ' || code as title, 
+          'Descuento: ' || discount_percent || '%' as description,
+          '/configuracion?tab=precios' as url
+        FROM coupons 
+        WHERE code ILIKE ${searchTerm}
+        LIMIT 5
+      )
+    `;
+    return results as SearchResult[];
+  } catch (error) {
+    console.error('Error performing global search:', error);
+    return [];
+  }
+}
+
+
+// =============================================
+// SMART FILTERS (for CommandAssistant)
+// =============================================
+
+export async function filterProducts(opts: {
+  search?: string;
+  priceMin?: number;
+  priceMax?: number;
+  brand?: string;
+  category?: string;
+  active?: boolean;
+  sortBy?: 'price_asc' | 'price_desc' | 'name';
+  limit?: number;
+}): Promise<SearchResult[]> {
+  const sql = createSql();
+  if (!sql) return [];
+  const limit = opts.limit ?? 10;
+
+  try {
+    let query = `
+      SELECT p.id, p.name, p.brand, p.price, p.category, p.is_active,
+      COALESCE(
+          (SELECT json_agg(pc.name) FROM product_colors pc WHERE pc.product_id = p.id),
+          '[]'
+      ) as colors
+      FROM products p 
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let i = 1;
+
+    if (opts.search) { query += ` AND (p.name ILIKE $${i} OR p.category ILIKE $${i} OR p.brand ILIKE $${i})`; params.push(`%${opts.search}%`); i++; }
+    if (opts.priceMin !== undefined) { query += ` AND p.price >= $${i++}`; params.push(opts.priceMin); }
+    if (opts.priceMax !== undefined) { query += ` AND p.price <= $${i++}`; params.push(opts.priceMax); }
+    if (opts.brand)    { query += ` AND p.brand ILIKE $${i++}`; params.push(`%${opts.brand}%`); }
+    if (opts.category) { query += ` AND p.category ILIKE $${i++}`; params.push(`%${opts.category}%`); }
+    if (opts.active !== undefined) { query += ` AND p.is_active = $${i++}`; params.push(opts.active); }
+
+    if (opts.sortBy === 'price_asc')  query += ' ORDER BY p.price ASC';
+    else if (opts.sortBy === 'price_desc') query += ' ORDER BY p.price DESC';
+    else query += ' ORDER BY p.name ASC';
+
+    query += ` LIMIT $${i++}`;
+    params.push(limit);
+
+    const rows = await runSql(query, params);
+    return rows.map((r: any) => {
+      const colorList = r.colors && r.colors.length > 0 ? r.colors.slice(0, 3).join(', ') + (r.colors.length > 3 ? '...' : '') : 'Sin colores';
+      
+      return {
+        type: 'product' as const,
+        id: r.id,
+        title: `${r.name} · $${Number(r.price).toFixed(2)}`,
+        description: `Colores: ${colorList} · ${r.category || 'General'}`,
+        url: `/inventario?product=${r.id}`,
+      };
+    });
+  } catch (error) {
+    console.error('Error filtering products:', error);
+    return [];
+  }
+}
+
+export async function filterOrders(opts: {
+  status?: string;
+  customerName?: string;
+  date?: 'today' | 'week' | 'month';
+  minTotal?: number;
+  maxTotal?: number;
+  limit?: number;
+}): Promise<SearchResult[]> {
+  const sql = createSql();
+  if (!sql) return [];
+  const limit = opts.limit ?? 10;
+
+  try {
+    let query = `SELECT id, customer_name, customer_phone, status, total, created_at FROM orders WHERE 1=1`;
+    const params: any[] = [];
+    let i = 1;
+
+    if (opts.status)       { query += ` AND status = $${i++}`; params.push(mapStatus(opts.status)); }
+    if (opts.customerName) { query += ` AND customer_name ILIKE $${i++}`; params.push(`%${opts.customerName}%`); }
+    if (opts.minTotal !== undefined) { query += ` AND total >= $${i++}`; params.push(opts.minTotal); }
+    if (opts.maxTotal !== undefined) { query += ` AND total <= $${i++}`; params.push(opts.maxTotal); }
+    if (opts.date === 'today') { query += ` AND DATE(created_at) = CURRENT_DATE`; }
+    else if (opts.date === 'week')  { query += ` AND created_at >= NOW() - INTERVAL '7 days'`; }
+    else if (opts.date === 'month') { query += ` AND created_at >= NOW() - INTERVAL '30 days'`; }
+
+    query += ` ORDER BY created_at DESC LIMIT $${i++}`;
+    params.push(limit);
+
+    const rows = await runSql(query, params);
+    return rows.map((r: any) => ({
+      type: 'order' as const,
+      id: r.id,
+      title: `${r.id}  ·  ${r.customer_name}`,
+      description: `${r.status.replace(/_/g,' ')}  ·  $${Number(r.total).toFixed(2)}`,
+      url: `/produccion?order=${r.id}`,
+    }));
+  } catch (error) {
+    console.error('Error filtering orders:', error);
+    return [];
+  }
+}
+
+export async function getTopSellingProducts(limit: number = 5): Promise<SearchResult[]> {
+  const sql = createSql();
+  if (!sql) return [];
+
+  try {
+    const rows = await sql`
+      SELECT p.id, p.name, p.brand, p.price,
+             COUNT(oi.product_id) as order_count,
+             COALESCE(SUM(oi.quantity), 0) as units_sold
+      FROM products p
+      LEFT JOIN order_items oi ON oi.product_id = p.id
+      GROUP BY p.id, p.name, p.brand, p.price
+      ORDER BY units_sold DESC
+      LIMIT ${limit}
+    `;
+    return rows.map((r: any) => ({
+      type: 'product' as const,
+      id: r.id,
+      title: `${r.name}  ·  $${Number(r.price).toFixed(2)}`,
+      description: `${r.units_sold} unidades vendidas · ${r.brand || ''}`,
+      url: `/inventario?product=${r.id}`,
+    }));
+  } catch (error) {
+    console.error('Error getting top products:', error);
+    return [];
   }
 }
 
@@ -727,12 +980,12 @@ export async function getOrderStats(): Promise<{ total: number; pending: number;
     const [stats] = await sql`
       SELECT 
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE status IN ('PENDING_PAYMENT', 'CONFIRMED')) as pending,
-        COUNT(*) FILTER (WHERE status IN ('IN_PRODUCTION', 'PRINTING')) as in_production,
-        COUNT(*) FILTER (WHERE status = 'COMPLETED') as completed,
+        COUNT(*) FILTER (WHERE status IN ('RECIBIDO', 'ESPERANDO_APROBACIÓN')) as pending,
+        COUNT(*) FILTER (WHERE status = 'EN_PRODUCCIÓN') as in_production,
+        COUNT(*) FILTER (WHERE status IN ('LISTO', 'ENTREGADO')) as completed,
         COALESCE(SUM(total) FILTER (WHERE DATE(created_at) = CURRENT_DATE), 0) as today_revenue
       FROM orders
-      WHERE status != 'CANCELLED'
+      WHERE status != 'CANCELADO'
     `;
     return stats as { total: number; pending: number; in_production: number; completed: number; today_revenue: number };
   } catch (error) {

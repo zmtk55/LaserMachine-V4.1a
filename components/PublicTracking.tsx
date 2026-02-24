@@ -1,17 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Order, OrderStatus } from '../types';
 import { Search, Package, CheckCircle, Clock, Truck, AlertCircle } from 'lucide-react';
 
 interface PublicTrackingProps {
   orders: Order[];
   onBack: () => void;
+  preSelectedOrderId?: string | null;
 }
 
-export const PublicTracking: React.FC<PublicTrackingProps> = ({ orders, onBack }) => {
+export const PublicTracking: React.FC<PublicTrackingProps> = ({ orders, onBack, preSelectedOrderId }) => {
   const [searchId, setSearchId] = useState('');
   const [foundOrder, setFoundOrder] = useState<Order | null>(null);
   const [error, setError] = useState('');
+
+  // Auto-search when preSelectedOrderId is provided
+  useEffect(() => {
+    if (preSelectedOrderId) {
+      const order = orders.find(o => o.id.toLowerCase() === preSelectedOrderId.toLowerCase());
+      if (order) {
+        setFoundOrder(order);
+        setSearchId(preSelectedOrderId);
+        setError('');
+      } else {
+        setError('No encontramos una orden con ese ID.');
+      }
+    }
+  }, [preSelectedOrderId, orders]);
 
   const handleTrack = (e: React.FormEvent) => {
     e.preventDefault();

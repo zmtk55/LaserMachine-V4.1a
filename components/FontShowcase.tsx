@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo } from 'react';
 import { FontOption, FontCategory } from '../types';
-import { Type, Search, ArrowRight, Check } from 'lucide-react';
+import { Type, Plus, Minus, RotateCcw } from 'lucide-react';
 
 interface FontShowcaseProps {
   fonts: FontOption[];
@@ -11,6 +10,9 @@ interface FontShowcaseProps {
 export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont }) => {
   const [previewText, setPreviewText] = useState('');
   const [activeCategory, setActiveCategory] = useState<FontCategory | 'TODAS'>('TODAS');
+  const [globalFontSize, setGlobalFontSize] = useState(64); // Tamaño global en px
+  const [selectedFontId, setSelectedFontId] = useState<number | null>(null); // Font con tamaño individual
+  const [individualSizes, setIndividualSizes] = useState<Record<number, number>>({}); // Tamaños individuales
 
   const categories: (FontCategory | 'TODAS')[] = ['TODAS', 'BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'];
 
@@ -22,103 +24,182 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont 
     return result;
   }, [fonts, activeCategory]);
 
+  // Obtener tamaño para una fuente específica
+  const getFontSize = (fontId: number): number => {
+    if (individualSizes[fontId]) {
+      return individualSizes[fontId];
+    }
+    return globalFontSize;
+  };
+
+  // Manejar click en card para seleccionar y ajustar
+  const handleCardClick = (font: FontOption) => {
+    if (selectedFontId === font.id) {
+      // Si ya está seleccionada, deseleccionar
+      setSelectedFontId(null);
+    } else {
+      // Seleccionar esta fuente
+      setSelectedFontId(font.id);
+    }
+    onSelectFont(font.id, previewText);
+  };
+
+  // Ajustar tamaño individual de la fuente seleccionada
+  const adjustSelectedFontSize = (delta: number) => {
+    if (selectedFontId === null) return;
+    
+    setIndividualSizes(prev => ({
+      ...prev,
+      [selectedFontId]: Math.max(20, Math.min(120, (prev[selectedFontId] || globalFontSize) + delta))
+    }));
+  };
+
+  // Resetear tamaños individuales
+  const resetIndividualSizes = () => {
+    setIndividualSizes({});
+    setSelectedFontId(null);
+  };
+
   return (
-    <div className="view-container font-mono-tech">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6 text-center md:text-left">
-          <div className="w-full md:w-auto">
-            <h1 className="nike-title text-5xl md:text-8xl italic text-zinc-900 dark:text-white uppercase tracking-tighter mb-4 drop-shadow-sm">
-              FONTS<span className="text-yellow-400">.</span>
-            </h1>
-            <p className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-[0.3em]">
-              Visualiza y selecciona tu tipografía favorita
-            </p>
-          </div>
-          
-          {/* Preview Input */}
-          <div className="w-full md:max-w-xl relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative flex items-center bg-zinc-900 rounded-3xl overflow-hidden border border-zinc-800 focus-within:border-yellow-400/50 transition-colors">
-                <div className="pl-6 text-zinc-500">
-                    <Type size={24} />
-                </div>
-                <input 
-                    type="text" 
-                    value={previewText}
-                    onChange={(e) => setPreviewText(e.target.value)}
-                    placeholder="Escribe tu texto aquí..."
-                    className="w-full bg-transparent text-white p-6 text-xl md:text-2xl font-bold outline-none placeholder:text-zinc-700 font-sans tracking-wide"
-                />
-            </div>
-          </div>
-        </div>
-
-        {/* Categories Filter */}
-        <div className="flex flex-wrap gap-3 mb-16 justify-center md:justify-start border-b border-zinc-200 dark:border-zinc-800 pb-8">
-            {categories.map(cat => (
-                <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
-                        activeCategory === cat 
-                        ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/20 scale-105' 
-                        : 'bg-transparent border border-zinc-300 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-600'
-                    }`}
-                >
-                    {cat}
-                </button>
+    <div className="max-w-[95%] mx-auto px-6 md:px-10 py-8">
+      {/* Header con controles globales */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+        <div className="flex-1">
+          <div className="flex gap-2 mt-2 overflow-x-auto pb-2">
+            {categories.map((cat) => (
+              <button 
+                key={cat} 
+                onClick={() => setActiveCategory(cat as any)} 
+                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-amber-500 text-white' : 'bg-zinc-200/20 dark:bg-zinc-800/30 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'}`}
+              >
+                {cat}
+              </button>
             ))}
-        </div>
-
-        {/* Fonts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredFonts.map(font => (
-                <div 
-                    key={font.id}
-                    onClick={() => onSelectFont(font.id, previewText)}
-                    className="group bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] overflow-hidden cursor-pointer hover:border-yellow-400 dark:hover:border-yellow-400 transition-all hover:-translate-y-2 hover:shadow-2xl relative h-72 flex flex-col backdrop-blur-sm"
-                >
-                    {/* Background Large Number (Restored for aesthetics) */}
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none select-none group-hover:opacity-10 transition-opacity">
-                        <span className="text-9xl font-black text-black dark:text-white font-industrial">{font.id}</span>
-                    </div>
-
-                    <div className="absolute top-4 left-4 z-10">
-                        <span className="text-[9px] font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-3 py-1.5 rounded-lg uppercase tracking-widest">{font.category || 'BASICA'}</span>
-                    </div>
-                    
-                    {/* ID Badge - Using font-industrial and larger size (text-sm) */}
-                    <div className="absolute top-4 right-4 z-10">
-                        <span className="text-sm font-industrial bg-yellow-400 text-black px-3 py-1.5 rounded-lg shadow-sm tracking-wider">#{font.id}</span>
-                    </div>
-
-                    <div className="flex-1 flex items-center justify-center p-8 overflow-hidden relative">
-                        <span className={`${font.cssFamily} text-6xl text-center text-zinc-900 dark:text-white transition-transform duration-500 group-hover:scale-110 break-words w-full leading-tight z-10`}>
-                            {previewText || 'Aa'}
-                        </span>
-                        <span className="text-[10px] text-zinc-500 absolute bottom-16 opacity-0 group-hover:opacity-100 transition-opacity tracking-widest font-black">MUESTRA</span>
-                    </div>
-
-                    <div className="p-5 bg-zinc-50 dark:bg-zinc-950/50 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center group-hover:bg-zinc-100 dark:group-hover:bg-zinc-900 transition-colors relative z-20">
-                        <div className="flex flex-col">
-                            <span className="text-[11px] font-black uppercase text-zinc-900 dark:text-white tracking-wider">{font.name}</span>
-                            <span className="text-[9px] font-bold text-zinc-400 mt-0.5">ID REF: {font.id}</span>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-900 dark:group-hover:bg-white group-hover:text-white dark:group-hover:text-black transition-all">
-                            <Check size={16} className="opacity-0 group-hover:opacity-100 transition-opacity transform scale-75 group-hover:scale-100"/>
-                        </div>
-                    </div>
-                </div>
-            ))}
+          </div>
         </div>
         
-        {filteredFonts.length === 0 && (
-            <div className="py-32 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
-                <p className="text-zinc-400 font-bold uppercase tracking-widest">No hay fuentes en esta categoría</p>
+        {/* Global Font Size Slider */}
+        <div className="flex items-center gap-4 bg-zinc-100 dark:bg-zinc-800 px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+          <span className="text-xs font-bold text-zinc-500 uppercase whitespace-nowrap">Tamaño Global</span>
+          <button 
+            onClick={() => setGlobalFontSize(Math.max(20, globalFontSize - 8))}
+            className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center justify-center hover:bg-amber-50 transition-colors"
+          >
+            <Minus className="w-4 h-4 text-zinc-600" />
+          </button>
+          <input
+            type="range"
+            min="20"
+            max="120"
+            step="4"
+            value={globalFontSize}
+            onChange={(e) => setGlobalFontSize(Number(e.target.value))}
+            className="w-32 accent-amber-500"
+          />
+          <button 
+            onClick={() => setGlobalFontSize(Math.min(120, globalFontSize + 8))}
+            className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center justify-center hover:bg-amber-50 transition-colors"
+          >
+            <Plus className="w-4 h-4 text-zinc-600" />
+          </button>
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 w-12 text-center">{globalFontSize}px</span>
+          {(Object.keys(individualSizes).length > 0 || selectedFontId) && (
+            <button
+              onClick={resetIndividualSizes}
+              className="ml-2 p-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 transition-colors"
+              title="Resetear tamaños individuales"
+            >
+              <RotateCcw className="w-4 h-4 text-zinc-600" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Preview Input */}
+      <div className="mb-8">
+        <div className="relative">
+          <Type className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-400" size={20}/>
+          <input 
+            value={previewText}
+            onChange={(e) => setPreviewText(e.target.value)}
+            placeholder="ESCRIBE AQUÍ PARA PROBAR TUS FUENTES..."
+            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-6 pl-16 rounded-2xl text-2xl font-bold uppercase text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+          />
+        </div>
+      </div>
+
+      {/* Selected Font Controls */}
+      {selectedFontId && (
+        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
+              Ajustando: {fonts.find(f => f.id === selectedFontId)?.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => adjustSelectedFontSize(-8)}
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-amber-200 flex items-center justify-center hover:bg-amber-100 transition-colors"
+            >
+              <Minus className="w-5 h-5 text-amber-600" />
+            </button>
+            <span className="text-sm font-bold text-amber-700 dark:text-amber-400 w-16 text-center">
+              {getFontSize(selectedFontId)}px
+            </span>
+            <button 
+              onClick={() => adjustSelectedFontSize(8)}
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-amber-200 flex items-center justify-center hover:bg-amber-100 transition-colors"
+            >
+              <Plus className="w-5 h-5 text-amber-600" />
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Font Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {filteredFonts.map(font => {
+          const fontSize = getFontSize(font.id);
+          const isSelected = selectedFontId === font.id;
+          
+          return (
+            <div
+              key={font.id}
+              className={`bg-white dark:bg-zinc-900 border-2 rounded-2xl overflow-hidden flex flex-col cursor-pointer group hover:border-amber-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${font.active === false ? 'opacity-40' : ''} ${isSelected ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-zinc-200 dark:border-zinc-700'}`}
+              onClick={() => handleCardClick(font)}
+            >
+              {/* Preview area */}
+              <div className="flex-1 flex items-center justify-center px-4 py-6 min-h-[160px] bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 group-hover:from-yellow-50 group-hover:to-amber-50 dark:group-hover:from-zinc-800 dark:group-hover:to-zinc-900 transition-colors duration-300 overflow-hidden">
+                <span 
+                  className={`${font.cssFamily} text-zinc-900 dark:text-white text-center leading-tight select-none group-hover:scale-105 transition-transform duration-300 break-words max-w-full`}
+                  style={{ 
+                    fontSize: `${fontSize}px`,
+                    lineHeight: '1.1'
+                  }}
+                >
+                  {previewText || 'Aa'}
+                </span>
+              </div>
+
+              {/* Footer */}
+              <div className={`border-t px-5 py-4 flex items-center justify-between gap-2 transition-colors duration-300 ${isSelected ? 'bg-amber-400 border-amber-400' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 group-hover:bg-yellow-400 dark:group-hover:bg-yellow-400'}`}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-lg text-xs font-black tabular-nums shadow-sm transition-colors duration-300 ${isSelected ? 'bg-black text-amber-400' : 'bg-yellow-400 text-black group-hover:bg-black group-hover:text-yellow-400'}`}>#{font.id}</span>
+                    <p className={`font-bold text-xs uppercase tracking-wide truncate transition-colors duration-300 ${isSelected ? 'text-black' : 'text-zinc-900 dark:text-white group-hover:text-black'}`}>{font.name}</p>
+                  </div>
+                  <p className={`text-[10px] uppercase tracking-widest mt-1 font-bold transition-colors duration-300 ${isSelected ? 'text-black/70' : 'text-zinc-400 group-hover:text-black/70'}`}>{font.category || 'BÁSICA'}</p>
+                </div>
+                <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${isSelected ? 'bg-black/20' : 'bg-zinc-100 dark:bg-zinc-800 group-hover:bg-black/20'}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-colors duration-300 ${isSelected ? 'text-black' : 'text-zinc-400 group-hover:text-black'}`}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </div>
+              </div>
             </div>
-        )}
+          );
+        })}
       </div>
     </div>
   );
 };
+
+export default FontShowcase;

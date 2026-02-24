@@ -5,17 +5,17 @@ import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
-// --- IMPORTANTE: CONFIGURACIÓN DE FIREBASE ---
-// 1. Intenta leer desde el almacenamiento local (Configurado desde el Modal de Login)
-// 2. Si no existe, usa la configuración hardcodeada (que debes editar si vas a desplegar en producción)
+// --- CONFIGURACIÓN DE FIREBASE ---
+// Las credenciales están hardcodeadas para producción
+// Opcional: Se puede sobrescribir desde localStorage para desarrollo
 
-const defaultFirebaseConfig = {
-  apiKey: "API_KEY_REAL_AQUI", // <--- EDITA ESTO SI PREFIERES CÓDIGO DIRECTO
-  authDomain: "tu-proyecto.firebaseapp.com",
-  projectId: "tu-proyecto",
-  storageBucket: "tu-proyecto.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456:web:abcdef"
+const productionFirebaseConfig = {
+  apiKey: "AIzaSyDJ8eeftZ2LaQ1XYYt5EmC5grDCxWBU-7o",
+  authDomain: "lasermachine-250bb.firebaseapp.com",
+  projectId: "lasermachine-250bb",
+  storageBucket: "lasermachine-250bb.appspot.com",
+  messagingSenderId: "350837441350",
+  appId: "1:350837441350:web:adfe7aba53efbd2089db47"
 };
 
 const getConfiguration = () => {
@@ -27,7 +27,7 @@ const getConfiguration = () => {
     } catch (e) {
         console.error("Error leyendo config local", e);
     }
-    return defaultFirebaseConfig;
+    return productionFirebaseConfig;
 };
 
 const finalConfig = getConfiguration();
@@ -40,8 +40,10 @@ let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 
 try {
-  // Verificación: Si tiene la llave placeholder y NO hay config local, es inválido.
-  const isConfigValid = finalConfig.apiKey && finalConfig.apiKey !== "API_KEY_REAL_AQUI";
+  // Verificar que la configuración tenga valores válidos
+  const isConfigValid = finalConfig.apiKey && 
+                        finalConfig.apiKey.startsWith("AIza") && 
+                        finalConfig.projectId;
 
   if (isConfigValid) {
       app = initializeApp(finalConfig);
@@ -49,15 +51,18 @@ try {
       db = getFirestore(app);
       storage = getStorage(app);
       googleProvider = new GoogleAuthProvider();
+      console.log("✅ Firebase inicializado correctamente");
   } else {
-      console.warn("⚠️ Firebase no configurado. Se requiere configuración manual o edición de archivo.");
+      console.warn("⚠️ Configuración de Firebase inválida.");
   }
 } catch (e) {
-  console.error("⚠️ Error crítico inicializando Firebase. La app continuará en modo limitado.", e);
-  // Si la configuración local estaba corrupta, limpiarla para permitir reintento
+  console.error("⚠️ Error crítico inicializando Firebase.", e);
+  // Si la configuración local estaba corrupta, limpiarla y usar la de producción
   if(localStorage.getItem('lm_firebase_config_v1')) {
       console.warn("Configuración local corrupta detectada. Limpiando...");
       localStorage.removeItem('lm_firebase_config_v1');
+      // Recargar para intentar con la configuración de producción
+      window.location.reload();
   }
 }
 

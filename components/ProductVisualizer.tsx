@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { removeBackground } from '../utils/imageUtils';
 import { 
   ArrowLeft, Type, Image as ImageIcon, RotateCcw, 
   Check, X, ChevronRight, ChevronLeft, Trash2, Wand2, Loader2,
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Product, FontOption, PricingConfig, OrderItem, DesignState, LogoItem, ColorPreset, FontCategory, BrandingAsset, StoreConfig } from '../types';
 import { VintageRollInput } from './VintageRollInput';
+import { ImageGallery } from './ImageGallery';
 
 interface ProductVisualizerProps {
   product: Product;
@@ -42,7 +44,26 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const [clientItemBrand, setClientItemBrand] = useState(initialState?.clientItemBrand || 'YETI');
   const [clientItemColor, setClientItemColor] = useState(initialState?.clientItemColor || '');
   const [userUploadedImage, setUserUploadedImage] = useState<string | null>(initialState?.customBackgroundImage || null);
-  const [isProcessing, setIsProcessing] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+  // --- AI BACKGROUND REMOVAL ---
+  const handleRemoveBackground = async () => {
+      if (!selectedLogoId) return;
+      setIsRemovingBackground(true);
+      try {
+          const logo = (view === 'FRONT' ? frontLogos : backLogos).find(l => l.id === selectedLogoId);
+          if (!logo) return;
+          const newUrl = await removeBackground(logo.url);
+          const list = view === 'FRONT' ? frontLogos : backLogos;
+          const setList = view === 'FRONT' ? setFrontLogos : setBackLogos;
+          setList(list.map(l => l.id === selectedLogoId ? { ...l, url: newUrl } : l));
+      } catch (error) {
+          console.error("Background removal failed:", error);
+          alert("No se pudo remover el fondo. Asegúrate de tener conexión a internet.");
+      } finally {
+          setIsRemovingBackground(false);
+      }
+  };
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [showCameraHint, setShowCameraHint] = useState(false);
   
@@ -428,7 +449,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                               <RefreshCw size={20} className="text-black"/>
                               <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-6 bg-yellow-400"></div>
                           </div>
-                          <div className="absolute -bottom-6 -right-6 w-10 h-10 bg-white border-4 border-yellow-400 rounded-full shadow-lg cursor-nwse-resize pointer-events-auto hover:scale-110 active:scale-95 transition-transform flex items-center justify-center z-20 hover:border-yellow-300" style={{ transform: `scale(${handleScale})` }} onPointerDown={(e) => startInteraction(e, 'SCALE', id)}>
+                          <div className="absolute -bottom-6 -right-6 w-10 h-10 bg-white dark:bg-zinc-900 border-4 border-yellow-400 rounded-full shadow-lg cursor-nwse-resize pointer-events-auto hover:scale-110 active:scale-95 transition-transform flex items-center justify-center z-20 hover:border-yellow-300" style={{ transform: `scale(${handleScale})` }} onPointerDown={(e) => startInteraction(e, 'SCALE', id)}>
                               <Maximize size={16} className="text-yellow-600"/>
                           </div>
                       </div>
@@ -459,7 +480,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
         <header className="h-20 md:h-24 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 md:px-8 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl z-30 shrink-0 relative">
             <button onClick={onBack} className="p-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors active:scale-95"><ArrowLeft size={24}/></button>
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                 <h2 className={`text-xl md:text-2xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white ${storeConfig.logoFont || 'nike-title'}`} style={{ fontFamily: storeConfig.logoFont ? undefined : 'Montserrat, sans-serif' }}>
+                 <h2 className={`text-xl md:text-2xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white ${storeConfig.logoFont || 'nike-title'}`} style={{ fontFamily: storeConfig.logoFont ? undefined : 'Plus Jakarta Sans, sans-serif' }}>
                      {storeConfig.businessName}
                  </h2>
             </div>
@@ -515,7 +536,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                         <div className={`z-[100] bg-white dark:bg-zinc-900 shadow-2xl fixed bottom-0 left-0 right-0 w-full max-h-[40vh] md:max-h-[60vh] rounded-t-[2rem] md:absolute md:right-32 md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:w-96 md:h-auto md:rounded-[2rem] md:left-auto flex flex-col animate-in slide-in-from-bottom-10 duration-300 border border-zinc-200 dark:border-zinc-800 overflow-hidden`}>
                             <div className="md:hidden w-12 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mt-3 mb-1 shrink-0" />
                             <div className="flex justify-between items-center px-6 py-2 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-                                <h3 className="font-serif font-black uppercase text-zinc-900 dark:text-white tracking-widest text-[10px] flex items-center gap-2">
+                                <h3 className="font-sans font-black uppercase text-zinc-900 dark:text-white tracking-widest text-[10px] flex items-center gap-2">
                                     {(activeTool === 'TEXT1' || activeTool === 'TEXT2') && <><TextCursor size={14}/> Editar Texto</>}
                                     {activeTool === 'IMAGES' && <><ImageIcon size={14}/> Galería</>}
                                     {activeTool === 'MAGIC' && <><Wand2 size={14}/> Edición Imagen</>}
@@ -545,20 +566,24 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                 )}
                                 {activeTool === 'IMAGES' && (
                                     <div className="space-y-3">
-                                        <button onClick={() => fileInputRef.current?.click()} className="w-full py-4 border-2 border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl text-[10px] font-bold uppercase text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 transition-all flex items-center justify-center gap-2"><Upload size={16}/> Subir Imagen</button>
-                                        <div>
-                                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block mb-2">Galería Rápida</span>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {galleryAssets.map(asset => (
-                                                    <button key={asset.id} onClick={() => addLogoToCanvas(asset.url)} className="aspect-square bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-1.5 border border-transparent hover:border-zinc-900 dark:hover:border-white transition-all group relative shadow-sm"><img src={asset.url} className="w-full h-full object-contain pointer-events-none group-hover:scale-110 transition-transform" /></button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        <ImageGallery 
+                                            galleryAssets={galleryAssets}
+                                            onSelectImage={(url) => addLogoToCanvas(url)}
+                                            onUploadImage={(file) => {
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => {
+                                                    const result = ev.target?.result as string;
+                                                    addLogoToCanvas(result);
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }}
+                                            isDarkMode={isDarkMode}
+                                        />
                                     </div>
                                 )}
                                 {activeTool === 'MAGIC' && selectedLogoId && (
                                     <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm relative">
-                                        {isProcessing && <div className="absolute inset-0 bg-white/80 dark:bg-zinc-900/80 z-20 flex items-center justify-center rounded-xl"><Loader2 className="animate-spin text-zinc-900 dark:text-white" size={24}/></div>}
+                                        {(isProcessing || isRemovingBackground) && <div className="absolute inset-0 bg-white/80 dark:bg-zinc-900/80 z-20 flex items-center justify-center rounded-xl"><Loader2 className="animate-spin text-zinc-900 dark:text-white" size={24}/></div>}
                                         <span className="text-[9px] font-black uppercase text-zinc-900 dark:text-white tracking-widest block mb-2">Filtros</span>
                                         <div className="grid grid-cols-2 gap-2 mb-3">
                                             <button onClick={() => processImage(selectedLogoId, 'REMOVE_WHITE')} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 bg-white dark:bg-zinc-900 shadow-sm transition-all group"><Scissors size={16} className="text-zinc-600 dark:text-zinc-400"/><span className="text-[7px] font-bold uppercase text-center leading-tight text-zinc-500">Quitar Blanco</span></button>
@@ -566,7 +591,10 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                             <button onClick={() => processImage(selectedLogoId, 'REMOVE_BLACK')} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 bg-zinc-100 dark:bg-zinc-800 shadow-sm transition-all group"><Scissors size={16} className="text-zinc-600 dark:text-zinc-300"/><span className="text-[7px] font-bold uppercase text-center leading-tight text-zinc-500">Quitar Negro</span></button>
                                             <button onClick={() => resetImage(selectedLogoId)} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-yellow-200 dark:border-yellow-900 hover:border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 shadow-sm transition-all group"><RotateCcw size={16} className="text-yellow-600 dark:text-yellow-500"/><span className="text-[7px] font-bold uppercase text-center leading-tight text-yellow-600 dark:text-yellow-500">Restaurar Original</span></button>
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-col gap-2">
+                                            <button onClick={handleRemoveBackground} disabled={isRemovingBackground} className="w-full py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 border border-purple-200 dark:border-purple-900/50 flex items-center justify-center gap-2 text-[9px] font-bold uppercase transition-all">
+                                                {isRemovingBackground ? <Loader2 size={12} className="animate-spin"/> : <Wand2 size={12}/>} Remover Fondo IA
+                                            </button>
                                             <button onClick={() => deleteLogo(selectedLogoId)} className="w-full py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-900/50 flex items-center justify-center gap-2 text-[9px] font-bold uppercase"><Trash2 size={12}/> Eliminar Imagen</button>
                                         </div>
                                     </div>
@@ -720,7 +748,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                 <div className="bg-white dark:bg-zinc-950 z-10 w-full md:w-[800px] md:h-[600px] md:mx-auto md:rounded-3xl rounded-t-[2.5rem] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300 overflow-hidden max-h-[85vh]">
                     <div className="md:hidden w-16 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mt-4 mb-2 shrink-0" />
                     <div className="h-20 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-6 md:px-8 shrink-0">
-                        <h2 className="text-3xl font-google font-bold uppercase text-zinc-900 dark:text-white tracking-wide">Tipografía</h2>
+                        <h2 className="text-3xl font-sans font-bold uppercase text-zinc-900 dark:text-white tracking-wide">Tipografía</h2>
                         <button onClick={() => setIsFontModalOpen(false)} className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-full hover:bg-zinc-200 transition-colors"><X size={24}/></button>
                     </div>
                     <div className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 p-4 overflow-x-auto no-scrollbar shrink-0 flex gap-3">

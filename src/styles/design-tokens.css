@@ -156,6 +156,12 @@
   --text-8xl: 80px;
   --text-9xl: 96px;
 
+  /* Font Families */
+  --font-family-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  --font-family-mono: 'JetBrains Mono', monospace;
+  --font-family-display: 'Plus Jakarta Sans', sans-serif;
+  --font-family-brand: 'Plus Jakarta Sans', sans-serif;
+
   /* Line Heights */
   --leading-tight: 1.1;
   --leading-snug: 1.2;
@@ -260,6 +266,33 @@
   --component-lg: 48px;
   --component-xl: 56px;
   --component-2xl: 64px;
+  
+  /* ===== GLASS MORPHISM TOKENS ===== */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-hover: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-backdrop: blur(20px) saturate(180%);
+  
+  /* ===== STATUS/STATE COLORS ===== */
+  --status-success-bg: var(--color-success-100);
+  --status-success-text: var(--color-success-700);
+  --status-success-border: var(--color-success-200);
+  
+  --status-warning-bg: var(--color-warning-100);
+  --status-warning-text: var(--color-warning-700);
+  --status-warning-border: var(--color-warning-200);
+  
+  --status-error-bg: var(--color-error-100);
+  --status-error-text: var(--color-error-700);
+  --status-error-border: var(--color-error-200);
+  
+  --status-info-bg: var(--color-info-100);
+  --status-info-text: var(--color-info-700);
+  --status-info-border: var(--color-info-200);
+  
+  --status-neutral-bg: var(--color-neutral-100);
+  --status-neutral-text: var(--color-neutral-600);
+  --status-neutral-border: var(--color-neutral-200);
 }
 
 /* ========================================
@@ -336,6 +369,33 @@
   --shadow-accent-sm: 0 1px 3px var(--shadow-accent), 0 1px 2px var(--shadow-soft);
   --shadow-accent-md: 0 4px 6px var(--shadow-accent), 0 2px 4px var(--shadow-soft);
   --shadow-accent-lg: 0 10px 15px var(--shadow-accent), 0 4px 6px var(--shadow-soft);
+  
+  /* ===== GLASS MORPHISM TOKENS (DARK) ===== */
+  --glass-bg: rgba(11, 18, 32, 0.7);
+  --glass-bg-hover: rgba(17, 24, 39, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-backdrop: blur(20px) saturate(180%);
+  
+  /* ===== STATUS/STATE COLORS (DARK) ===== */
+  --status-success-bg: rgba(6, 78, 59, 0.3);
+  --status-success-text: var(--color-success-400);
+  --status-success-border: rgba(6, 78, 59, 0.5);
+  
+  --status-warning-bg: rgba(120, 53, 15, 0.3);
+  --status-warning-text: var(--color-warning-400);
+  --status-warning-border: rgba(120, 53, 15, 0.5);
+  
+  --status-error-bg: rgba(127, 29, 29, 0.3);
+  --status-error-text: var(--color-error-400);
+  --status-error-border: rgba(127, 29, 29, 0.5);
+  
+  --status-info-bg: rgba(30, 58, 138, 0.3);
+  --status-info-text: var(--color-info-400);
+  --status-info-border: rgba(30, 58, 138, 0.5);
+  
+  --status-neutral-bg: rgba(31, 41, 55, 0.5);
+  --status-neutral-text: var(--color-neutral-400);
+  --status-neutral-border: rgba(75, 85, 99, 0.5);
 }
 
 /* ========================================
@@ -452,6 +512,78 @@
 .transition-system-normal { transition: var(--transition-normal); }
 .transition-system-slow { transition: var(--transition-slow); }
 .transition-system-slowest { transition: var(--transition-slowest); }
+
+/* ===== GLASS MORPHISM UTILITIES ===== */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+}
+
+.glass-hover:hover {
+  background: var(--glass-bg-hover);
+}
+
+/* ===== STATUS BADGE UTILITIES ===== */
+.badge-success {
+  background-color: var(--status-success-bg);
+  color: var(--status-success-text);
+  border: 1px solid var(--status-success-border);
+}
+
+.badge-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
+  border: 1px solid var(--status-warning-border);
+}
+
+.badge-error {
+  background-color: var(--status-error-bg);
+  color: var(--status-error-text);
+  border: 1px solid var(--status-error-border);
+}
+
+.badge-info {
+  background-color: var(--status-info-bg);
+  color: var(--status-info-text);
+  border: 1px solid var(--status-info-border);
+}
+
+.badge-neutral {
+  background-color: var(--status-neutral-bg);
+  color: var(--status-neutral-text);
+  border: 1px solid var(--status-neutral-border);
+}
+
+/* ===== SHADOW SYSTEM UTILITIES (for Tailwind compat) ===== */
+.shadow-system-sm { box-shadow: var(--shadow-sm); }
+.shadow-system-md { box-shadow: var(--shadow-md); }
+.shadow-system-lg { box-shadow: var(--shadow-lg); }
+.shadow-system-xl { box-shadow: var(--shadow-xl); }
+.shadow-system-2xl { box-shadow: var(--shadow-2xl); }
+.shadow-system-inner { box-shadow: var(--shadow-inner); }
+
+/* ===== SYSTEM BACKGROUND UTILITIES (semantic) ===== */
+.bg-system-primary { background-color: var(--bg-primary); }
+.bg-system-secondary { background-color: var(--bg-secondary); }
+.bg-system-tertiary { background-color: var(--bg-tertiary); }
+.bg-system-accent { background-color: var(--bg-accent); }
+.bg-system-inverse { background-color: var(--bg-inverse); }
+
+/* ===== SYSTEM TEXT UTILITIES (semantic) ===== */
+.text-system-primary { color: var(--text-primary); }
+.text-system-secondary { color: var(--text-secondary); }
+.text-system-tertiary { color: var(--text-tertiary); }
+.text-system-muted { color: var(--text-muted); }
+.text-system-accent { color: var(--text-accent); }
+.text-system-inverse { color: var(--text-inverse); }
+
+/* ===== SYSTEM BORDER UTILITIES (semantic) ===== */
+.border-system-primary { border-color: var(--border-primary); }
+.border-system-secondary { border-color: var(--border-secondary); }
+.border-system-tertiary { border-color: var(--border-tertiary); }
+.border-system-accent { border-color: var(--border-accent); }
 
 /* ===== ANIMATION UTILITIES ===== */
 .animate-system-fade-in { animation: var(--animation-fade-in); }
