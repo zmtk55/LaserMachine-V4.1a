@@ -3366,9 +3366,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
       <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { 
         if (editingFont) {
-          // Actualizar la fuente - mantener la misma fuente pero con nuevo ID
-          const updatedFont = { ...font, id: font.id };
-          onUpdateFont(editingFont.id, updatedFont);
+          // Actualizar la fuente con los nuevos datos (incluyendo el nuevo ID)
+          onUpdateFont(editingFont.id, font);
         } else {
           onAddFont(font);
         }
