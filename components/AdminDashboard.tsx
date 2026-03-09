@@ -652,7 +652,9 @@ const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
             alert('Ingresa un nombre para la fuente');
             return;
         }
-        if (!fontFile && !font?.fileData) {
+        // Si es edición (ya tiene archivo en data) o si/subió nuevo archivo, puede guardar
+        const hasFile = fontFile || data.fileData;
+        if (!hasFile) {
             alert('Sube un archivo de fuente (.ttf o .otf)');
             return;
         }
@@ -660,7 +662,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
             ...data,
             cssFamily: `font-custom-${data.id}`,
             isCustom: true,
-            fileData: fontFile || font?.fileData,
+            fileData: fontFile || data.fileData,
             active: true
         };
         onSave(fontData);
