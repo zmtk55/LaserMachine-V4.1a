@@ -150,9 +150,10 @@ export interface FontOption {
   name: string;
   cssFamily: string;
   category?: FontCategory;
+  categories?: FontCategory[];
   isCustom?: boolean;
-  fileData?: string; // Base64 de .ttf/.otf
-  active?: boolean; // Nuevo: Control de visibilidad
+  fileData?: string;
+  active?: boolean;
 }
 
 export interface DesignState {

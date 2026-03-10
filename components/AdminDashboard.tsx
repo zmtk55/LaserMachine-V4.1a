@@ -613,6 +613,8 @@ const ProductFormModal = ({isOpen, onClose, product, onSave, presetColors, categ
           );
 };
 
+const ALL_CATEGORIES = ['BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'];
+
 const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { isOpen: boolean; onClose: () => void; font?: FontOption; onSave: (font: FontOption) => void; existingFonts?: FontOption[] }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [data, setData] = useState<FontOption>(font || { id: 0, name: '', cssFamily: '', category: 'BASICAS' });
@@ -620,42 +622,31 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [fontIdError, setFontIdError] = useState('');
-    const [previewText, setPreviewText] = useState('Lasercase México 123');
+    const [previewText, setPreviewText] = useState('Laser Machine México 2026');
+    const [selectedCategories, setSelectedCategories] = useState<string[]>(font?.category ? [font.category] : ['BASICAS']);
     
-    // Generar ID corto (número básico 1-1000)
-    const generateShortId = () => {
-        return Math.floor(1 + Math.random() * 999); // 1-999
-    };
+    const generateShortId = () => Math.floor(1 + Math.random() * 999);
     
-    // Validar que el ID no exista (permite el ID original al editar)
     const validateFontId = (id: number, currentFontId?: number): boolean => {
-        // Si el ID es 0 o inválido, es error
         if (!id || id < 1 || id > 999) {
             setFontIdError('El ID debe estar entre 1 y 999');
             return false;
         }
-        
-        // Si es el mismo ID que el actual (sea original o nuevo), siempre es válido
         if (currentFontId && id === currentFontId) {
             setFontIdError('');
             return true;
         }
-        
-        // Verificar si ya existe en otras fuentes (excluyendo la fuente actual)
         const exists = existingFonts.some(f => f.id === id && f.id !== currentFontId);
         if (exists) {
             setFontIdError('Este número de fuente ya está en uso');
             return false;
         }
-        
         setFontIdError('');
         return true;
     };
     
-    // Reiniciar datos cuando se abre el modal para nueva fuente
     useEffect(() => { 
         if (isOpen && !font) {
-            // Generar un ID único que no exista
             let newId = generateShortId();
             let attempts = 0;
             while (existingFonts.some(f => f.id === newId) && attempts < 10) {
@@ -665,40 +656,34 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
             setData({ id: newId, name: '', cssFamily: '', category: 'BASICAS' });
             setFontFile(null);
             setFontIdError('');
+            setSelectedCategories(['BASICAS']);
+            setPreviewText('Laser Machine México 2026');
         } else if (font) {
             setData(font);
             setFontFile(font.fileData || null);
             setFontIdError('');
+            setSelectedCategories(font.category ? [font.category] : ['BASICAS']);
+            setPreviewText('Laser Machine México 2026');
         }
     }, [isOpen, font, existingFonts]);
     
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
         const validExtensions = ['.ttf', '.otf'];
         const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-        
         if (!validExtensions.includes(ext)) {
             alert('Solo se aceptan archivos .ttf y .otf');
             return;
         }
-        
-        // Simular progreso de carga
         setIsUploading(true);
         setUploadProgress(0);
-        
-        // Simular progreso
         const progressInterval = setInterval(() => {
             setUploadProgress(prev => {
-                if (prev >= 90) {
-                    clearInterval(progressInterval);
-                    return prev;
-                }
+                if (prev >= 90) { clearInterval(progressInterval); return prev; }
                 return prev + 20;
             });
         }, 100);
-        
         const reader = new FileReader();
         reader.onload = (ev) => {
             const result = ev.target?.result as string;
@@ -706,57 +691,46 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
             setUploadProgress(100);
             setIsUploading(false);
             clearInterval(progressInterval);
-            
-            // Auto-generar nombre si no existe
             if (!data.name) {
                 const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').toUpperCase();
                 setData({ ...data, name: cleanName });
             }
         };
-        reader.onerror = () => {
-            setIsUploading(false);
-            clearInterval(progressInterval);
-            alert('Error al leer el archivo');
-        };
+        reader.onerror = () => { setIsUploading(false); clearInterval(progressInterval); alert('Error al leer el archivo'); };
         reader.readAsDataURL(file);
     };
     
     const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newId = parseInt(e.target.value) || 0;
         setData({ ...data, id: newId });
-        console.log('handleIdChange:', newId, 'font?.id:', font?.id);
         validateFontId(newId, font?.id);
     };
     
+    const toggleCategory = (cat: string) => {
+        setSelectedCategories(prev => {
+            if (prev.includes(cat)) {
+                return prev.length > 1 ? prev.filter(c => c !== cat) : prev;
+            }
+            return [...prev, cat];
+        });
+    };
+    
     const handleSave = () => {
-        console.log('handleSave - fontIdError:', fontIdError, 'data:', data);
-        if (fontIdError) {
-            alert('Corrige el número de fuente antes de guardar');
-            return;
-        }
-        if (!data.name.trim()) {
-            alert('Ingresa un nombre para la fuente');
-            return;
-        }
-        // Permitir guardar si:
-        // 1. Es edición de fuente existente (ya tiene fileData)
-        // 2. Subió nuevo archivo
-        // 3. La fuente existente no tenía fileData (fuentes del sistema)
+        if (fontIdError) { alert('Corrige el número de fuente antes de guardar'); return; }
+        if (!data.name.trim()) { alert('Ingresa un nombre para la fuente'); return; }
+        
         const existingFileData = font?.fileData;
         const newFileData = fontFile;
         const hasFile = existingFileData || newFileData;
         
-        // Si es nueva fuente sin archivo, no permitir
-        if (!font && !hasFile) {
-            alert('Sube un archivo de fuente (.ttf o .otf)');
-            return;
-        }
+        if (!font && !hasFile) { alert('Sube un archivo de fuente (.ttf o .otf)'); return; }
         
-        // Para fuentes del sistema (sin fileData), mantener su cssFamily original
         const cssFamily = hasFile ? `font-custom-${data.id}` : (data.cssFamily || `font-system-${data.id}`);
         
         const fontData = {
             ...data,
+            category: selectedCategories[0] as any,
+            categories: selectedCategories,
             cssFamily: cssFamily,
             isCustom: !!hasFile,
             fileData: newFileData || existingFileData || null,
@@ -767,131 +741,93 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
     };
     
     if (!isOpen) return null;
+    
     return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 p-4">
-            <div className="bg-zinc-900 w-full max-w-md rounded-xl p-6 border border-zinc-800 relative shadow-2xl max-h-[90vh] overflow-y-auto">
-                <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><X size={20}/></button>
-                <h3 className="text-white font-bold mb-4">{font ? 'Editar Fuente' : 'Nueva Fuente'}</h3>
-                <div className="space-y-4">
-                    {/* Selector de archivo con progreso */}
-                    <div 
-                        className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${isUploading ? 'border-amber-500 bg-amber-500/10' : fontFile ? 'border-green-500 bg-green-500/10' : 'border-zinc-700 hover:border-amber-400'}`}
-                        onClick={() => !isUploading && fileInputRef.current?.click()}
-                    >
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            className="hidden" 
-                            accept=".ttf,.otf"
-                            onChange={handleFileUpload}
-                        />
-                        {isUploading ? (
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-32 h-2 bg-zinc-700 rounded-full overflow-hidden">
-                                    <div 
-                                        className="h-full bg-amber-500 transition-all duration-300"
-                                        style={{ width: `${uploadProgress}%` }}
-                                    />
-                                </div>
-                                <span className="text-amber-500 text-sm font-medium">Cargando... {uploadProgress}%</span>
-                            </div>
-                        ) : fontFile ? (
-                            <div className="flex items-center gap-2 text-green-400">
-                                <CheckCircle size={20} />
-                                <span className="text-sm font-medium">Archivo cargado correctamente</span>
-                            </div>
-                        ) : (
-                            <div className="text-zinc-400">
-                                <UploadCloud size={24} className="mx-auto mb-1" />
-                                <span className="text-xs">Click para subir .ttf o .otf</span>
-                            </div>
-                        )}
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 w-full max-w-lg rounded-2xl border border-zinc-700/50 shadow-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 px-6 py-4 border-b border-zinc-700/50">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-white">{font ? 'Editar Fuente' : 'Nueva Fuente'}</h3>
+                        <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors"><X size={22}/></button>
                     </div>
-                    
-                    <input 
-                        className="w-full bg-black border border-zinc-700 p-3 rounded text-white" 
-                        value={data.name} 
-                        onChange={e => setData({...data, name: e.target.value})} 
-                        placeholder="Nombre de la Fuente"
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <input 
-                                type="number"
-                                className={`w-full bg-black border p-3 rounded text-white ${fontIdError ? 'border-red-500' : 'border-zinc-700'}`} 
-                                value={data.id} 
-                                onChange={handleIdChange} 
-                                placeholder="ID de Fuente"
-                                min={1}
-                                max={999}
-                            />
-                            {fontIdError && (
-                                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                                    <AlertCircle size={12} />
-                                    {fontIdError}
-                                </p>
-                            )}
-                            <p className="text-zinc-500 text-[10px] mt-1">Número único (1-999)</p>
-                        </div>
-                        <select 
-                            className="w-full bg-black border border-zinc-700 p-3 rounded text-white" 
-                            value={data.category} 
-                            onChange={e => setData({...data, category: e.target.value as any})}
+                </div>
+                
+                <div className="p-6 space-y-5">
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Archivo de Fuente</label>
+                        <div 
+                            className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${isUploading ? 'border-amber-500 bg-amber-500/10' : fontFile ? 'border-green-500 bg-green-500/10' : 'border-zinc-600 hover:border-amber-500 hover:bg-zinc-800/50'}`}
+                            onClick={() => !isUploading && fileInputRef.current?.click()}
                         >
-                            {['BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'].map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                            <input type="file" ref={fileInputRef} className="hidden" accept=".ttf,.otf" onChange={handleFileUpload}/>
+                            {isUploading ? (
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="w-40 h-2 bg-zinc-700 rounded-full overflow-hidden"><div className="h-full bg-amber-500 transition-all" style={{width: `${uploadProgress}%`}}/></div>
+                                    <span className="text-amber-400 text-sm font-medium">Cargando... {uploadProgress}%</span>
+                                </div>
+                            ) : fontFile ? (
+                                <div className="flex items-center gap-3 text-green-400"><CheckCircle size={22}/><span className="font-medium">Archivo cargado</span></div>
+                            ) : (
+                                <div className="text-zinc-400"><UploadCloud size={28} className="mx-auto mb-2"/><span className="text-sm">Click para subir .ttf o .otf</span></div>
+                            )}
+                        </div>
                     </div>
                     
-                    {/* Preview Mejorado */}
-                    {fontFile && data.name && (
-                        <div className="bg-zinc-800 rounded-xl p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs text-zinc-500 uppercase">Vista Previa</p>
-                                <span className="text-[10px] text-zinc-600">ID: #{data.id}</span>
-                            </div>
-                            
-                            {/* Input para texto de prueba */}
-                            <input
-                                type="text"
-                                value={previewText}
-                                onChange={(e) => setPreviewText(e.target.value)}
-                                placeholder="Escribe para previsualizar..."
-                                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-400 focus:border-amber-500 outline-none"
-                            />
-                            
-                            {/* Miniatura de la fuente */}
-                            <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-lg p-4 border border-zinc-700/50">
-                                <style>{`
-                                    @font-face {
-                                        font-family: 'font-preview-${data.id}';
-                                        src: url('${fontFile}');
-                                    }
-                                `}</style>
-                                <p className="text-2xl text-white truncate" style={{ fontFamily: `font-preview-${data.id}` }}>
-                                    {previewText || 'AaBbCc 123'}
-                                </p>
-                            </div>
-                            
-                            {/* Muestra de caracteres */}
-                            <div className="grid grid-cols-4 gap-2 text-center">
-                                {['A', 'B', 'C', 'a', 'b', 'c', '1', '2'].map((char, i) => (
-                                    <div key={i} className="bg-zinc-900 rounded p-2">
-                                        <span className="text-lg text-white" style={{ fontFamily: `font-preview-${data.id}` }}>
-                                            {char}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">ID de Fuente</label>
+                            <input type="number" value={data.id} onChange={handleIdChange} min={1} max={999}
+                                className={`w-full bg-zinc-950 border ${fontIdError ? 'border-red-500' : 'border-zinc-600'} rounded-xl px-4 py-3 text-white font-mono text-lg focus:border-amber-500 focus:outline-none transition-colors`}/>
+                            {fontIdError && <p className="text-red-400 text-xs flex items-center gap-1"><AlertCircle size={12}/>{fontIdError}</p>}
                         </div>
-                    )}
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nombre</label>
+                            <input type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} placeholder="Nombre de la fuente"
+                                className="w-full bg-zinc-950 border border-zinc-600 rounded-xl px-4 py-3 text-white focus:border-amber-500 focus:outline-none transition-colors"/>
+                        </div>
+                    </div>
                     
-                    <button 
-                        onClick={handleSave}
-                        disabled={!!fontIdError || isUploading}
-                        className={`w-full btn-system btn-system-primary flex items-center justify-center gap-2 ${fontIdError || isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        <Save size={18} />
-                        Guardar Fuente
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Categorías (selecciona varias)</label>
+                        <div className="grid grid-cols-5 gap-2">
+                            {ALL_CATEGORIES.map(cat => (
+                                <button key={cat} onClick={() => toggleCategory(cat)}
+                                    className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Texto de Preview</label>
+                        <input type="text" value={previewText} onChange={e => setPreviewText(e.target.value)} placeholder="Escribe tu texto..."
+                            className="w-full bg-zinc-950 border border-zinc-600 rounded-xl px-4 py-3 text-white focus:border-amber-500 focus:outline-none transition-colors"/>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl p-5 border border-zinc-700/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Vista Previa</span>
+                            <span className="text-xs text-zinc-500">#{data.id} · {data.name || 'Sin nombre'}</span>
+                        </div>
+                        <div className="bg-zinc-950/50 rounded-lg p-6 border border-zinc-800">
+                            {fontFile ? (
+                                <p className="text-3xl md:text-4xl text-white text-center break-words" style={{ fontFamily: `font-preview-${data.id}` }}>{previewText || 'Tu texto aquí'}</p>
+                            ) : (
+                                <p className="text-3xl md:text-4xl text-white text-center break-words">{previewText || 'Tu texto aquí'}</p>
+                            )}
+                            {fontFile && <style>{`@font-face { font-family: 'font-preview-${data.id}'; src: url('${fontFile}'); }`}</style>}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {selectedCategories.map(cat => (
+                                <span key={cat} className="px-2 py-1 bg-zinc-800 rounded-lg text-[10px] text-zinc-400">{cat}</span>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <button onClick={handleSave} disabled={!!fontIdError || isUploading}
+                        className={`w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 ${fontIdError || isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <Save size={20}/> {font ? 'Actualizar Fuente' : 'Crear Fuente'}
                     </button>
                 </div>
             </div>
