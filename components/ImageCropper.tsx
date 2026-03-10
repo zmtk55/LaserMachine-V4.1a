@@ -132,7 +132,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
           objectFit="contain"
           style={{
               containerStyle: { background: '#09090b' },
-              cropAreaStyle: { border: '2px solid #facc15', boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.8)' },
+              cropAreaStyle: { border: '2px solid #f59e0b', boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.8)' },
           }}
         />
       </div>
@@ -169,7 +169,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
                   <Wand2 size={16}/> {isProcessing ? 'Procesando...' : 'Quitar Fondo'}
               </button>
 
-              <button onClick={handleSave} className="px-10 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-xs transition-colors flex items-center gap-2 shadow-lg shadow-yellow-400/20">
+              <button onClick={handleSave} className="px-10 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-xs transition-colors flex items-center gap-2 shadow-lg dark:shadow-none">
                   <Check size={16}/> Guardar
               </button>
           </div>

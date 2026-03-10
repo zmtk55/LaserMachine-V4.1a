@@ -4,6 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BackgroundProvider } from './contexts/BackgroundContext';
 import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
 import { CartProvider, useCartPanel } from './contexts/CartContext';
+import { OrderHistoryProvider } from './contexts/OrderHistoryContext';
+import { ContextMenuProvider } from './contexts/ContextMenuContext';
+import ContextMenu from './components/ContextMenu';
 import { NavBar } from './components/NavBar';
 import { AdminDashboard } from './components/AdminDashboard';
 import CommandAssistant from './components/CommandAssistant';
@@ -64,7 +67,7 @@ const DEFAULT_GALLERY_ASSETS = [
 const DEFAULT_STORE: StoreConfig = {
   businessName: 'LASERMACHINE',
   logoUrl: '',
-  accentColor: '#facc15',
+  accentColor: '#f59e0b',
   themeDarkModeBg: '#000000',
   bgPattern: 'dots',
   nextOrderId: 1000,
@@ -244,6 +247,7 @@ const App = () => {
 
   // New state for font flow
   const [preSelectedFontId, setPreSelectedFontId] = useState<number | null>(null);
+  const [preSelectedText, setPreSelectedText] = useState<string>('');
 
   // Persistence Effect
   useEffect(() => {
@@ -334,14 +338,14 @@ const App = () => {
       const { url, data } = customEvent.detail || {};
       
       if (url === '#inventory') {
-        setView('ADMIN');
+        setView('ADMIN_DASHBOARD');
         // Small delay to ensure view is set first
         setTimeout(() => {
           // Trigger inventory tab via custom event
           window.dispatchEvent(new CustomEvent('navigateToTab', { detail: 'INVENTORY' }));
         }, 100);
       } else if (url === '#orders') {
-        setView('ADMIN');
+        setView('ADMIN_DASHBOARD');
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('navigateToTab', { detail: 'ORDERS' }));
         }, 100);
@@ -464,6 +468,29 @@ const App = () => {
   };
 
   const processOrderCreation = () => {
+    // Validate stock availability before creating order
+    const stockErrors: string[] = [];
+    cart.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) {
+        stockErrors.push(`Producto no encontrado: ${item.productId}`);
+        return;
+      }
+      const color = product.colors.find(c => c.name === item.colorName);
+      if (!color) {
+        stockErrors.push(`Color no encontrado: ${item.colorName} para ${product.name}`);
+        return;
+      }
+      if (color.stock < item.quantity) {
+        stockErrors.push(`Stock insuficiente para ${product.name} (${color.name}): disponible ${color.stock}, requerido ${item.quantity}`);
+      }
+    });
+    
+    if (stockErrors.length > 0) {
+      alert(`Error de inventario:\n${stockErrors.join('\n')}`);
+      return;
+    }
+
     const subtotal = cart.reduce((a, b) => a + b.totalPrice, 0);
     const pointsDiscount = (usePoints && user?.laserPoints) ? user.laserPoints : 0;
     
@@ -502,6 +529,7 @@ const App = () => {
       items: [...cart],
       total: finalTotal,
       pointsRedeemed: pointsDiscount,
+      pointsEarned: selectedPaymentMethod === PaymentMethod.MERCADOPAGO ? pointsEarned : 0, // Solo se ganarán si ya pagó (MercadoPago)
       couponUsed: appliedCoupon?.code,
       discountAmount: couponDiscountAmount,
       status: OrderStatus.RECEIVED,
@@ -515,14 +543,36 @@ const App = () => {
     
     setStoreConfig({ ...storeConfig, nextOrderId: currentId + 1 });
 
-    // Update User Points (Subtract used, Add earned, Add History)
+    // Update Inventory - Deduct stock for each item
+    const updatedProducts = products.map(product => {
+      const orderItemsForProduct = cart.filter(item => item.productId === product.id);
+      if (orderItemsForProduct.length === 0) return product;
+      
+      return {
+        ...product,
+        colors: product.colors.map(color => {
+          const itemWithColor = orderItemsForProduct.find(item => item.colorName === color.name);
+          if (itemWithColor) {
+            return {
+              ...color,
+              stock: Math.max(0, color.stock - itemWithColor.quantity)
+            };
+          }
+          return color;
+        })
+      };
+    });
+    setProducts(updatedProducts);
+
+    // Update User Points - Only redeem (debit) points used, DO NOT credit earned points yet
     if (user) {
+        // Los puntos ganados se acreditan solo cuando se paga (ver AdminDashboard)
+        // Solo debitamos los puntos canjeados/usados como descuento
         const remainingPoints = usePoints ? 0 : user.laserPoints || 0;
-        const newBalance = remainingPoints + pointsEarned;
         
         let newHistory = user.pointsHistory || [];
         
-        // Record Redemption
+        // Record Redemption (debit points used for discount)
         if (usePoints && user.laserPoints && user.laserPoints > 0) {
             newHistory = [...newHistory, {
                 id: Date.now().toString() + '-redeem',
@@ -534,19 +584,7 @@ const App = () => {
             }];
         }
 
-        // Record Earnings
-        if (pointsEarned > 0) {
-            newHistory = [...newHistory, {
-                id: Date.now().toString() + '-earn',
-                type: 'EARNED',
-                amount: pointsEarned,
-                date: new Date().toISOString(),
-                orderId: newOrderId,
-                description: `Premio ${pointsPercentage}% compra`
-            }];
-        }
-
-        setUser({ ...user, laserPoints: newBalance, pointsHistory: newHistory }); 
+        setUser({ ...user, laserPoints: remainingPoints, pointsHistory: newHistory }); 
     }
     
     setOrders(prevOrders => [newOrder, ...prevOrders]);
@@ -639,11 +677,13 @@ const App = () => {
       <NotificationProvider>
         <CartProvider>
         <BackgroundProvider>
+        <OrderHistoryProvider>
+        <ContextMenuProvider>
           <div className={`min-h-screen flex flex-col font-mono-tech bg-zinc-50 dark:bg-zinc-950 ${isDarkMode ? 'dark' : ''}`}>
       {/* Notification Manager - Solo cuando hay usuario logueado */}
       {user && <NotificationManager products={products} orders={orders} user={user} />}
       
-      {view !== 'CUSTOMIZER' && view !== 'PUBLIC_TRACKING' && (
+      {view !== 'CUSTOMIZER' && view !== 'PUBLIC_TRACKING' && view !== 'CLIENT_DASHBOARD' && (
         <NavBar 
           user={user} cartCount={cart.length} 
           onNavigate={setView} 
@@ -696,13 +736,15 @@ const App = () => {
         )}
 
         {view === 'FONTS_SHOWCASE' && (
-            <FontShowcase 
-                fonts={fonts} 
-                onSelectFont={(id) => {
-                    setPreSelectedFontId(id);
-                    setView('SHOP');
-                }}
-            />
+          <FontShowcase 
+            fonts={fonts} 
+            onSelectFont={(id, text) => {
+              setPreSelectedFontId(id);
+              setPreSelectedText(text || '');
+              setView('SHOP');
+            }}
+            onBack={() => setView('SHOP')}
+          />
         )}
 
         {view === 'CUSTOMIZER' && selectedProduct && (
@@ -710,10 +752,10 @@ const App = () => {
             product={selectedProduct} fonts={fonts} pricing={pricing}
             availableColors={storeConfig.globalColors}
             initialFontId={preSelectedFontId || undefined}
-            initialState={editingItem}
+            initialState={editingItem || (preSelectedText ? { frontText: preSelectedText, frontFontId: preSelectedFontId || undefined } as OrderItem : null)}
             galleryAssets={storeConfig.galleryAssets || []}
             storeConfig={storeConfig}
-            onBack={() => setView('SHOP')} 
+            onBack={() => { setView('SHOP'); setPreSelectedText(''); }} 
             onSwitchProduct={(p) => { setSelectedProduct(p); setEditingItem(null); }}
             onSave={(config, goToCart) => { 
               const fontName = fonts.find(f => f.id === config.frontFontId)?.name || 'Default';
@@ -751,6 +793,7 @@ const App = () => {
 
               setCart([...cart, newItem]); 
               setPreSelectedFontId(null); 
+              setPreSelectedText('');
               setEditingItem(null); 
               
               if (goToCart) {
@@ -948,7 +991,7 @@ const App = () => {
                             </div>
                         </div>
 
-                        <button onClick={handleFinalCheckout} className="w-full py-5 bg-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-xl hover:bg-yellow-300 shadow-lg shadow-yellow-400/20 flex items-center justify-center gap-3 transition-transform active:scale-95">
+                        <button onClick={handleFinalCheckout} className="w-full py-5 bg-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-xl hover:bg-yellow-300 shadow-lg dark:shadow-none flex items-center justify-center gap-3 transition-transform active:scale-95">
                             Confirmar Pedido <ArrowRight size={18}/>
                         </button>
                     </div>
@@ -995,6 +1038,7 @@ const App = () => {
           <AdminDashboard 
             orders={orders} products={products} fonts={fonts} pricing={pricing}
             storeConfig={storeConfig}
+            user={user} setUser={setUser}
             onUpdatePricing={setPricing} onUpdateStoreConfig={setStoreConfig}
             onUpdateOrder={(updatedOrder) => setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
             onAddOrder={(newOrder) => setOrders([newOrder, ...orders])}
@@ -1003,7 +1047,7 @@ const App = () => {
             onUpdateProduct={p => setProducts(products.map(x => x.id === p.id ? p : x))}
             onDeleteProduct={id => setProducts(products.filter(p => p.id !== id))}
             onAddFont={f => setFonts([...fonts, f])}
-            onUpdateFont={(oldId, f) => setFonts(fonts.map(font => font.id === oldId ? f : font))}
+            onUpdateFont={(oldId, f) => setFonts(prev => prev.map(font => font.id === oldId ? f : font))}
             onDeleteFont={id => setFonts(fonts.filter(f => f.id !== id))}
             onUpdateClient={updateClientDetails}
             onDeleteClient={deleteClientHistory}
@@ -1016,6 +1060,10 @@ const App = () => {
         )}
 
         {view === 'CLIENT_DASHBOARD' && (user?.role === UserRole.CLIENT || user?.role === UserRole.ADMIN) && (
+          <div 
+            className="fixed inset-0 z-[9999] overflow-auto"
+            style={{ backgroundColor: isDarkMode ? '#09090b' : '#ffffff' }}
+          >
             <ClientDashboard 
               user={user} 
               orders={orders} 
@@ -1024,8 +1072,15 @@ const App = () => {
               products={products}
               fonts={fonts}
               isDarkMode={isDarkMode}
-              toggleTheme={toggleTheme}
+              toggleTheme={() => setIsDarkMode(!isDarkMode)}
+              onBackToAdmin={user?.role === UserRole.ADMIN ? () => setView('ADMIN_DASHBOARD') : undefined}
+              onProductSelect={(product) => {
+                setSelectedProduct(product);
+                setEditingItem(null);
+                setView('CUSTOMIZER');
+              }}
             />
+          </div>
         )}
 
         {/* Login Modal Integration */}
@@ -1067,11 +1122,14 @@ const App = () => {
         )}
       </main>
           
-          {/* Notification Panel */}
+{/* Notification Panel */}
           <NotificationPanel />
           
+          {/* Context Menu */}
+          <ContextMenu />
+          
           {/* Cart Panel */}
-          <CartPanel 
+          <CartPanel
             cartItems={cart.map(item => ({
               id: item.id,
               productName: item.productName,
@@ -1093,9 +1151,12 @@ const App = () => {
           />
           
         </div>
+      </ContextMenuProvider>
+      </OrderHistoryProvider>
       </BackgroundProvider>
       </CartProvider>
       </NotificationProvider>
+
   );
 };
 

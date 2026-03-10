@@ -1,6 +1,4 @@
-
-
-export enum UserRole {
+ export enum UserRole {
   ADMIN = 'ADMIN',
   CLIENT = 'CLIENT',
   GUEST = 'GUEST'
@@ -67,11 +65,11 @@ export interface Coupon {
   code: string;
   discountPercent: number;
   active: boolean;
-  assignedToPhone?: string; 
+  assignedToPhone?: string;
   referrerUserId?: string; // Nuevo: Vincula el cupón a un cliente (Embajador)
-  expiryDate?: string; 
-  maxUses?: number; 
-  usedCount?: number; 
+  expiryDate?: string;
+  maxUses?: number;
+  usedCount?: number;
   createdAt: string;
 }
 
@@ -102,20 +100,20 @@ export interface BrandingAsset {
 
 export interface StoreConfig {
   businessName: string;
-  slogan?: string;       
+  slogan?: string;
   logoUrl: string;
   logoFont?: string; // Nombre de tipografía
   customLogoFontData?: string; // Base64 para fuente personalizada del sistema
-  bannerUrl?: string;    
+  bannerUrl?: string;
   faviconUrl?: string;
-  
+
   // Lógica
   nextOrderId?: number; // Lógica de ID secuencial
   productCategories?: string[]; // Categorías dinámicas
   adminEmails?: string[]; // Acceso admin dinámico
   pointsPercentage?: number; // Porcentaje de compra que se convierte en puntos (0-100)
   pointValue?: number; // Valor de 1 punto en moneda local (MXN)
-  
+
   // Contacto y Redes
   contactEmail?: string;
   contactPhone?: string;
@@ -127,19 +125,19 @@ export interface StoreConfig {
   tiktokUrl?: string;
 
   // Temas
-  accentColor: string; 
-  themeDarkModeBg: string; 
+  accentColor: string;
+  themeDarkModeBg: string;
   bgPattern: 'dots' | 'grid' | 'lines' | 'none';
-  
+
   bankInfo: string;
   shippingInfo: string;
   coupons: Coupon[];
   globalColors: ColorPreset[];
   messageTemplates: MessageTemplates;
-  customTemplates?: CustomTemplate[]; 
-  brandingAssets: BrandingAsset[]; 
+  customTemplates?: CustomTemplate[];
+  brandingAssets: BrandingAsset[];
   galleryAssets?: BrandingAsset[]; // Nueva galería de clipart
-  
+
   // Desarrollador / API
   webhookUrl?: string;
   apiKey?: string;
@@ -151,7 +149,7 @@ export interface FontOption {
   id: number;
   name: string;
   cssFamily: string;
-  category?: FontCategory; 
+  category?: FontCategory;
   isCustom?: boolean;
   fileData?: string; // Base64 de .ttf/.otf
   active?: boolean; // Nuevo: Control de visibilidad
@@ -181,28 +179,28 @@ export interface OrderItem {
   frontText: string;
   frontText2?: string;
   frontFontId: number;
-  frontFontId2?: number; 
+  frontFontId2?: number;
   frontFontName: string;
   frontDesignState: DesignState;
-  frontDesignState2?: DesignState; 
+  frontDesignState2?: DesignState;
   frontLogos: LogoItem[];
   // DORSO
   backText: string;
   backText2?: string;
   backFontId: number;
-  backFontId2?: number; 
+  backFontId2?: number;
   backFontName?: string;
   backDesignState: DesignState;
-  backDesignState2?: DesignState; 
+  backDesignState2?: DesignState;
   backLogos: LogoItem[];
-  
+
   quantity: number;
   unitPrice: number;
   totalPrice: number;
   notes?: string;
-  isClientItem?: boolean; 
-  clientItemBrand?: string; 
-  clientItemColor?: string; 
+  isClientItem?: boolean;
+  clientItemBrand?: string;
+  clientItemColor?: string;
   customBackgroundImage?: string;
 }
 
@@ -254,13 +252,14 @@ export interface Order {
   id: string;
   userId: string;
   customerName: string;
-  customerCompany?: string; 
+  customerCompany?: string;
   customerPhone: string;
   customerEmail?: string;
   items: OrderItem[];
   couponUsed?: string;
   discountAmount?: number;
   pointsRedeemed?: number; // Puntos usados
+  pointsEarned?: number; // Puntos a ganar al pagar
   total: number;
   // Financiero
   paymentStatus: PaymentStatus;
@@ -268,8 +267,8 @@ export interface Order {
   amountPaid: number;
   // Logística
   deliveryMethod?: DeliveryMethod;
-  deliveryDate?: string; 
-  deliveryTime?: string; 
+  deliveryDate?: string;
+  deliveryTime?: string;
   shippingProvider?: string;
   shippingTracking?: string;
   shippingAddress?: string;
@@ -286,7 +285,7 @@ export interface CustomerProfile {
   id?: string;
   phone: string;
   name: string;
-  company?: string; 
+  company?: string;
   email?: string;
   address?: string;
   totalOrders: number;
@@ -297,3 +296,143 @@ export interface CustomerProfile {
 }
 
 export type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMIZER' | 'CART' | 'ADMIN_DASHBOARD' | 'CLIENT_DASHBOARD' | 'FONTS_SHOWCASE' | 'PUBLIC_TRACKING' | 'TRACKING';
+
+// ========================================
+//   ORDER HISTORY TYPES
+// ========================================
+
+export interface OrderHistoryItem {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  total: number;
+  status: OrderStatus;
+  createdAt: string;
+  items: OrderItem[];
+  deliveryDate?: string;
+  deliveryTime?: string;
+  shippingAddress?: string;
+  paymentMethod?: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  amountPaid: number;
+  isPriority?: boolean;
+  history: OrderEvent[];
+  mockupUrl?: string;
+  internalNotes?: OrderInternalNote[];
+}
+
+// ========================================
+//   CONTEXT MENU SYSTEM TYPES
+// ========================================
+
+export interface ContextMenuItem {
+  id: string;
+  label: string;
+  icon?: any; // React.ReactNode - using 'any' to avoid React import in types file
+  shortcut?: string;
+  disabled?: boolean;
+  danger?: boolean;
+  onClick?: () => void;
+  submenu?: ContextMenuItem[];
+}
+
+export interface ContextMenuState {
+  isOpen: boolean;
+  position: { x: number; y: number };
+  items: ContextMenuItem[];
+  targetData?: any;
+}
+
+export interface ContextMenuContextType {
+  state: ContextMenuState;
+  showMenu: (position: { x: number; y: number }, items: ContextMenuItem[], targetData?: any) => void;
+  hideMenu: () => void;
+}
+
+// ========================================
+//   PRODUCTION SECTION TYPES
+// ========================================
+
+export enum ProductionStatus {
+  PENDING = 'PENDIENTE',
+  IN_PROGRESS = 'EN_PROCESO',
+  COMPLETED = 'COMPLETADO'
+}
+
+export interface ProductionItem {
+  // Identificación
+  orderId: string;
+  orderItemId: string;
+  sequenceNumber: number;
+  
+  // Producto
+  productName: string;
+  productBrand: ProductBrand;
+  colorName: string;
+  colorHex: string;
+  productImageUrl: string;
+  
+  // Diseño - Frente
+  frontText: string;
+  frontText2?: string;
+  frontFontId: number;
+  frontFontName: string;
+  frontFontCssFamily?: string;
+  frontDesignState: DesignState;
+  frontDesignState2?: DesignState;
+  frontLogos: LogoItem[];
+  
+  // Diseño - Dorso
+  backText: string;
+  backText2?: string;
+  backFontId?: number;
+  backFontName?: string;
+  backFontCssFamily?: string;
+  backDesignState: DesignState;
+  backDesignState2?: DesignState;
+  backLogos: LogoItem[];
+  
+  // Producción
+  quantity: number;
+  notes?: string;
+  specialInstructions?: string;
+  
+  // Logística (para el empleado)
+  deliveryDate?: string;
+  deliveryTime?: string;
+  isPriority?: boolean;
+  customerName?: string;
+  
+  // Estado de producción
+  productionStatus: ProductionStatus;
+  startedAt?: string;
+  completedAt?: string;
+  estimatedCompletionAt?: string;
+}
+
+// ========================================
+//   APPOINTMENT/RESERVATION TYPES
+// ========================================
+
+export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+
+export interface Appointment {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  duration: number; // minutes
+  type: 'PICKUP' | 'CONSULTATION' | 'MEASUREMENT' | 'DELIVERY' | 'OTHER';
+  status: AppointmentStatus;
+  notes?: string;
+  orderId?: string; // Optional link to an order
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppointmentSlot {
+  time: string;
+  available: boolean;
+}

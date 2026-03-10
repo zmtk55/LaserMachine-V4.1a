@@ -1,6 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, Sparkles, Shield, Truck, Star, ChevronRight, ChevronLeft, Zap, Package } from 'lucide-react';
+import { ArrowRight, Sparkles, Shield, Truck, Star, ChevronRight, ChevronLeft, Zap, Package, Play } from 'lucide-react';
 import { Product, StoreConfig } from '../types';
+
+// Custom hook for intersection observer (scroll animations)
+const useInView = (options = {}) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsInView(true);
+      }
+    }, { threshold: 0.1, ...options });
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, isInView };
+};
 
 interface LandingPageProps {
   storeConfig: StoreConfig;
@@ -21,14 +43,14 @@ const HERO_PRODUCTS = [
   {
     id: '2',
     name: 'STANLEY Quencher',
-    image: '/images/products/yeti/YETI_Rambler_30oz_White.jpg',
+    image: '/images/products/yeti/YETI_Rambler_30oz_White.png',
     color: '#f5f5f5',
     price: 749
   },
   {
     id: '3',
     name: 'OWALA FreeSip',
-    image: '/images/products/yeti/YETI_Rambler_30oz_Key_Lime.jpg',
+    image: '/images/products/yeti/YETI_Rambler_30oz_Key_Lime.png',
     color: '#c8e6c9',
     price: 649
   }
@@ -88,17 +110,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       {/* HERO SECTION */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
-        {/* Background gradient */}
+        {/* Animated gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-100 via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-black" />
         
-        {/* Decorative elements */}
+        {/* Opera Neon style - Animated gradient blobs */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Primary blob - Yellow/Orange */}
+          <div 
+            className="absolute -top-40 -right-40 w-[800px] h-[800px] bg-gradient-to-br from-yellow-400/30 via-amber-500/20 to-orange-500/30 morph-blob blur-[100px] gradient-animate"
+            style={{ 
+              transform: `translate(${scrollY * 0.1}px, ${scrollY * 0.2}px)`,
+              animation: 'morph 8s ease-in-out infinite, gradient-shift 8s ease infinite'
+            }}
+          />
+          
+          {/* Secondary blob - Purple/Blue */}
+          <div 
+            className="absolute -bottom-60 -left-40 w-[600px] h-[600px] bg-gradient-to-tr from-purple-500/20 via-blue-500/10 to-cyan-500/20 morph-blob blur-[120px]"
+            style={{ 
+              transform: `translate(${scrollY * -0.15}px, ${scrollY * -0.1}px)`,
+              animation: 'morph 10s ease-in-out infinite reverse'
+            }}
+          />
+          
+          {/* Tertiary blob - Small accent */}
+          <div 
+            className="absolute top-1/2 left-1/4 w-[300px] h-[300px] bg-yellow-300/10 rounded-full blur-[80px] glow-pulse"
+          />
+        </div>
+        
+        {/* Noise texture overlay */}
         <div 
-          className="absolute top-20 right-10 w-96 h-96 bg-yellow-400/20 rounded-full blur-[100px]"
-          style={{ transform: `translateY(${scrollY * 0.2}px)` }}
-        />
-        <div 
-          className="absolute bottom-20 left-10 w-64 h-64 bg-yellow-400/10 rounded-full blur-[80px]"
-          style={{ transform: `translateY(${scrollY * -0.1}px)` }}
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
         />
 
         {/* Large background text */}
@@ -126,35 +172,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                 </span>
               </div>
 
-              {/* Main headline */}
+              {/* Main headline with text reveal animation */}
               <div className="space-y-4">
                 <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-zinc-900 dark:text-white uppercase leading-[0.9] tracking-tight">
-                  Hazlo
-                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">
-                    Tuyo
+                  <span className="block overflow-hidden">
+                    <span className="block slide-up-animation" style={{ animationDelay: '0.1s' }}>
+                      Laser
+                    </span>
+                  </span>
+                  <span className="block overflow-hidden">
+                    <span 
+                      className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 gradient-animate"
+                      style={{ 
+                        animationDelay: '0.2s',
+                        backgroundSize: '200% 200%'
+                      }}
+                    >
+                      Machine
+                    </span>
                   </span>
                 </h2>
-                <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-md font-medium">
+                <p 
+                  className="text-lg text-zinc-600 dark:text-zinc-400 max-w-md font-medium slide-up-animation"
+                  style={{ animationDelay: '0.4s' }}
+                >
                   Personaliza tus termos con grabados láser de alta calidad. 
                   Diseños únicos que duran para siempre.
                 </p>
               </div>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-wrap gap-4">
+              {/* CTA Buttons with hover effects */}
+              <div 
+                className="flex flex-wrap gap-4 slide-up-animation"
+                style={{ animationDelay: '0.5s' }}
+              >
                 <button 
                   onClick={onLogin}
-                  className="group px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider rounded-2xl flex items-center gap-3 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-yellow-400/30"
+                  className="group relative px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider rounded-2xl flex items-center gap-3 transition-all hover:shadow-xl overflow-hidden"
                 >
-                  Ver Catálogo
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-yellow-300 to-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="relative flex items-center gap-3">
+                    Ver Catálogo
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  </span>
                 </button>
                 <button 
                   onClick={onLogin}
-                  className="px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-black uppercase text-sm tracking-wider rounded-2xl hover:opacity-90 transition-all flex items-center gap-2"
+                  className="group px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-black uppercase text-sm tracking-wider rounded-2xl hover:opacity-90 transition-all flex items-center gap-2 overflow-hidden relative"
                 >
-                  <Zap size={18} />
-                  ¡Ya tengo mi termo!
+                  <span className="absolute inset-0 bg-gradient-to-r from-zinc-800 to-zinc-700 dark:from-zinc-200 dark:to-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="relative flex items-center gap-2">
+                    <Zap size={18} className="group-hover:scale-110 transition-transform" />
+                    ¡Ya tengo mi termo!
+                  </span>
                 </button>
               </div>
 
@@ -268,30 +338,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
           </div>
         </div>
 
-        {/* CSS for float animation */}
-        <style>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(2deg); }
-          }
-        `}</style>
+
       </section>
 
-      {/* PRODUCTS CAROUSEL SECTION */}
-      <section className="py-20 px-6 lg:px-12 bg-white dark:bg-zinc-950">
-        <div className="max-w-7xl mx-auto">
+      {/* PRODUCTS CAROUSEL SECTION - Opera Neon Style */}
+      <section className="py-20 px-6 lg:px-12 bg-white dark:bg-zinc-950 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-yellow-400/5 to-transparent rounded-full blur-[100px]" />
+        
+        <div className="max-w-7xl mx-auto relative">
           <div className="flex items-end justify-between mb-12">
-            <div>
+            <div className="reveal-on-scroll">
               <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Catálogo</span>
-              <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase mt-2">
+              <h3 className="text-3xl md:text-5xl font-black text-zinc-900 dark:text-white uppercase mt-2">
                 Productos Populares
               </h3>
             </div>
             <button 
               onClick={() => onNavigate('SHOP')}
-              className="hidden md:flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-yellow-500 transition-colors uppercase tracking-wider"
+              className="hidden md:flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-yellow-500 transition-colors uppercase tracking-wider group"
             >
-              Ver Todo <ArrowRight size={16} />
+              Ver Todo 
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
 
@@ -299,13 +367,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
           <div className="relative">
             <button 
               onClick={() => scrollProducts('left')}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors hidden md:flex"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all hidden md:flex card-hover"
             >
               <ChevronLeft size={20} />
             </button>
             <button 
               onClick={() => scrollProducts('right')}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors hidden md:flex"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all hidden md:flex card-hover"
             >
               <ChevronRight size={20} />
             </button>
@@ -318,28 +386,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
             {featuredProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="flex-shrink-0 w-72 snap-start group cursor-pointer"
+                className="flex-shrink-0 w-72 snap-start group cursor-pointer card-hover"
                 onClick={() => onNavigate('SHOP')}
+                style={{ 
+                  animationDelay: `${index * 0.1}s`,
+                }}
               >
-                <div className="relative aspect-square bg-transparent rounded-3xl overflow-hidden mb-4">
+                <div className="relative aspect-square bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-lg group-hover:shadow-2xl transition-shadow duration-500">
+                  {/* Floating badge */}
+                  <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-yellow-400 text-black text-xs font-bold rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform -translate-y-2 group-hover:translate-y-0">
+                    ${product.price}
+                  </div>
+                  
                   <img
                     src={product.imageUrl || product.colors[0]?.imageUrl}
                     alt={product.name}
-                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-lg"
+                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl"
                   />
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0">
-                      <span className="px-6 py-3 bg-yellow-400 text-black font-bold rounded-full text-sm">
-                        Ver Detalles
-                      </span>
-                    </div>
+                  
+                  {/* Hover overlay with glass effect */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-8">
+                    <span className="px-6 py-3 bg-yellow-400 text-black font-bold rounded-full text-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 shadow-lg">
+                      Personalizar
+                    </span>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-zinc-900 dark:text-white truncate">{product.name}</h4>
+                <div className="space-y-1 px-2">
+                  <h4 className="font-bold text-zinc-900 dark:text-white truncate group-hover:text-yellow-500 transition-colors">{product.name}</h4>
                   <p className="text-sm text-zinc-500">{product.brand}</p>
-                  <p className="text-lg font-black text-yellow-500">${product.price}</p>
                 </div>
               </div>
             ))}
@@ -349,19 +423,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
           {/* Mobile: View all button */}
           <button 
             onClick={() => onNavigate('SHOP')}
-            className="md:hidden w-full mt-6 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold rounded-2xl"
+            className="md:hidden w-full mt-6 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold rounded-2xl hover:scale-[1.02] transition-transform"
           >
             Ver Todo el Catálogo
           </button>
         </div>
       </section>
 
-      {/* HOW IT WORKS - Simplified */}
-      <section className="py-20 px-6 lg:px-12 bg-zinc-50 dark:bg-black">
-        <div className="max-w-5xl mx-auto">
+      {/* HOW IT WORKS - Opera Neon Style */}
+      <section className="py-20 px-6 lg:px-12 bg-zinc-50 dark:bg-black relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-yellow-400/5 rounded-full blur-[100px]" />
+          <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px]" />
+        </div>
+        
+        <div className="max-w-5xl mx-auto relative">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Proceso</span>
-            <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase mt-2">
+            <span className="inline-block px-4 py-2 bg-yellow-400/10 rounded-full text-xs font-bold text-yellow-500 uppercase tracking-widest mb-4">
+              Proceso
+            </span>
+            <h3 className="text-3xl md:text-5xl font-black text-zinc-900 dark:text-white uppercase">
               En 3 Simples Pasos
             </h3>
           </div>
@@ -387,15 +469,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                 icon: Truck
               }
             ].map((item, index) => (
-              <div key={index} className="relative text-center group">
-                <div className="w-20 h-20 mx-auto mb-6 bg-yellow-400 rounded-3xl flex items-center justify-center shadow-xl shadow-yellow-400/20 group-hover:scale-110 transition-transform">
-                  <item.icon size={32} className="text-black" />
+              <div 
+                key={index} 
+                className="relative text-center group"
+                style={{ animationDelay: `${index * 0.2}s` }}
+              >
+                {/* Connector line */}
+                {index < 2 && (
+                  <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-yellow-400/50 to-transparent" />
+                )}
+                
+                <div className="relative w-20 h-20 mx-auto mb-6">
+  
+                  
+                  <div className="relative w-full h-full bg-gradient-to-br from-yellow-400 to-amber-500 rounded-3xl flex items-center justify-center shadow-lg dark:shadow-none transition-all duration-300">
+                    <item.icon size={32} className="text-black" />
+                  </div>
                 </div>
-                <span className="text-6xl font-black text-zinc-200 dark:text-zinc-800 absolute top-0 left-1/2 -translate-x-1/2 -z-10">
+                
+                <span className="text-7xl font-black text-zinc-200 dark:text-zinc-800/50 absolute top-0 left-1/2 -translate-x-1/2 -z-10 select-none">
                   {item.step}
                 </span>
-                <h4 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">{item.title}</h4>
-                <p className="text-sm text-zinc-500">{item.desc}</p>
+                
+                <h4 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-yellow-500 transition-colors">
+                  {item.title}
+                </h4>
+                <p className="text-sm text-zinc-500 max-w-xs mx-auto">{item.desc}</p>
               </div>
             ))}
           </div>

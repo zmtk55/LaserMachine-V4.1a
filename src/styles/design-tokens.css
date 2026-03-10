@@ -718,6 +718,78 @@
   border-color: var(--border-secondary);
 }
 
+.btn-system-success {
+  background-color: var(--color-success-500);
+  color: var(--color-neutral-0);
+  box-shadow: var(--shadow-success);
+  border: 1px solid var(--color-success-600);
+}
+
+.btn-system-success:hover {
+  background-color: var(--color-success-600);
+  box-shadow: var(--shadow-success);
+  transform: translateY(-1px);
+}
+
+.btn-system-success:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-system-warning {
+  background-color: var(--color-warning-500);
+  color: var(--color-neutral-0);
+  box-shadow: var(--shadow-accent-md);
+  border: 1px solid var(--color-warning-600);
+}
+
+.btn-system-warning:hover {
+  background-color: var(--color-warning-600);
+  box-shadow: var(--shadow-accent-lg);
+  transform: translateY(-1px);
+}
+
+.btn-system-warning:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-accent-sm);
+}
+
+.btn-system-error {
+  background-color: var(--color-error-500);
+  color: var(--color-neutral-0);
+  box-shadow: var(--shadow-danger);
+  border: 1px solid var(--color-error-600);
+}
+
+.btn-system-error:hover {
+  background-color: var(--color-error-600);
+  box-shadow: var(--shadow-danger);
+  transform: translateY(-1px);
+}
+
+.btn-system-error:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-system-info {
+  background-color: var(--color-info-500);
+  color: var(--color-neutral-0);
+  box-shadow: var(--shadow-accent-md);
+  border: 1px solid var(--color-info-600);
+}
+
+.btn-system-info:hover {
+  background-color: var(--color-info-600);
+  box-shadow: var(--shadow-accent-lg);
+  transform: translateY(-1px);
+}
+
+.btn-system-info:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-accent-sm);
+}
+
 /* ===== CARD SYSTEM ===== */
 .card-system {
   background-color: var(--bg-primary);
@@ -924,4 +996,38 @@
     background-color: #fff !important;
     color: #000 !important;
   }
+}
+
+/* ========================================
+   CONTEXT MENU ANIMATIONS
+   ======================================== */
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes contextMenuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-context-menu {
+  animation: contextMenuFadeIn 150ms ease-out forwards;
+}
+
+.animate-context-menu-submenu {
+  animation: contextMenuSlideIn 100ms ease-out forwards;
 }

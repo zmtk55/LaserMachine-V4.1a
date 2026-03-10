@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingBag, Sun, Moon, UserCircle, LogOut, LayoutDashboard, Package, Type, Menu, X, Bell } from 'lucide-react';
+import { ShoppingBag, Sun, Moon, UserCircle, LogOut, LayoutDashboard, Package, Type, Menu, X, Bell, Sparkles, Palette, ShoppingCart, Shield, Settings, Users, Calendar, DollarSign, Archive, Home } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useCartPanel } from '../contexts/CartContext';
 import { User, ViewState, StoreConfig, UserRole } from '../types';
@@ -64,9 +64,9 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
       <div className="flex items-center gap-6 md:gap-16">
         <div onClick={() => handleNav('LANDING')} className="cursor-pointer flex items-center gap-4 group">
            {storeConfig.logoUrl ? (
-               <img src={storeConfig.logoUrl} className="h-10 md:h-12 w-auto object-contain transition-transform group-hover:scale-105" alt="Logo" />
+               <img src={storeConfig.logoUrl} className="h-10 md:h-12 w-auto object-contain" alt="Logo" />
            ) : (
-               <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-400 flex items-center justify-center font-black text-black text-sm md:text-base rounded-xl shadow-lg shadow-amber-400/20 transition-transform group-hover:rotate-3">LM</div>
+               <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-400 flex items-center justify-center font-black text-black text-sm md:text-base rounded-xl shadow-lg shadow-amber-400/20">LM</div>
            )}
            <span 
              className={`text-xl md:text-2xl font-black tracking-tighter text-zinc-900 dark:text-white uppercase ${storeConfig.logoFont || 'nike-title'}`}
@@ -89,26 +89,33 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
         {/* Desktop Menu - Solo visible con login */}
         {user && (
           <div className="hidden md:flex items-center gap-2 bg-zinc-100/50 dark:bg-zinc-800/50 p-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
-             <button onClick={() => handleNav('SHOP')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md">Catálogo</button>
-             <button onClick={() => handleNav('FONTS_SHOWCASE')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md">Fuentes</button>
-             <button onClick={() => handleNav('CUSTOMIZER')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest bg-yellow-400 text-black hover:bg-yellow-300 transition-all shadow-sm hover:shadow-md">Personalizar</button>
+             <button onClick={() => handleNav('SHOP')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+               <Archive size={16} /> Catálogo
+             </button>
+             <button onClick={() => handleNav('FONTS_SHOWCASE')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+               <Palette size={16} /> Fuentes
+             </button>
+             <button onClick={() => handleNav('CUSTOMIZER')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest bg-yellow-400 text-black hover:bg-yellow-300 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+               <Sparkles size={16} /> Personalizar
+             </button>
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-3 md:gap-5">
         {/* Mobile Menu Toggle */}
-        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-3 text-zinc-500 hover:text-black dark:hover:text-white z-[160] relative transition-transform active:scale-95">
-            {isMenuOpen ? <X size={24}/> : <Menu size={24}/>}
+        <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"} className="md:hidden p-3 text-zinc-500 hover:text-black dark:hover:text-white z-[160] relative transition-transform active:scale-95">
+          {isMenuOpen ? <X size={24}/> : <Menu size={24}/>}
         </button>
 
-        <button onClick={toggleTheme} className="hidden md:flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-amber-400 transition-colors w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90">
+        <button onClick={toggleTheme} aria-label="Cambiar tema" className="hidden md:flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-amber-400 transition-colors w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90">
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
         
         {/* Notification Bell */}
-        <button 
+        <button
           onClick={() => setIsPanelOpen(true)}
+          aria-label="Notificaciones"
           className="relative flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90"
         >
           <Bell size={20} />
@@ -120,8 +127,9 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
         </button>
         
         {/* Cart Button - Opens slide panel */}
-        <button 
+        <button
           onClick={() => setIsCartOpen(true)}
+          aria-label="Carrito de compras"
           className="relative flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90"
         >
           <ShoppingBag size={20} />
@@ -140,13 +148,13 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
                     onClick={() => handleNav('ADMIN_DASHBOARD')} 
                     className="bg-amber-500 text-white border border-transparent px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 hover:scale-105 hover:shadow-lg hover:shadow-amber-500/20 transition-all flex items-center gap-2"
                   >
-                    <LayoutDashboard size={14}/> Admin
+                    <Home size={14}/> Admin
                   </button>
                   <button 
                     onClick={() => handleNav('CLIENT_DASHBOARD')} 
                     className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2 hover:scale-105"
                   >
-                    <Package size={14}/> Vista Cliente
+                    <Shield size={14}/> Vista Cliente
                   </button>
                 </div>
              ) : (
@@ -154,7 +162,7 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
                   onClick={() => handleNav('CLIENT_DASHBOARD')} 
                   className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex items-center gap-2 hover:scale-105"
                 >
-                  <Package size={14}/> Mis Pedidos
+                  <Shield size={14}/> Mis Pedidos
                 </button>
              )}
              <div className="flex items-center gap-2 cursor-pointer group relative">
@@ -163,7 +171,7 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
              </div>
            </div>
         ) : (
-           <button onClick={onLogin} className="hidden md:flex text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-800 items-center gap-2 transition-all px-6 py-3 hover:bg-amber-500 hover:text-white rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-transparent">
+           <button onClick={onLogin} aria-label="Iniciar sesión" className="hidden md:flex text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-800 items-center gap-2 transition-all px-6 py-3 hover:bg-amber-500 hover:text-white rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-transparent">
              <UserCircle size={18} /> Login
            </button>
         )}
@@ -174,27 +182,37 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
           <div className="fixed inset-0 top-0 w-full h-screen bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl z-[150] flex flex-col p-10 pt-32 gap-8 animate-in slide-in-from-right duration-300 md:hidden">
               {user ? (
                   <>
-                    <button onClick={() => handleNav('SHOP')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">Catálogo</button>
-                    <button onClick={() => handleNav('FONTS_SHOWCASE')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">Fuentes</button>
-                    <button onClick={() => handleNav('CUSTOMIZER')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all">Personalizar</button>
+                    <button onClick={() => handleNav('SHOP')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all flex items-center gap-4">
+                      <Archive size={32} /> Catálogo
+                    </button>
+                    <button onClick={() => handleNav('FONTS_SHOWCASE')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all flex items-center gap-4">
+                      <Palette size={32} /> Fuentes
+                    </button>
+                    <button onClick={() => handleNav('CUSTOMIZER')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all flex items-center gap-4">
+                      <Sparkles size={32} /> Personalizar
+                    </button>
                     {user.role === UserRole.ADMIN ? (
                       <>
-                        <button onClick={() => handleNav('ADMIN_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all">
-                          Panel Admin
+                        <button onClick={() => handleNav('ADMIN_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all flex items-center gap-4">
+                          <Home size={32} /> Panel Admin
                         </button>
-                        <button onClick={() => handleNav('CLIENT_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">
-                          Vista Cliente
+                        <button onClick={() => handleNav('CLIENT_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all flex items-center gap-4">
+                          <Shield size={32} /> Vista Cliente
                         </button>
                       </>
                     ) : (
-                      <button onClick={() => handleNav('CLIENT_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all">
-                        Mis Pedidos
+                      <button onClick={() => handleNav('CLIENT_DASHBOARD')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all flex items-center gap-4">
+                        <Shield size={32} /> Mis Pedidos
                       </button>
                     )}
-                    <button onClick={() => { onLogout(); setIsMenuOpen(false); }} className="text-left font-bold uppercase tracking-widest text-red-500 py-4 text-sm hover:pl-2 transition-all">Cerrar Sesión</button>
+                    <button onClick={() => { onLogout(); setIsMenuOpen(false); }} className="text-left font-bold uppercase tracking-widest text-red-500 py-4 text-sm hover:pl-2 transition-all flex items-center gap-4">
+                      <LogOut size={24} /> Cerrar Sesión
+                    </button>
                   </>
               ) : (
-                  <button onClick={() => { onLogin(); setIsMenuOpen(false); }} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all">Iniciar Sesión</button>
+                  <button onClick={() => { onLogin(); setIsMenuOpen(false); }} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all flex items-center gap-4">
+                    <UserCircle size={32} /> Iniciar Sesión
+                  </button>
               )}
               <div className="mt-auto flex justify-center">
                   <button onClick={toggleTheme} className="p-6 bg-zinc-100 dark:bg-zinc-800 rounded-full hover:scale-110 transition-transform shadow-lg">{isDarkMode ? <Sun size={32}/> : <Moon size={32}/>}</button>

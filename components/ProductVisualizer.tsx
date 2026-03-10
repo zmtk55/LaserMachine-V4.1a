@@ -538,7 +538,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                             <div className="flex justify-between items-center px-6 py-2 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
                                 <h3 className="font-sans font-black uppercase text-zinc-900 dark:text-white tracking-widest text-[10px] flex items-center gap-2">
                                     {(activeTool === 'TEXT1' || activeTool === 'TEXT2') && <><TextCursor size={14}/> Editar Texto</>}
-                                    {activeTool === 'IMAGES' && <><ImageIcon size={14}/> Galería</>}
+                                    {activeTool === 'IMAGES' && <><Images size={14}/> Galería de Logos</>}
                                     {activeTool === 'MAGIC' && <><Wand2 size={14}/> Edición Imagen</>}
                                     {activeTool === 'SETTINGS' && <><Settings size={14}/> Configuración</>}
                                 </h3>
@@ -566,6 +566,9 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                 )}
                                 {activeTool === 'IMAGES' && (
                                     <div className="space-y-3">
+                                        <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+                                            Elige un logo o icono y se agregará directo al termo.
+                                        </p>
                                         <ImageGallery 
                                             galleryAssets={galleryAssets}
                                             onSelectImage={(url) => addLogoToCanvas(url)}
@@ -737,7 +740,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                 </div>
                 <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 hidden md:block"></div>
                 <button onClick={() => handleSaveClick(false)} className="p-2 text-zinc-500 hover:text-black dark:hover:text-white transition-colors active:scale-90" title="Guardar Borrador"><Save size={18}/></button>
-                <button onClick={() => handleSaveClick(true)} disabled={isOutOfStock} className={`flex-1 md:flex-none px-6 md:px-8 py-2 font-black uppercase text-[10px] tracking-[0.2em] rounded-lg shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-[0.98] ${isOutOfStock ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300 text-black shadow-yellow-400/20'}`}><span className="hidden md:inline">{isOutOfStock ? 'Agotado' : 'Agregar'}</span> <Zap size={16} fill={isOutOfStock ? 'none' : 'black'}/></button>
+                <button onClick={() => handleSaveClick(true)} disabled={isOutOfStock} className={`flex-1 md:flex-none px-6 md:px-8 py-2 font-black uppercase text-[10px] tracking-[0.2em] rounded-lg shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-[0.98] ${isOutOfStock ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300 text-black'}`}><span className="hidden md:inline">{isOutOfStock ? 'Agotado' : 'Agregar'}</span> <Zap size={16} fill={isOutOfStock ? 'none' : 'black'}/></button>
             </div>
         </div>
 

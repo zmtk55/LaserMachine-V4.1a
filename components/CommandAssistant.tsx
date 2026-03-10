@@ -107,47 +107,18 @@ function localTopProducts(orders: Order[], products: Product[], limit: number): 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL   = 'llama-3.3-70b-versatile';
 
-const SYSTEM_PROMPT = `Eres RAB, el asistente inteligente de LaserMachine.
-El admin habla en español informal. Devuelve SOLO JSON puro, sin texto extra, sin markdown.
+const SYSTEM_PROMPT = `Eres RAB, asistente de LaserMachine. RESPUESTA: SOLO JSON válido. EJEMPLOS:
+- "cuánto vendimos" → {"action":"get_stats"}
+- "busca pedido Juan" → {"action":"search","query":"Juan"}
+- "pedidos de hoy" → {"action":"filter_orders","date":"today"}
+- "qué hay en producción" → {"action":"filter_orders","status":"IN_PRODUCTION"}
+- "productos YETI" → {"action":"filter_products","brand":"YETI"}
+- "qué se vende más" → {"action":"get_top_products","limit":5}
+- "pon LM-1001 como listo" → {"action":"update_order_status","orderId":"LM-1001","status":"READY"}
+- "crea cupón 20OFF 20%" → {"action":"create_coupon","code":"20OFF","discount_percent":20}
+- "hola" → {"action":"unknown","message":"¡Hola! Soy RAB, puedo ayudarte con pedidos, productos, ventas y más."}
 
-ACCIONES DISPONIBLES:
-
-1. Cambiar estado de pedido:
-{"action":"update_order_status","orderId":"<id>","status":"<STATUS>"}
-STATUS válidos: RECEIVED, WAITING_APPROVAL, IN_PRODUCTION, READY, COMPLETED, CANCELLED
-(RECEIVED=recibido, WAITING_APPROVAL=esperando aprobación, IN_PRODUCTION=en producción, READY=listo, COMPLETED=entregado, CANCELLED=cancelado)
-
-2. Crear cupón:
-{"action":"create_coupon","code":"<CODIGO>","discount_percent":<numero>}
-
-3. Estadísticas y ventas del día:
-{"action":"get_stats"}
-Usa esta acción para: "cuánto vendimos", "ventas de hoy", "ingresos", "resumen del día", "cuánto ganamos", "qué tal el día", "estadísticas", "cuánto se recaudó"
-
-4. Buscar por texto libre (nombre, teléfono, ID exacto):
-{"action":"search","query":"<termino>"}
-
-5. Filtrar PRODUCTOS (precio, marca, categoría, búsqueda):
-{"action":"filter_products","search":"<termino_opcional>","price_min":<num_opcional>,"price_max":<num_opcional>,"brand":"<opcional>","category":"<opcional>","active":<true/false_opcional>,"sort":"price_asc|price_desc|name"}
-Usa esta acción para: "precios", "cuánto cuestan", "catálogo", "productos activos", "más baratos", "más caros", "qué tienen de X categoría", "precio de coffee mug"
-
-6. Filtrar PEDIDOS (estado, cliente, fecha, monto):
-{"action":"filter_orders","status":"<STATUS_opcional>","customer_name":"<opcional>","date":"today|week|month","min_total":<num_opcional>,"max_total":<num_opcional>}
-Usa esta acción para: "pedidos de hoy", "pedidos en producción", "pedidos de Juan", "pedidos esta semana", "pedidos de más de $500"
-
-7. Top productos más vendidos:
-{"action":"get_top_products","limit":<numero>}
-Usa esta acción para: "qué se vende más", "best sellers", "top productos", "más populares"
-
-Si no corresponde:
-{"action":"unknown","message":"<explica brevemente>"}
-
-REGLAS CLAVE:
-- Preguntas sobre precios/catálogo/inventario → filter_products
-- "cuánto vendimos", "ventas", "ingresos", "estadísticas" → SIEMPRE get_stats
-- Preguntas sobre pedidos por estado/fecha/cliente → filter_orders
-- Búsqueda por ID exacto o nombre específico → search
-- SIEMPRE JSON puro sin texto adicional`;
+REGLAS: Si no entiendes → unknown. SOLO JSON.`;;
 
 type AiAction =
   | { action: 'update_order_status'; orderId: string; status: string }
@@ -190,6 +161,7 @@ const CommandAssistant: React.FC<CommandAssistantProps> = ({ isOpen, onClose, on
   const [state, setState]           = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [feedback, setFeedback]     = useState('');
   const [navAction, setNavAction]   = useState<NavAction | null>(null);
+  const [useGroq, setUseGroq]       = useState<boolean>(true);
   
   // ...existing code...
   const [history, setHistory] = useState<string[]>(() => {
@@ -253,37 +225,38 @@ const CommandAssistant: React.FC<CommandAssistantProps> = ({ isOpen, onClose, on
   const executeCommand = async (text: string) => {
     if (!text) return;
     setInputValue(text);
-    setState('loading'); 
-    setResults([]); 
-    setFeedback(''); 
+    setState('loading');
+    setResults([]);
+    setFeedback('');
     setNavAction(null);
     addToHistory(text);
 
     try {
-      const parsed = await askGroq(text);
+      // Choose between Groq API or local parsing based on user selection
+      const parsed: AiAction = useGroq ? await askGroq(text) : await parseLocalCommand(text);
       switch (parsed.action) {
         case 'update_order_status': {
           const ok = await updateOrderStatus(parsed.orderId, parsed.status);
-          if (ok) { 
-              setState('success'); 
-              setFeedback(`Pedido ${parsed.orderId} → ${parsed.status.replace(/_/g,' ')}`); 
-              setNavAction({ tab: 'ORDERS', orderId: parsed.orderId, label: `Abrir ${parsed.orderId}` }); 
-          } else { 
-              setState('error');   
-              setFeedback(`No se pudo actualizar ${parsed.orderId}. ¿Existe ese ID?`); 
-              setNavAction({ tab: 'ORDERS', label: 'Ver todos los pedidos' }); 
+          if (ok) {
+            setState('success');
+            setFeedback(`Pedido ${parsed.orderId} → ${parsed.status.replace(/_/g,' ')}`);
+            setNavAction({ tab: 'ORDERS', orderId: parsed.orderId, label: `Abrir ${parsed.orderId}` });
+          } else {
+            setState('error');
+            setFeedback(`No se pudo actualizar ${parsed.orderId}. ¿Existe ese ID?`);
+            setNavAction({ tab: 'ORDERS', label: 'Ver todos los pedidos' });
           }
           break;
         }
         case 'create_coupon': {
           const coupon = await createCoupon({ code: parsed.code, discount_percent: parsed.discount_percent });
-          if (coupon) { 
-              setState('success'); 
-              setFeedback(`Cupón "${parsed.code}" del ${parsed.discount_percent}% creado.`); 
-              setNavAction({ tab: 'SETTINGS', settingsTab: 'COUPONS', label: 'Ver cupones' }); 
-          } else { 
-              setState('error');   
-              setFeedback(`No se pudo crear el cupón. ¿Ya existe ese código?`); 
+          if (coupon) {
+            setState('success');
+            setFeedback(`Cupón "${parsed.code}" del ${parsed.discount_percent}% creado.`);
+            setNavAction({ tab: 'SETTINGS', settingsTab: 'COUPONS', label: 'Ver cupones' });
+          } else {
+            setState('error');
+            setFeedback(`No se pudo crear el cupón. ¿Ya existe ese código?`);
           }
           break;
         }
@@ -329,6 +302,25 @@ const CommandAssistant: React.FC<CommandAssistantProps> = ({ isOpen, onClose, on
     }
   };
 
+  // Simple local parser for a subset of commands (fallback when Groq is disabled)
+  const parseLocalCommand = async (text: string): Promise<AiAction> => {
+    const lower = text.toLowerCase();
+    if (lower.includes('cuánto vendimos') || lower.includes('ventas de hoy')) {
+      return { action: 'get_stats' };
+    }
+    if (lower.includes('pedidos de hoy')) {
+      return { action: 'filter_orders', date: 'today' };
+    }
+    if (lower.includes('productos yeti') || lower.includes('brand:yeti')) {
+      return { action: 'filter_products', brand: 'YETI' };
+    }
+    if (lower.includes('qué se vende más') || lower.includes('top productos')) {
+      return { action: 'get_top_products', limit: 5 };
+    }
+    // Default fallback
+    return { action: 'unknown', message: 'Comando no reconocido en modo local.' };
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     executeCommand(inputValue.trim());
@@ -368,6 +360,10 @@ const CommandAssistant: React.FC<CommandAssistantProps> = ({ isOpen, onClose, on
           
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
             <X size={16}/>
+          </button>
+          {/* Model toggle */}
+          <button onClick={() => setUseGroq(!useGroq)} className="ml-2 px-2 py-1 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs font-medium uppercase">
+            {useGroq ? 'Groq' : 'Local'}
           </button>
         </div>
 

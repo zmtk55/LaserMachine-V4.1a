@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { FontOption, FontCategory } from '../types';
-import { Type, Plus, Minus, RotateCcw } from 'lucide-react';
+import { Type, Plus, Minus, RotateCcw, ArrowLeft } from 'lucide-react';
 
 interface FontShowcaseProps {
   fonts: FontOption[];
   onSelectFont: (fontId: number, text: string) => void;
+  onBack?: () => void;
 }
 
-export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont }) => {
+export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts = [], onSelectFont, onBack }) => {
   const [previewText, setPreviewText] = useState('');
   const [activeCategory, setActiveCategory] = useState<FontCategory | 'TODAS'>('TODAS');
   const [globalFontSize, setGlobalFontSize] = useState(64); // Tamaño global en px
@@ -60,8 +61,39 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont 
     setSelectedFontId(null);
   };
 
+  // Debug - verificar si hay fonts
+  console.log('FontShowcase - fonts:', fonts?.length, fonts);
+
+  // Mapeo de cssFamily a valores reales de font-family
+  const fontFamilyMap: Record<string, string> = {
+    'font-google': '"Plus Jakarta Sans", sans-serif',
+    'font-industrial': 'Anton, sans-serif',
+    'font-mono': '"JetBrains Mono", monospace',
+    'font-bold1': '"Bebas Neue", sans-serif',
+    'font-script1': '"Permanent Marker", cursive',
+    'font-script2': '"Permanent Marker", cursive',
+    'font-serif1': '"Playfair Display", serif',
+    'font-display1': '"Bebas Neue", sans-serif',
+  };
+  
   return (
-    <div className="max-w-[95%] mx-auto px-6 md:px-10 py-8">
+    <div className="max-w-[95%] mx-auto px-6 md:px-10 py-8 bg-white dark:bg-zinc-950 min-h-screen">
+      {/* Barra superior opcional con botón de regreso */}
+      {onBack && (
+        <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-colors"
+          >
+            <ArrowLeft size={14} />
+            Volver al catálogo
+          </button>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+            Toca una fuente para usarla en el diseñador.
+          </p>
+        </div>
+      )}
+
       {/* Header con controles globales */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div className="flex-1">
@@ -133,7 +165,7 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont 
         <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
-              Ajustando: {fonts.find(f => f.id === selectedFontId)?.name}
+              Ajustando: {fonts?.find(f => f.id === selectedFontId)?.name || 'Fuente'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -158,9 +190,16 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont 
       
       {/* Font Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {filteredFonts.length === 0 && (
+          <div className="col-span-full text-center py-12 text-zinc-500">
+            No hay fuentes disponibles en esta categoría
+          </div>
+        )}
         {filteredFonts.map(font => {
+          if (!font || !font.id) return null;
           const fontSize = getFontSize(font.id);
           const isSelected = selectedFontId === font.id;
+          const fontFamily = fontFamilyMap[font.cssFamily || ''] || font.cssFamily || 'sans-serif';
           
           return (
             <div
@@ -171,8 +210,9 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont 
               {/* Preview area */}
               <div className="flex-1 flex items-center justify-center px-4 py-6 min-h-[160px] bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 group-hover:from-yellow-50 group-hover:to-amber-50 dark:group-hover:from-zinc-800 dark:group-hover:to-zinc-900 transition-colors duration-300 overflow-hidden">
                 <span 
-                  className={`${font.cssFamily} text-zinc-900 dark:text-white text-center leading-tight select-none group-hover:scale-105 transition-transform duration-300 break-words max-w-full`}
+                  className="text-zinc-900 dark:text-white text-center leading-tight select-none group-hover:scale-105 transition-transform duration-300 break-words max-w-full"
                   style={{ 
+                    fontFamily: fontFamily,
                     fontSize: `${fontSize}px`,
                     lineHeight: '1.1'
                   }}
@@ -186,7 +226,7 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts, onSelectFont 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-lg text-xs font-black tabular-nums shadow-sm transition-colors duration-300 ${isSelected ? 'bg-black text-amber-400' : 'bg-yellow-400 text-black group-hover:bg-black group-hover:text-yellow-400'}`}>#{font.id}</span>
-                    <p className={`font-bold text-xs uppercase tracking-wide truncate transition-colors duration-300 ${isSelected ? 'text-black' : 'text-zinc-900 dark:text-white group-hover:text-black'}`}>{font.name}</p>
+                    <p className={`font-bold text-xs uppercase tracking-wide truncate transition-colors duration-300 ${isSelected ? 'text-black' : 'text-zinc-900 dark:text-white group-hover:text-black'}`}>{font.name || 'Fuente'}</p>
                   </div>
                   <p className={`text-[10px] uppercase tracking-widest mt-1 font-bold transition-colors duration-300 ${isSelected ? 'text-black/70' : 'text-zinc-400 group-hover:text-black/70'}`}>{font.category || 'BÁSICA'}</p>
                 </div>

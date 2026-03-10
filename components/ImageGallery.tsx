@@ -1,9 +1,11 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { Card } from './ui';
 import { 
   Search, Upload, X, Check, Grid3X3, LayoutGrid, List, 
-  Image as ImageIcon, ChevronRight, Folder
+  Image as ImageIcon, ChevronRight, Folder, Eye, Download, Copy, Trash2, ExternalLink
 } from 'lucide-react';
 import { BrandingAsset } from '../types';
+import { useContextMenu } from '../contexts/ContextMenuContext';
 
 interface ImageGalleryProps {
   galleryAssets: BrandingAsset[];
@@ -97,11 +99,69 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   // Image card component
   const ImageCard = ({ asset }: { asset: BrandingAsset }) => {
+    const { showMenu } = useContextMenu();
+
+    const handleContextMenu = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const menuItems = [
+        {
+          id: 'select',
+          label: 'Seleccionar',
+          icon: <Check size={14} />,
+          onClick: () => handleSelectImage(asset),
+        },
+        {
+          id: 'separator1',
+          label: '',
+        },
+        {
+          id: 'view',
+          label: 'Ver completa',
+          icon: <Eye size={14} />,
+          onClick: () => window.open(asset.url, '_blank'),
+        },
+        {
+          id: 'copy-url',
+          label: 'Copiar URL',
+          icon: <Copy size={14} />,
+          onClick: () => {
+            navigator.clipboard.writeText(asset.url);
+          },
+        },
+        {
+          id: 'download',
+          label: 'Descargar',
+          icon: <Download size={14} />,
+          onClick: () => {
+            const link = document.createElement('a');
+            link.href = asset.url;
+            link.download = asset.name || 'image';
+            link.click();
+          },
+        },
+        {
+          id: 'separator2',
+          label: '',
+        },
+        {
+          id: 'open-tab',
+          label: 'Abrir en nueva pestaña',
+          icon: <ExternalLink size={14} />,
+          onClick: () => window.open(asset.url, '_blank'),
+        },
+      ];
+      
+      showMenu({ x: e.clientX, y: e.clientY }, menuItems, asset);
+    };
+
     if (viewMode === 'list') {
       return (
-        <div
+        <Card
           className="group flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-all"
           onClick={() => handleSelectImage(asset)}
+          onContextMenu={handleContextMenu}
         >
           <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex-shrink-0 overflow-hidden">
             <img src={asset.url} alt={asset.name} className="w-full h-full object-contain p-1" />
@@ -113,7 +173,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
             <Check size={16} className="text-yellow-500" />
           </div>
-        </div>
+        </Card>
       );
     }
 
@@ -121,6 +181,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       <div
         className="group relative bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-yellow-500 hover:shadow-md transition-all cursor-pointer overflow-hidden"
         onClick={() => handleSelectImage(asset)}
+        onContextMenu={handleContextMenu}
       >
         <div className="aspect-square">
           <img 

@@ -265,7 +265,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
               <div className="space-y-3">
                 <button
                   onClick={() => setView('guest-phone')}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-400/20"
+                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg dark:shadow-none"
                 >
                   <User size={18} />
                   Continuar como invitado
@@ -444,7 +444,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-400/20 disabled:opacity-50 mt-4"
+                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg dark:shadow-none disabled:opacity-50 mt-4"
                 >
                   {isLoading ? (
                     <>

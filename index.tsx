@@ -14,6 +14,19 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[PWA] SW registered:', registration.scope);
+      })
+      .catch((error) => {
+        console.log('[PWA] SW registration failed:', error);
+      });
+  });
+}
+
 try {
   console.log('🚀 Creando React root...');
   const root = ReactDOM.createRoot(rootElement);

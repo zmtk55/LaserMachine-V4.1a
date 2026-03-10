@@ -17,6 +17,18 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'react-vendor': ['react', 'react-dom'],
+              'lucide': ['lucide-react'],
+              'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+            }
+          }
+        },
+        chunkSizeWarningLimit: 500,
       }
     };
 });

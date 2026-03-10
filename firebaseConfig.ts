@@ -22,11 +22,15 @@ const getConfiguration = () => {
     try {
         const localConfig = localStorage.getItem('lm_firebase_config_v1');
         if (localConfig) {
+            console.log('[Firebase Debug] Usando configuración localStorage');
+            console.log('[Firebase Debug] Dominio actual:', window.location.hostname);
             return JSON.parse(localConfig);
         }
     } catch (e) {
         console.error("Error leyendo config local", e);
     }
+    console.log('[Firebase Debug] Usando configuración de producción');
+    console.log('[Firebase Debug] Dominio actual:', window.location.hostname);
     return productionFirebaseConfig;
 };
 
@@ -52,6 +56,8 @@ try {
       storage = getStorage(app);
       googleProvider = new GoogleAuthProvider();
       console.log("✅ Firebase inicializado correctamente");
+      console.log("[Firebase Debug] authDomain configurado:", finalConfig.authDomain);
+      console.log("[Firebase Debug] Dominio actual de la app:", window.location.hostname);
   } else {
       console.warn("⚠️ Configuración de Firebase inválida.");
   }

@@ -26,18 +26,18 @@ export const FONTS: FontOption[] = [
 
 // Product image URLs - Local images from public folder
 // YETI Rambler Images
-const IMG_YETI_20OZ_COPPER = '/images/products/yeti/YETI_Rambler_20oz_Copper.jpg';
-const IMG_YETI_20OZ_GRAPHITE = '/images/products/yeti/YETI_Rambler_20oz_Graphite.jpg';
-const IMG_YETI_30OZ_BLACK = '/images/products/yeti/YETI_Rambler_30oz_Black.jpg';
+const IMG_YETI_20OZ_COPPER = '/images/products/yeti/YETI_Rambler_20oz_Copper.png';
+const IMG_YETI_20OZ_GRAPHITE = '/images/products/yeti/YETI_Rambler_20oz_Graphite.png';
+const IMG_YETI_30OZ_BLACK = '/images/products/yeti/YETI_Rambler_30oz_Black.png';
 const IMG_YETI_30OZ_NAVY = '/images/products/yeti/YETI_Rambler_30oz_Navy.png';
-const IMG_YETI_30OZ_WHITE = '/images/products/yeti/YETI_Rambler_30oz_White.jpg';
-const IMG_YETI_30OZ_STEEL = '/images/products/yeti/YETI_Rambler_30oz_Stainless_Steel.jpg';
-const IMG_YETI_30OZ_CHARCOAL = '/images/products/yeti/YETI_Rambler_30oz_Charcoal.jpg';
-const IMG_YETI_30OZ_GREEN = '/images/products/yeti/YETI_Rambler_30oz_Black_Forest_Green.jpg';
-const IMG_YETI_30OZ_TAUPE = '/images/products/yeti/YETI_Rambler_30oz_Taupe.jpg';
-const IMG_YETI_30OZ_CAPE_TAUPE = '/images/products/yeti/YETI_Rambler_30oz_Cape_Taupe.jpg';
-const IMG_YETI_30OZ_KEY_LIME = '/images/products/yeti/YETI_Rambler_30oz_Key_Lime.jpg';
-const IMG_YETI_30OZ_RIDGE = '/images/products/yeti/YETI_Rambler_30oz_Ridgeline.jpg';
+const IMG_YETI_30OZ_WHITE = '/images/products/yeti/YETI_Rambler_30oz_White.png';
+const IMG_YETI_30OZ_STEEL = '/images/products/yeti/YETI_Rambler_30oz_Stainless_Steel.png';
+const IMG_YETI_30OZ_CHARCOAL = '/images/products/yeti/YETI_Rambler_30oz_Charcoal.png';
+const IMG_YETI_30OZ_GREEN = '/images/products/yeti/YETI_Rambler_30oz_Black_Forest_Green.png';
+const IMG_YETI_30OZ_TAUPE = '/images/products/yeti/YETI_Rambler_30oz_Taupe.png';
+const IMG_YETI_30OZ_CAPE_TAUPE = '/images/products/yeti/YETI_Rambler_30oz_Cape_Taupe.png';
+const IMG_YETI_30OZ_KEY_LIME = '/images/products/yeti/YETI_Rambler_30oz_Key_Lime.png';
+const IMG_YETI_30OZ_RIDGE = '/images/products/yeti/YETI_Rambler_30oz_Ridgeline.png';
 
 // Placeholders for other brands (until we get real images)
 const IMG_TUMBLER_BLACK = 'https://placehold.co/400x500/1a1a1a/FFF?text=Tumbler';

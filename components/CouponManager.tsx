@@ -239,7 +239,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
         {/* Create Button */}
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-amber-500 hover:bg-amber-600 text-zinc-900 px-4 py-2 rounded-lg text-xs font-bold uppercase flex items-center gap-2 transition-colors"
+          className="btn-system btn-system-primary px-4 py-2 rounded-lg text-xs font-bold uppercase flex items-center gap-2 transition-colors"
         >
           <Plus size={14} />
           Nuevo Cupón
@@ -472,7 +472,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                       onClick={() => handleToggleActive(coupon.code)}
                       className={`p-2 rounded-lg transition-colors ${
                         coupon.active 
-                          ? 'text-green-500 hover:bg-green-500/10' 
+                          ? 'text-system-success hover:bg-system-success/10' 
                           : 'text-zinc-300 dark:text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                       }`}
                       title={coupon.active ? 'Desactivar' : 'Activar'}
@@ -482,7 +482,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                     
                     <button
                       onClick={() => handleDuplicate(coupon)}
-                      className="p-2 text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                      className="p-2 text-zinc-400 hover:text-system-info hover:bg-system-info/10 rounded-lg transition-colors"
                       title="Duplicar"
                     >
                       <Copy size={18} />
@@ -490,7 +490,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                     
                     <button
                       onClick={() => handleDelete(coupon.code)}
-                      className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                      className="p-2 text-zinc-400 hover:text-system-danger hover:bg-system-error/10 rounded-lg transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 size={18} />

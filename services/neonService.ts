@@ -272,10 +272,11 @@ export async function updateFont(id: number, font: Partial<Font>): Promise<Font 
   try {
     const [updated] = await sql`
       UPDATE fonts SET
-        name = COALESCE(${font.name || null}, name),
-        css_family = COALESCE(${font.css_family || null}, css_family),
-        category = COALESCE(${font.category || null}, category),
-        preview_url = COALESCE(${font.preview_url || null}, preview_url)
++        id = COALESCE(${font.id || null}, id),
++        name = COALESCE(${font.name || null}, name),
++        css_family = COALESCE(${font.css_family || null}, css_family),
++        category = COALESCE(${font.category || null}, category),
++        preview_url = COALESCE(${font.preview_url || null}, preview_url)
       WHERE id = ${id}
       RETURNING *
     `;

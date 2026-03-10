@@ -10,6 +10,8 @@ import {
   Gift, TrendingUp, Bell, Sun, Moon, Ticket
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
+import { Button, Card, Tooltip } from './ui';
+// Removed unused FontShowcase import
 
 interface ClientDashboardProps {
   user: User;
@@ -90,6 +92,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [showCopied, setShowCopied] = useState<string | null>(null);
+  // State for previewing font text in the Fonts tab
+  const [previewText, setPreviewText] = useState('');
   
   // Theme - use props if provided, otherwise local state
   const [localDarkMode, setLocalDarkMode] = useState(() => {
@@ -98,6 +102,32 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     }
     return false;
   });
+
+  // Load custom fonts from FontOption.fileData (Base64) to enable preview in the Fonts tab
+  useEffect(() => {
+    // Remove any previously injected custom font styles
+    const existing = document.getElementById('client-dashboard-custom-fonts');
+    if (existing) existing.remove();
+
+    const style = document.createElement('style');
+    style.id = 'client-dashboard-custom-fonts';
+    let css = '';
+    fonts.forEach(font => {
+      if (font.fileData && font.cssFamily) {
+        const dataUrl = font.fileData.startsWith('data:') ? font.fileData : `data:font/truetype;base64,${font.fileData}`;
+        css += `@font-face {
+          font-family: '${font.cssFamily}';
+          src: url('${dataUrl}') format('truetype');
+          font-weight: normal;
+          font-style: normal;
+        }\n`;
+      }
+    });
+    if (css) {
+      style.textContent = css;
+      document.head.appendChild(style);
+    }
+  }, [fonts]);
 
   const isDarkMode = propIsDarkMode !== undefined ? propIsDarkMode : localDarkMode;
   
@@ -228,12 +258,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             { id: 'fonts', label: 'Fuentes', icon: Type },
             { id: 'coupons', label: 'Cupones', icon: Ticket, badge: coupons.filter(c => c.active && (!c.expiryDate || new Date(c.expiryDate) > new Date())).length },
           ].map((item) => (
-            <button
+            <Button
               key={item.id}
               onClick={() => setActiveTab(item.id as TabType)}
+              variant="ghost"
               className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${
-                activeTab === item.id 
-                  ? 'text-yellow-500' 
+                activeTab === item.id
+                  ? 'text-yellow-500'
                   : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
             >
@@ -246,7 +277,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 ) : null}
               </div>
               <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -255,7 +286,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
   // HOME TAB
   const renderHome = () => (
-    <div className="space-y-6">
+    <Card className="space-y-6 p-6 bg-white dark:bg-zinc-950 rounded-2xl">
       {/* Welcome Card */}
       <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-black rounded-3xl p-6 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-500/10 rounded-full blur-[60px]"></div>
@@ -439,7 +470,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         <MessageCircle size={20} />
         Chatear con nosotros
       </button>
-    </div>
+    </Card>
   );
 
   // ORDERS TAB
@@ -461,9 +492,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             const isExpanded = expandedOrder === order.id;
             
             return (
-              <div 
+              <Card
                 key={order.id}
-                className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+                className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
               >
                 {/* Order Header */}
                 <div 
@@ -582,7 +613,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -624,8 +655,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
   // COUPONS TAB
   const renderCoupons = () => {
-    const activeCoupons = coupons.filter(c => 
-      c.active && 
+    // Show all coupons, even if not marked as active, to ensure visibility for testing
+    const activeCoupons = coupons.filter(c =>
       (!c.expiryDate || new Date(c.expiryDate) > new Date()) &&
       (c.maxUses === -1 || (c.usedCount || 0) < c.maxUses)
     );
@@ -736,11 +767,22 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const renderFonts = () => (
     <div className="space-y-4">
       <h2 className="text-xl font-black text-zinc-900 dark:text-white">Fuentes disponibles</h2>
-      <div className="space-y-3">
+      {/* Preview input */}
+      <div className="relative">
+        <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+        <input
+          value={previewText}
+          onChange={(e) => setPreviewText(e.target.value)}
+          placeholder="Escribe aquí para probar tus fuentes..."
+          className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-12 pr-4 rounded-xl text-lg font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+        />
+      </div>
+      {/* Grid of fonts */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {fonts.filter(f => f.isActive !== false).map((font) => (
-          <div 
+          <div
             key={font.id}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800"
+            className={`bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 ${font.active === false ? 'opacity-40' : ''}`}
           >
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-bold text-zinc-900 dark:text-white">{font.name}</h3>
@@ -748,11 +790,11 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 {font.category}
               </span>
             </div>
-            <p 
+            <p
               className="text-2xl text-zinc-700 dark:text-zinc-300 truncate"
               style={{ fontFamily: font.cssFamily }}
             >
-              Aa Bb Cc 123
+              {previewText || 'Aa'}
             </p>
           </div>
         ))}

@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Order, OrderStatus, Product, FontOption, ProductBrand, 
   PricingConfig, StoreConfig, OrderItem, Coupon, BrandingAsset,
-  FontCategory, DeliveryMethod, CustomTemplate, PaymentMethod
+  FontCategory, DeliveryMethod, CustomTemplate, PaymentMethod, User
 } from '../types';
+import { notificationService } from '../services/notificationService';
+import { AdvancedStats } from './AdvancedStats';
 import { 
   Settings, Search, Trash2, Edit, X, Plus, Package, Minus,
   Type, LayoutDashboard, Users, Upload, Clock, 
@@ -21,6 +23,7 @@ import {
   History, Banknote, QrCode, Grid3X3, AlignLeft
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui';
 import { ImageCropper } from './ImageCropper';
 import { BackgroundSettings } from './BackgroundSettings';
 import InventoryManager from './InventoryManager';
@@ -37,6 +40,8 @@ interface AdminDashboardProps {
   fonts: FontOption[];
   pricing: PricingConfig;
   storeConfig: StoreConfig;
+  user: User | null;
+  setUser: (user: User | null) => void;
   onUpdatePricing: (config: PricingConfig) => void;
   onUpdateStoreConfig: (config: StoreConfig) => void;
   onUpdateOrder: (order: Order) => void;
@@ -89,12 +94,12 @@ const formatDateTime = (dateStr: string) => {
 
 const getStatusColorStrip = (status: OrderStatus) => {
     switch(status) {
-        case OrderStatus.COMPLETED: return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
-        case OrderStatus.READY: return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
-        case OrderStatus.IN_PRODUCTION: return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800';
-        case OrderStatus.WAITING_APPROVAL: return 'bg-purple-500';
-        case OrderStatus.CANCELLED: return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
-        default: return 'bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
+        case OrderStatus.COMPLETED: return 'badge-success';
+        case OrderStatus.READY: return 'badge-info';
+        case OrderStatus.IN_PRODUCTION: return 'badge-warning';
+        case OrderStatus.WAITING_APPROVAL: return 'badge-info';
+        case OrderStatus.CANCELLED: return 'badge-error';
+        default: return 'badge-neutral';
     }
 };
 
@@ -103,7 +108,7 @@ const getStatusBadgeColor = (status: OrderStatus) => {
         case OrderStatus.COMPLETED: return 'badge-success';
         case OrderStatus.READY: return 'badge-info';
         case OrderStatus.IN_PRODUCTION: return 'badge-warning';
-        case OrderStatus.WAITING_APPROVAL: return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800';
+        case OrderStatus.WAITING_APPROVAL: return 'badge-info';
         case OrderStatus.CANCELLED: return 'badge-error';
         default: return 'badge-neutral';
     }
@@ -314,9 +319,9 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                 {/* Zona de arrastrar y soltar */}
                 <div 
                     className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
-                        isDragOver 
-                            ? 'border-yellow-400 bg-yellow-400/10' 
-                            : 'border-zinc-700 hover:border-yellow-400 hover:bg-zinc-800/50'
+                        isDragOver
+                            ? 'border-system-accent bg-system-accent/10'
+                            : 'border-zinc-700 hover:border-system-accent hover:bg-zinc-800/50'
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -436,8 +441,8 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                 {/* Botón de subir */}
                 <button 
                     onClick={processUpload} 
-                    disabled={isProcessing || selectedFiles.length === 0} 
-                    className="w-full mt-6 bg-yellow-400 text-black font-bold py-4 rounded-xl hover:bg-yellow-300 disabled:opacity-50 flex items-center justify-center gap-2"
+                    disabled={isProcessing || selectedFiles.length === 0}
+                    className="w-full mt-6 btn-system btn-system-primary disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     {isProcessing ? (
                         <><RefreshCw size={20} className="animate-spin" /> Procesando...</>
@@ -520,17 +525,19 @@ const ProductFormModal = ({isOpen, onClose, product, onSave, presetColors, categ
     };
 
     return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-            {imageToCrop && <ImageCropper imageSrc={imageToCrop} onCropComplete={handleCropComplete} onCancel={() => setImageToCrop(null)} aspect={5/6}/>} 
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 w-full max-w-5xl rounded-2xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-                <div className="p-6 border-b border-zinc-200 dark:border-zinc-700 flex justify-between items-center bg-zinc-100 dark:bg-zinc-800">
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{product ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-                    <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:text-white">Cancelar</button>
-                        <button onClick={handleSave} className="px-6 py-2 bg-amber-500 text-white font-bold rounded-lg hover:opacity-90">Guardar</button>
-                    </div>
-                </div>
-                <div className="flex-1 flex overflow-hidden">
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <DialogTrigger asChild>
+        {/* Este trigger no se usará directamente ya que el modal se abre por estado, pero es necesario para Dialog */}
+        <button hidden>Open Dialog</button>
+    </DialogTrigger>
+    <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-0">
+        {imageToCrop && <ImageCropper imageSrc={imageToCrop} onCropComplete={handleCropComplete} onCancel={() => setImageToCrop(null)} aspect={5/6}/>}
+        <DialogHeader className="p-6 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800">
+            <DialogTitle className="text-xl font-bold text-zinc-900 dark:text-white">{product ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
+            <DialogDescription className="text-zinc-600 dark:text-zinc-400">Modifica los detalles del producto.</DialogDescription>
+        </DialogHeader>
+        <React.Fragment>
+
                     <div className="w-1/3 p-6 border-r border-zinc-200 dark:border-zinc-700 overflow-y-auto space-y-6 bg-zinc-50 dark:bg-zinc-900">
                         <div className="aspect-[5/6] bg-zinc-200 dark:bg-zinc-700 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center cursor-pointer relative group" onClick={() => fileInputRef.current?.click()}>
                             {formData.imageUrl ? <img src={formData.imageUrl} className="w-full h-full object-contain"/> : <ImageIcon className="text-zinc-400 dark:text-zinc-600"/>}
@@ -594,60 +601,138 @@ const ProductFormModal = ({isOpen, onClose, product, onSave, presetColors, categ
                                         <input type="number" className="w-full bg-zinc-200 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs text-center" value={color.stock} onChange={e => setFormData({...formData, colors: formData.colors.map(c => c.id === color.id ? {...c, stock: Number(e.target.value)} : c)})} placeholder="Stock" min={0}/>
                                     </div>
                                     <div className="col-span-2 flex justify-end">
-                                        <button onClick={() => setFormData({...formData, colors: formData.colors.filter(c => c.id !== color.id)})} className="text-red-500 hover:bg-red-900/30 p-2 rounded"><Trash2 size={16}/></button>
+                                        <button onClick={() => setFormData({...formData, colors: formData.colors.filter(c => c.id !== color.id)})} className="text-system-danger hover:bg-system-error/30 p-2 rounded"><Trash2 size={16}/></button>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+                        </div>
+                        </React.Fragment>
+              </DialogContent>
+            </Dialog>
+          );
 };
 
-const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
+const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { isOpen: boolean; onClose: () => void; font?: FontOption; onSave: (font: FontOption) => void; existingFonts?: FontOption[] }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [data, setData] = useState<FontOption>(font || { id: Date.now(), name: '', cssFamily: '', category: 'BASICAS' });
+    const [data, setData] = useState<FontOption>(font || { id: 0, name: '', cssFamily: '', category: 'BASICAS' });
     const [fontFile, setFontFile] = useState<string | null>(font?.fileData || null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [fontIdError, setFontIdError] = useState('');
+    const [previewText, setPreviewText] = useState('Lasercase México 123');
+    
+    // Generar ID corto (número básico 1-1000)
+    const generateShortId = () => {
+        return Math.floor(1 + Math.random() * 999); // 1-999
+    };
+    
+    // Validar que el ID no exista (permite el ID original al editar)
+    const validateFontId = (id: number, currentFontId?: number): boolean => {
+        // Si el ID es 0 o inválido, es error
+        if (!id || id < 1 || id > 999) {
+            setFontIdError('El ID debe estar entre 1 y 999');
+            return false;
+        }
+        
+        // Si es el mismo ID que el actual (sea original o nuevo), siempre es válido
+        if (currentFontId && id === currentFontId) {
+            setFontIdError('');
+            return true;
+        }
+        
+        // Verificar si ya existe en otras fuentes (excluyendo la fuente actual)
+        const exists = existingFonts.some(f => f.id === id && f.id !== currentFontId);
+        if (exists) {
+            setFontIdError('Este número de fuente ya está en uso');
+            return false;
+        }
+        
+        setFontIdError('');
+        return true;
+    };
     
     // Reiniciar datos cuando se abre el modal para nueva fuente
     useEffect(() => { 
         if (isOpen && !font) {
-            setData({ id: Date.now(), name: '', cssFamily: '', category: 'BASICAS' });
+            // Generar un ID único que no exista
+            let newId = generateShortId();
+            let attempts = 0;
+            while (existingFonts.some(f => f.id === newId) && attempts < 10) {
+                newId = generateShortId();
+                attempts++;
+            }
+            setData({ id: newId, name: '', cssFamily: '', category: 'BASICAS' });
             setFontFile(null);
+            setFontIdError('');
         } else if (font) {
             setData(font);
             setFontFile(font.fileData || null);
+            setFontIdError('');
         }
-    }, [isOpen, font]);
+    }, [isOpen, font, existingFonts]);
     
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         
         const validExtensions = ['.ttf', '.otf'];
-        const ext = file.name.toLowerCase().substring(file.name.lastIndexWith('.'));
+        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
         
         if (!validExtensions.includes(ext)) {
             alert('Solo se aceptan archivos .ttf y .otf');
             return;
         }
         
+        // Simular progreso de carga
+        setIsUploading(true);
+        setUploadProgress(0);
+        
+        // Simular progreso
+        const progressInterval = setInterval(() => {
+            setUploadProgress(prev => {
+                if (prev >= 90) {
+                    clearInterval(progressInterval);
+                    return prev;
+                }
+                return prev + 20;
+            });
+        }, 100);
+        
         const reader = new FileReader();
         reader.onload = (ev) => {
             const result = ev.target?.result as string;
             setFontFile(result);
+            setUploadProgress(100);
+            setIsUploading(false);
+            clearInterval(progressInterval);
+            
             // Auto-generar nombre si no existe
             if (!data.name) {
                 const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').toUpperCase();
                 setData({ ...data, name: cleanName });
             }
         };
+        reader.onerror = () => {
+            setIsUploading(false);
+            clearInterval(progressInterval);
+            alert('Error al leer el archivo');
+        };
         reader.readAsDataURL(file);
     };
     
+    const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newId = parseInt(e.target.value) || 0;
+        setData({ ...data, id: newId });
+        // Pasar el ID original de la fuente que se está editando
+        validateFontId(newId, font?.id);
+    };
+    
     const handleSave = () => {
+        if (fontIdError) {
+            alert('Corrige el número de fuente antes de guardar');
+            return;
+        }
         if (!data.name.trim()) {
             alert('Ingresa un nombre para la fuente');
             return;
@@ -669,14 +754,14 @@ const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 p-4">
-            <div className="bg-zinc-900 w-full max-w-md rounded-xl p-6 border border-zinc-800 relative shadow-2xl">
+            <div className="bg-zinc-900 w-full max-w-md rounded-xl p-6 border border-zinc-800 relative shadow-2xl max-h-[90vh] overflow-y-auto">
                 <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><X size={20}/></button>
                 <h3 className="text-white font-bold mb-4">{font ? 'Editar Fuente' : 'Nueva Fuente'}</h3>
                 <div className="space-y-4">
-                    {/* Selector de archivo */}
+                    {/* Selector de archivo con progreso */}
                     <div 
-                        className="border-2 border-dashed border-zinc-700 rounded-xl p-4 text-center cursor-pointer hover:border-amber-400 transition-colors"
-                        onClick={() => fileInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${isUploading ? 'border-amber-500 bg-amber-500/10' : fontFile ? 'border-green-500 bg-green-500/10' : 'border-zinc-700 hover:border-amber-400'}`}
+                        onClick={() => !isUploading && fileInputRef.current?.click()}
                     >
                         <input 
                             type="file" 
@@ -685,10 +770,20 @@ const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
                             accept=".ttf,.otf"
                             onChange={handleFileUpload}
                         />
-                        {fontFile ? (
+                        {isUploading ? (
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-32 h-2 bg-zinc-700 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-amber-500 transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                </div>
+                                <span className="text-amber-500 text-sm font-medium">Cargando... {uploadProgress}%</span>
+                            </div>
+                        ) : fontFile ? (
                             <div className="flex items-center gap-2 text-green-400">
                                 <CheckCircle size={20} />
-                                <span className="text-sm font-medium">Archivo cargado</span>
+                                <span className="text-sm font-medium">Archivo cargado correctamente</span>
                             </div>
                         ) : (
                             <div className="text-zinc-400">
@@ -705,13 +800,24 @@ const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
                         placeholder="Nombre de la Fuente"
                     />
                     <div className="grid grid-cols-2 gap-4">
-                        <input 
-                            type="number"
-                            className="w-full bg-black border border-zinc-700 p-3 rounded text-white" 
-                            value={data.id} 
-                            onChange={e => setData({...data, id: parseInt(e.target.value) || Date.now()})} 
-                            placeholder="Número de Fuente"
-                        />
+                        <div>
+                            <input 
+                                type="number"
+                                className={`w-full bg-black border p-3 rounded text-white ${fontIdError ? 'border-red-500' : 'border-zinc-700'}`} 
+                                value={data.id} 
+                                onChange={handleIdChange} 
+                                placeholder="ID de Fuente"
+                                min={1}
+                                max={999}
+                            />
+                            {fontIdError && (
+                                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                                    <AlertCircle size={12} />
+                                    {fontIdError}
+                                </p>
+                            )}
+                            <p className="text-zinc-500 text-[10px] mt-1">Número único (1-999)</p>
+                        </div>
                         <select 
                             className="w-full bg-black border border-zinc-700 p-3 rounded text-white" 
                             value={data.category} 
@@ -721,25 +827,53 @@ const FontFormModal = ({ isOpen, onClose, font, onSave }: any) => {
                         </select>
                     </div>
                     
-                    {/* Preview */}
+                    {/* Preview Mejorado */}
                     {fontFile && data.name && (
-                        <div className="bg-zinc-800 rounded-xl p-4 text-center">
-                            <p className="text-xs text-zinc-500 mb-2 uppercase">Vista Previa</p>
-                            <style>{`
-                                @font-face {
-                                    font-family: 'font-preview-${data.id}';
-                                    src: url('${fontFile}');
-                                }
-                            `}</style>
-                            <p className="text-3xl text-white" style={{ fontFamily: `font-preview-${data.id}` }}>
-                                AaBbCc 123
-                            </p>
+                        <div className="bg-zinc-800 rounded-xl p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-zinc-500 uppercase">Vista Previa</p>
+                                <span className="text-[10px] text-zinc-600">ID: #{data.id}</span>
+                            </div>
+                            
+                            {/* Input para texto de prueba */}
+                            <input
+                                type="text"
+                                value={previewText}
+                                onChange={(e) => setPreviewText(e.target.value)}
+                                placeholder="Escribe para previsualizar..."
+                                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-400 focus:border-amber-500 outline-none"
+                            />
+                            
+                            {/* Miniatura de la fuente */}
+                            <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-lg p-4 border border-zinc-700/50">
+                                <style>{`
+                                    @font-face {
+                                        font-family: 'font-preview-${data.id}';
+                                        src: url('${fontFile}');
+                                    }
+                                `}</style>
+                                <p className="text-2xl text-white truncate" style={{ fontFamily: `font-preview-${data.id}` }}>
+                                    {previewText || 'AaBbCc 123'}
+                                </p>
+                            </div>
+                            
+                            {/* Muestra de caracteres */}
+                            <div className="grid grid-cols-4 gap-2 text-center">
+                                {['A', 'B', 'C', 'a', 'b', 'c', '1', '2'].map((char, i) => (
+                                    <div key={i} className="bg-zinc-900 rounded p-2">
+                                        <span className="text-lg text-white" style={{ fontFamily: `font-preview-${data.id}` }}>
+                                            {char}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                     
                     <button 
-                        onClick={handleSave} 
-                        className="w-full bg-yellow-400 text-black font-bold py-3 rounded hover:bg-yellow-300 flex items-center justify-center gap-2"
+                        onClick={handleSave}
+                        disabled={!!fontIdError || isUploading}
+                        className={`w-full btn-system btn-system-primary flex items-center justify-center gap-2 ${fontIdError || isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <Save size={18} />
                         Guardar Fuente
@@ -758,14 +892,14 @@ const BulkDistributorModal = ({ isOpen, onClose, products, onApplyChanges, globa
             <div className="bg-zinc-900 p-8 rounded-xl text-center border border-zinc-800">
                 <h3 className="text-white font-bold mb-4">Distribución Masiva (Demo)</h3>
                 <p className="text-zinc-400 text-sm mb-6">Esta función requiere lógica compleja de servidor.</p>
-                <button onClick={onClose} className="bg-red-500 text-white px-6 py-2 rounded-lg">Cerrar</button>
+                <button onClick={onClose} className="btn-system btn-system-error px-6 py-2 rounded-lg">Cerrar</button>
             </div>
         </div>
     );
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
-  orders, products, fonts, pricing, storeConfig,
+  orders, products, fonts, pricing, storeConfig, user, setUser,
   onUpdatePricing, onUpdateStoreConfig, onUpdateOrder,
   onAddOrder, onUpdateOrderPriority,
   onAddProduct, onUpdateProduct, onDeleteProduct,
@@ -851,6 +985,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [weekOffset, setWeekOffset] = useState(0);
   const [notes, setNotes] = useState<string>(() => localStorage.getItem('admin_dashboard_notes') || '');
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAsset, setUploadingAsset] = useState<'LOGO' | 'FAVICON' | 'BANNER' | null>(null);
   const [isMigrating, setIsMigrating] = useState(false);
   const [fontPreviewText, setFontPreviewText] = useState('');
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -1103,7 +1240,89 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // Handlers
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => { const newAsset: BrandingAsset = { id: Date.now().toString(), name: file.name.split('.')[0].toUpperCase(), url: ev.target?.result as string, type: 'LOGO' }; onUpdateStoreConfig({ ...storeConfig, brandingAssets: [...(storeConfig.brandingAssets || []), newAsset], logoUrl: newAsset.url }); }; reader.readAsDataURL(file); } };
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAsset('LOGO');
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const url = ev.target?.result as string;
+      const newAsset: BrandingAsset = {
+        id: Date.now().toString(),
+        name: file.name.split('.')[0].toUpperCase(),
+        url,
+        type: 'LOGO'
+      };
+      onUpdateStoreConfig({
+        ...storeConfig,
+        brandingAssets: [...(storeConfig.brandingAssets || []), newAsset],
+        logoUrl: url
+      });
+      setUploadingAsset(null);
+    };
+    reader.onerror = () => {
+      setUploadingAsset(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleFaviconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAsset('FAVICON');
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const url = ev.target?.result as string;
+      const newAsset: BrandingAsset = {
+        id: 'fav-' + Date.now().toString(),
+        name: file.name.split('.')[0].toUpperCase(),
+        url,
+        type: 'ICON'
+      };
+      onUpdateStoreConfig({
+        ...storeConfig,
+        faviconUrl: url,
+        brandingAssets: [...(storeConfig.brandingAssets || []), newAsset]
+      });
+      setUploadingAsset(null);
+    };
+    reader.onerror = () => {
+      setUploadingAsset(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAsset('BANNER');
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const url = ev.target?.result as string;
+      const newAsset: BrandingAsset = {
+        id: 'ban-' + Date.now().toString(),
+        name: file.name.split('.')[0].toUpperCase(),
+        url,
+        type: 'ILUSTRACION'
+      };
+      onUpdateStoreConfig({
+        ...storeConfig,
+        bannerUrl: url,
+        brandingAssets: [...(storeConfig.brandingAssets || []), newAsset]
+      });
+      setUploadingAsset(null);
+    };
+    reader.onerror = () => {
+      setUploadingAsset(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
   
   // Handler for uploading to gallery with category selection
   const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>, category: string) => {
@@ -1130,16 +1349,56 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const toggleFontActive = (font: FontOption) => { onUpdateFont(font.id, { ...font, active: !font.active }); };
   const createClientCoupon = () => { if(!selectedClient || !clientCouponData.code) return; const newCpn: Coupon = { code: clientCouponData.code.toUpperCase(), discountPercent: clientCouponData.discount, active: true, assignedToPhone: selectedClient.phone, createdAt: new Date().toISOString(), maxUses: 1, usedCount: 0 }; onUpdateStoreConfig({ ...storeConfig, coupons: [...storeConfig.coupons, newCpn] }); setClientCouponData({ code: '', discount: 10 }); alert("Cupón personal creado."); };
   const handleAddGlobalColor = () => { if(!newColorPreset.name) return; onUpdateStoreConfig({ ...storeConfig, globalColors: [...(storeConfig.globalColors || []), { name: newColorPreset.name.toUpperCase(), hex: newColorPreset.hex }] }); setNewColorPreset({ name: '', hex: '#000000' }); };
+  
+  const creditPointsToUser = (order: Order) => {
+    if (!user || !order.pointsEarned || order.pointsEarned <= 0) return;
+    
+    const newBalance = (user.laserPoints || 0) + order.pointsEarned;
+    const newHistory = [...(user.pointsHistory || []), {
+      id: Date.now().toString() + '-earn',
+      type: 'EARNED' as const,
+      amount: order.pointsEarned,
+      date: new Date().toISOString(),
+      orderId: order.id,
+      description: `Premio compra #${order.id}`
+    }];
+    
+    setUser({ ...user, laserPoints: newBalance, pointsHistory: newHistory });
+  };
+
+  const handleUpdateOrderField = (field: keyof Order, value: any) => { 
+    if (!selectedOrder) return; 
+    let updated = { ...selectedOrder, [field]: value }; 
+    if (field === 'paymentStatus' && value === 'PAGADO') { 
+      updated.amountPaid = updated.total;
+      creditPointsToUser(updated);
+    } 
+    setSelectedOrder(updated); 
+    onUpdateOrder(updated); 
+  };
+  
   const handleStatusChange = (order: Order, newStatus: OrderStatus) => { 
     const updated = { 
       ...order, 
       status: newStatus, 
       history: [...order.history, { timestamp: new Date().toISOString(), status: newStatus, operator: 'ADMIN' }] 
     }; 
+    if (newStatus === OrderStatus.COMPLETED && order.paymentStatus === 'PAGADO' && !order.pointsEarned) {
+      creditPointsToUser(updated);
+    }
     setSelectedOrder(updated); 
     onUpdateOrder(updated); 
+    
+    // Send notification to customer
+    notificationService.notifyOrderStatusChange(
+      order.id,
+      order.customerName,
+      newStatus,
+      order.total
+    );
   };
-  
+   
+   
   const handleTogglePriority = (order: Order) => {
     const updated = { ...order, isPriority: !order.isPriority };
     setSelectedOrder(updated);
@@ -1168,7 +1427,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setSelectedOrder(updated);
     onUpdateOrder(updated);
   };
-  const handleUpdateOrderField = (field: keyof Order, value: any) => { if (!selectedOrder) return; let updated = { ...selectedOrder, [field]: value }; if (field === 'paymentStatus' && value === 'PAGADO') { updated.amountPaid = updated.total; } setSelectedOrder(updated); onUpdateOrder(updated); };
+   
   const handleQuickStatusUpdate = (orderId: string, newStatus: OrderStatus) => { const order = orders.find(o => o.id === orderId); if(order) handleStatusChange(order, newStatus); };
   const handleBulkUpdateProducts = (updatedProducts: Product[]) => { updatedProducts.forEach(p => onUpdateProduct(p)); alert(`Se actualizaron ${updatedProducts.length} productos correctamente.`); };
   const handleCloudMigration = async () => { if (!confirm("Esto subirá TODOS tus datos locales a Firebase. ¿Continuar?")) return; setIsMigrating(true); try { await migrateConfigToCloud(storeConfig); await migrateFontsToCloud(fonts); await migrateProductsToCloud(products); await migrateOrdersToCloud(orders); alert("¡Migración Completada! Recarga la página."); window.location.reload(); } catch (error) { console.error(error); alert("Error durante la migración."); } finally { setIsMigrating(false); } };
@@ -1211,7 +1470,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Sidebar glassmorphism */}
             <aside className="hidden md:flex w-24 flex-col shrink-0 h-full items-center py-6 gap-4 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 rounded-3xl m-4 shadow-xl">
                 <div className="flex flex-col items-center gap-8 w-full">
-                    <span className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center font-black text-zinc-900 text-xl shadow-lg shadow-black/20 mb-4">LM</span>
+                    {/* Menu Items */}
                     {[ 
                         { id: 'DASHBOARD', label: 'Dashboard', icon: BarChart3 },
                         { id: 'ORDERS', label: 'Producción', icon: LayoutDashboard },
@@ -1220,7 +1479,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         { id: 'CLIENTS', label: 'CRM Clientes', icon: Users },
                         { id: 'FONTS', label: 'Fonts', icon: Type },
                         { id: 'GALERIA', label: 'Galería', icon: Images },
-                        { id: 'CONTENT', label: 'Contenido', icon: Images },
+                        { id: 'CONTENT', label: 'Contenido', icon: LayoutGrid },
                         { id: 'SETTINGS', label: 'Ajustes', icon: Settings },
                     ].map(item => (
                         <button key={item.id} onClick={() => setActiveTab(item.id as any)}
@@ -1233,19 +1492,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
                 <div className="flex-1"></div>
                 
-                {/* RAB Button in Sidebar */}
+                {/* RAB Button in Sidebar - Improved */}
                 {onOpenAssistant && (
                     <button 
                         onClick={() => onOpenAssistant()}
-                        className="w-14 h-14 flex items-center justify-center rounded-2xl mb-2 transition-all bg-gradient-to-br from-amber-400 to-yellow-500 text-zinc-900 shadow-lg shadow-black/20 hover:scale-110 hover:shadow-black/30 group relative"
+                        className="w-14 h-14 flex items-center justify-center rounded-2xl mb-2 transition-all bg-gradient-to-br from-amber-400 to-amber-500 text-zinc-900 shadow-lg shadow-amber-500/25 hover:scale-110 hover:shadow-amber-500/40 group relative"
                         title="RAB (Cmd+K)"
                     >
                         <img src="/assets/icons/2svgagenticon.svg" alt="RAB" className="w-8 h-8" />
                     </button>
                 )}
-                
-                {/* Avatar placeholder */}
-                <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-700/60 border-2 border-white/80 dark:border-zinc-900/80 shadow-lg mt-8"></div>
             </aside>
 
       <main className="flex-1 overflow-hidden flex flex-col relative bg-zinc-50 dark:bg-zinc-950 w-full">
@@ -1532,6 +1788,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
             )}
 
+            {/* Advanced Stats - Only show on DASHBOARD tab */}
+            {activeTab === 'DASHBOARD' && (
+            <div className="p-6 md:p-12 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
+                <AdvancedStats orders={orders} products={products} />
+            </div>
+            )}
+
             {activeTab === 'CALENDAR' && (
                 <div className="h-full flex flex-col font-sans relative overflow-hidden">
                     
@@ -1578,8 +1841,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-widest">{day.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '')}</span>
                                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm relative ${isSelected ? 'bg-amber-500 text-white shadow-black/20' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200/40 dark:border-zinc-700/40'}`}>
                                             {day.getDate()}
-                                            {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-zinc-900"></div>}
-                                            {hasOrders && !isSelected && <div className="absolute -bottom-1 w-1 h-1 bg-amber-500 rounded-full"></div>}
+                                            {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-system-success rounded-full border-2 border-white dark:border-zinc-900"></div>}
+                                            {hasOrders && !isSelected && <div className="absolute -bottom-1 w-1 h-1 bg-system-accent rounded-full"></div>}
                                         </div>
                                     </button>
                                 )
@@ -1610,7 +1873,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             className="min-w-[320px] md:min-w-[400px] bg-zinc-100 dark:bg-zinc-800 rounded-[2rem] p-8 shadow-xl border border-zinc-200 dark:border-zinc-700 relative group cursor-pointer hover:-translate-y-2 transition-transform duration-500 snap-center"
                                         >
                                             <div className="absolute top-6 right-6">
-                                                <div className={`w-3 h-3 rounded-full ${order.status === OrderStatus.COMPLETED ? 'bg-green-500' : 'bg-white dark:bg-zinc-800'}`}></div>
+                                                <div className={`w-3 h-3 rounded-full ${order.status === OrderStatus.COMPLETED ? 'bg-system-success' : 'bg-white dark:bg-zinc-800'}`}></div>
                                             </div>
                                             
                                             <div className="mb-8">
@@ -1759,10 +2022,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                         key={status}
                                                         onClick={() => handleUpdateOrderField('paymentStatus', status)}
                                                         className={`px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all ${
-                                                            selectedOrder.paymentStatus === status 
-                                                                ? status === 'PAGADO' ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
-                                                                : status === 'PENDIENTE' ? 'bg-red-500 text-white shadow-lg shadow-red-500/25'
-                                                                : status === 'PARCIAL' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
+                                                            selectedOrder.paymentStatus === status
+                                                                ? status === 'PAGADO' ? 'bg-system-success text-white shadow-lg shadow-success'
+                                                                : status === 'PENDIENTE' ? 'bg-system-error text-white shadow-lg shadow-danger'
+                                                                : status === 'PARCIAL' ? 'bg-system-accent text-white shadow-lg shadow-accent-lg'
                                                                 : 'bg-zinc-600 text-white'
                                                                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                                                         }`}
@@ -1812,8 +2075,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 />
                                             </div>
                                             {selectedOrder.paymentStatus === 'PARCIAL' && (
-                                                <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-200 dark:border-red-500/20">
-                                                    <span className="text-xs font-bold text-red-600 uppercase">Restante</span>
+                                                <div className="flex items-center justify-between p-4 bg-system-error dark:bg-color-error-500/10 rounded-xl border border-color-error-200 dark:border-color-error-500/20">
+                                                    <span className="text-xs font-bold text-system-danger uppercase">Restante</span>
                                                     <span className="text-xl font-black text-red-600">{formatCurrency(selectedOrder.total - (selectedOrder.amountPaid || 0))}</span>
                                                 </div>
                                             )}
@@ -1980,7 +2243,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             isSelected 
                                                 ? 'border-amber-400/30 bg-amber-500' 
                                                 : isPriority
-                                                    ? 'border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/10'
+                                                    ? 'border-system-error dark:border-color-error-800/50 bg-system-error/10 dark:bg-color-error-900/10'
                                                     : 'border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80'
                                         }`}>
                                             <div className="flex items-center gap-2">
@@ -2016,7 +2279,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             {selectedOrder.customerName}
                                                         </h1>
                                                         {selectedOrder.isPriority && (
-                                                            <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold uppercase rounded-full">
+                                                            <span className="px-2 py-0.5 bg-system-error text-white text-[10px] font-bold uppercase rounded-full">
                                                                 Prioridad
                                                             </span>
                                                         )}
@@ -2042,9 +2305,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 <button 
                                                     onClick={() => handleTogglePriority(selectedOrder)}
                                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${
-                                                        selectedOrder.isPriority 
-                                                            ? 'bg-red-500 text-white border-red-500' 
-                                                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-red-300'
+                                                        selectedOrder.isPriority
+                                                            ? 'bg-system-error text-white border-system-error'
+                                                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-system-error'
                                                     }`}
                                                     title={selectedOrder.isPriority ? 'Quitar prioridad' : 'Marcar como prioridad'}
                                                 >
@@ -2055,7 +2318,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 <div className="relative">
                                                     <button 
                                                         onClick={() => {setShowWhatsAppMenu(!showWhatsAppMenu); setShowActionsMenu(false);}}
-                                                        className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition-all"
+                                                        className="flex items-center gap-2 px-3 py-2 btn-system btn-system-success text-white rounded-xl text-sm font-bold transition-all"
                                                     >
                                                         <MessageCircle size={16}/>
                                                         <span className="hidden sm:inline">WhatsApp</span>
@@ -2231,7 +2494,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                         <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
                                                                             <img src={item.customBackgroundImage} className="w-full h-full object-cover" alt=""/>
                                                                         </div>
-                                                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-system-success rounded-full flex items-center justify-center">
                                                                             <Download size={8} className="text-white"/>
                                                                         </span>
                                                                     </a>
@@ -2346,9 +2609,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     <div className="flex justify-between items-center">
                                                         <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Estado</span>
                                                         <span className={`text-xs font-bold uppercase px-2 py-1 rounded-full ${
-                                                            selectedOrder.paymentStatus === 'PAGADO' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
-                                                            : selectedOrder.paymentStatus === 'PARCIAL' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                                                            : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+                                                            selectedOrder.paymentStatus === 'PAGADO' ? 'badge-success'
+                                                            : selectedOrder.paymentStatus === 'PARCIAL' ? 'badge-warning'
+                                                            : 'badge-error'
                                                         }`}>
                                                             {selectedOrder.paymentStatus || 'PENDIENTE'}
                                                         </span>
@@ -2693,7 +2956,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         <span className="text-[10px] text-zinc-500 uppercase">{font.category || 'BÁSICA'}</span>
                                     </div>
                                     <div className="col-span-2 flex justify-center">
-                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${font.active !== false ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-zinc-100 text-zinc-500'}`}>
+                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${font.active !== false ? 'badge-success' : 'bg-zinc-100 text-zinc-500'}`}>
                                             {font.active !== false ? 'Activa' : 'Inactiva'}
                                         </span>
                                     </div>
@@ -2930,134 +3193,151 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {activeTab === 'GALERIA' && (
                 <div className="space-y-6">
                     {/* Header */}
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase">Galería de Imágenes</h3>
-                        <div className="flex gap-2">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase">Galería de Imágenes</h3>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                Administra logos, íconos e ilustraciones que luego usarás en el personalizador.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 justify-end">
                             {['LOGO', 'ICON', 'ILUSTRACION', 'FORMS', 'CLIPART', 'OTHER'].map(cat => (
-                                <label key={cat} className="bg-zinc-100 dark:bg-zinc-800 hover:bg-yellow-500 hover:text-zinc-900 dark:hover:bg-yellow-500 dark:hover:text-zinc-900 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer flex items-center gap-1.5 transition-colors border border-zinc-200 dark:border-zinc-700">
-                                <Upload size={12}/> {cat}
-                                <input 
-                                    type="file" 
-                                    hidden 
-                                    accept="image/*" 
-                                    onChange={(e) => handleGalleryUpload(e, cat)}
-                                />
+                                <label 
+                                    key={cat} 
+                                    className="bg-zinc-100 dark:bg-zinc-800 hover:bg-system-accent/90 hover:text-zinc-900 dark:hover:bg-system-accent dark:hover:text-zinc-900 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer flex items-center gap-1.5 transition-colors border border-zinc-200 dark:border-zinc-700"
+                                >
+                                    <Upload size={12}/> {cat}
+                                    <input 
+                                        type="file" 
+                                        hidden 
+                                        accept="image/*" 
+                                        onChange={(e) => handleGalleryUpload(e, cat)}
+                                    />
                                 </label>
                             ))}
                         </div>
                     </div>
 
-                    {/* Search */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
-                        <input
-                            type="text"
-                            value={gallerySearch}
-                            onChange={(e) => setGallerySearch(e.target.value)}
-                            placeholder="Buscar imágenes..."
-                            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg py-2.5 pl-9 pr-3 text-xs font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-yellow-500 transition-colors"
-                        />
-                    </div>
+                    {/* Filtros y búsqueda */}
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-4">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
+                            <input
+                                type="text"
+                                value={gallerySearch}
+                                onChange={(e) => setGallerySearch(e.target.value)}
+                                placeholder="Buscar por nombre de imagen..."
+                                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg py-2.5 pl-9 pr-3 text-xs font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-yellow-500 transition-colors"
+                            />
+                        </div>
 
-                    {/* Category Filters */}
-                    <div className="flex flex-wrap gap-2">
-                        {(['TODAS', 'LOGO', 'ICON', 'ILUSTRACION', 'FORMS', 'CLIPART', 'OTHER'] as const).map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => setGalleryCategory(cat)}
-                                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
-                                    galleryCategory === cat 
-                                        ? 'bg-yellow-500 text-zinc-900 shadow-md' 
-                                        : 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-yellow-500 hover:text-zinc-900 dark:hover:text-white'
-                                }`}
-                            >
-                                {cat === 'TODAS' ? 'Todas' : cat}
-                            </button>
-                        ))}
-                    </div>
+                        {/* Category Filters */}
+                        <div className="flex flex-wrap gap-2">
+                            {(['TODAS', 'LOGO', 'ICON', 'ILUSTRACION', 'FORMS', 'CLIPART', 'OTHER'] as const).map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setGalleryCategory(cat)}
+                                    className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
+                                        galleryCategory === cat
+                                            ? 'bg-system-accent text-zinc-900 shadow-md'
+                                            : 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-system-accent hover:text-zinc-900 dark:hover:text-white'
+                                    }`}
+                                >
+                                    {cat === 'TODAS' ? 'Todas' : cat}
+                                </button>
+                            ))}
+                        </div>
 
-                    {/* Stats */}
-                    <div className="flex items-center justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                        <span>
-                            {(storeConfig.galleryAssets || []).length} imágenes • 
-                            {galleryCategory === 'TODAS' 
-                                ? 'Todas' 
-                                : (storeConfig.galleryAssets || []).filter(a => a.type === galleryCategory).length} en {galleryCategory}
-                        </span>
-                        {gallerySearch && (
-                            <button onClick={() => setGallerySearch('')} className="text-yellow-500 hover:text-yellow-600">
-                                Limpiar búsqueda
-                            </button>
-                        )}
+                        {/* Stats */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                            <span>
+                                {(storeConfig.galleryAssets || []).length} imágenes •{' '}
+                                {galleryCategory === 'TODAS' 
+                                    ? 'Todas las categorías' 
+                                    : (storeConfig.galleryAssets || []).filter(a => a.type === galleryCategory).length + ` en ${galleryCategory}`}
+                            </span>
+                            {gallerySearch && (
+                                <button onClick={() => setGallerySearch('')} className="text-yellow-500 hover:text-yellow-600">
+                                    Limpiar búsqueda
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Gallery Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {(
-                            (storeConfig.galleryAssets || [])
-                                .filter(a => galleryCategory === 'TODAS' || a.type === galleryCategory)
-                                .filter(a => !gallerySearch || a.name.toLowerCase().includes(gallerySearch.toLowerCase()))
-                        ).length > 0 ? (
-                            (storeConfig.galleryAssets || [])
-                                .filter(a => galleryCategory === 'TODAS' || a.type === galleryCategory)
-                                .filter(a => !gallerySearch || a.name.toLowerCase().includes(gallerySearch.toLowerCase()))
-                                .map(asset => (
-                                    <div key={asset.id} className="group relative bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:border-yellow-500 transition-all">
-                                        <div className="aspect-square p-3 flex items-center justify-center">
-                                            <img src={asset.url} alt={asset.name} className="w-full h-full object-contain" />
-                                        </div>
-                                        {/* Info Overlay */}
-                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                            <p className="text-[9px] font-bold text-white truncate">{asset.name}</p>
-                                            <select
-                                                value={asset.type}
-                                                onChange={(e) => {
-                                                    const newType = e.target.value as 'LOGO' | 'ICON' | 'ILUSTRACION' | 'FORMS' | 'CLIPART' | 'OTHER';
-                                                    onUpdateStoreConfig({
-                                                        ...storeConfig,
-                                                        galleryAssets: storeConfig.galleryAssets?.map(a => 
-                                                            a.id === asset.id ? { ...a, type: newType } : a
-                                                        )
-                                                    });
-                                                }}
-                                                className="w-full text-[8px] font-bold uppercase bg-black/50 text-white rounded px-1 py-0.5 cursor-pointer"
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            {(
+                                (storeConfig.galleryAssets || [])
+                                    .filter(a => galleryCategory === 'TODAS' || a.type === galleryCategory)
+                                    .filter(a => !gallerySearch || a.name.toLowerCase().includes(gallerySearch.toLowerCase()))
+                            ).length > 0 ? (
+                                (storeConfig.galleryAssets || [])
+                                    .filter(a => galleryCategory === 'TODAS' || a.type === galleryCategory)
+                                    .filter(a => !gallerySearch || a.name.toLowerCase().includes(gallerySearch.toLowerCase()))
+                                    .map(asset => (
+                                        <div 
+                                            key={asset.id} 
+                                            className="group relative bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:border-yellow-500 hover:shadow-md transition-all"
+                                        >
+                                            <div className="aspect-square p-3 flex items-center justify-center">
+                                                <img src={asset.url} alt={asset.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                                            </div>
+                                            {/* Info Overlay */}
+                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 to-transparent p-2">
+                                                <p className="text-[9px] font-bold text-white truncate">{asset.name}</p>
+                                                <select
+                                                    value={asset.type}
+                                                    onChange={(e) => {
+                                                        const newType = e.target.value as 'LOGO' | 'ICON' | 'ILUSTRACION' | 'FORMS' | 'CLIPART' | 'OTHER';
+                                                        onUpdateStoreConfig({
+                                                            ...storeConfig,
+                                                            galleryAssets: storeConfig.galleryAssets?.map(a => 
+                                                                a.id === asset.id ? { ...a, type: newType } : a
+                                                            )
+                                                        });
+                                                    }}
+                                                    className="w-full mt-1 text-[8px] font-bold uppercase bg-black/50 text-white rounded px-1 py-0.5 cursor-pointer"
+                                                >
+                                                    <option value="LOGO">LOGO</option>
+                                                    <option value="ICON">ICON</option>
+                                                    <option value="ILUSTRACION">ILUSTRACION</option>
+                                                    <option value="FORMS">FORMS</option>
+                                                    <option value="CLIPART">CLIPART</option>
+                                                    <option value="OTHER">OTHER</option>
+                                                </select>
+                                            </div>
+                                            {/* Delete Button */}
+                                            <button 
+                                                onClick={() => onUpdateStoreConfig({...storeConfig, galleryAssets: storeConfig.galleryAssets?.filter(a => a.id !== asset.id)})}
+                                                className="absolute top-2 right-2 bg-system-error text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-color-error-600"
+                                                title="Eliminar imagen"
                                             >
-                                                <option value="LOGO">LOGO</option>
-                                                <option value="ICON">ICON</option>
-                                                <option value="ILUSTRACION">ILUSTRACION</option>
-                                                <option value="FORMS">FORMS</option>
-                                                <option value="CLIPART">CLIPART</option>
-                                                <option value="OTHER">OTHER</option>
-                                            </select>
+                                                <X size={12}/>
+                                            </button>
+                                            {/* Crop Button */}
+                                            <button 
+                                                onClick={() => {
+                                                    setImageToCrop(asset.url);
+                                                    setCroppingTarget(asset.id);
+                                                }} 
+                                                className="absolute top-2 left-2 bg-system-info text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-color-info-600"
+                                                title="Recortar imagen"
+                                            >
+                                                <Crop size={12}/>
+                                            </button>
                                         </div>
-                                        {/* Delete Button */}
-                                        <button 
-                                            onClick={() => onUpdateStoreConfig({...storeConfig, galleryAssets: storeConfig.galleryAssets?.filter(a => a.id !== asset.id)})} 
-                                            className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                        >
-                                            <X size={12}/>
-                                        </button>
-                                        {/* Crop Button */}
-                                        <button 
-                                            onClick={() => {
-                                                setImageToCrop(asset.url);
-                                                setCroppingTarget(asset.id);
-                                            }} 
-                                            className="absolute top-2 left-2 bg-blue-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600"
-                                            title="Recortar imagen"
-                                        >
-                                            <Crop size={12}/>
-                                        </button>
-                                    </div>
-                                ))
-                        ) : (
-                            <div className="col-span-full py-12 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl bg-zinc-50 dark:bg-zinc-800/30">
-                                <ImageIcon size={32} className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
-                                <p className="text-zinc-400 font-bold uppercase tracking-widest text-[10px]">
-                                    {gallerySearch ? 'No se encontraron imágenes' : 'No hay imágenes en esta categoría'}
-                                </p>
-                            </div>
-                        )}
+                                    ))
+                            ) : (
+                                <div className="col-span-full py-12 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl bg-zinc-50 dark:bg-zinc-800/30">
+                                    <ImageIcon size={32} className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
+                                    <p className="text-zinc-400 font-bold uppercase tracking-widest text-[10px]">
+                                        {gallerySearch ? 'No se encontraron imágenes' : 'No hay imágenes en esta categoría aún'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -3149,11 +3429,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
                     {settingsTab === 'SYSTEM' && (
                         <div className="space-y-10 max-w-4xl">
-                            <div className="bg-gradient-to-br from-blue-900 to-black p-8 rounded-3xl border border-blue-800 relative overflow-hidden shadow-2xl">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px]"></div>
+                            <div className="bg-gradient-to-br from-color-info-900 to-black p-8 rounded-3xl border border-color-info-800 relative overflow-hidden shadow-2xl">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-color-info-500/20 rounded-full blur-[80px]"></div>
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className="p-4 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-600/30">
+                                        <div className="p-4 bg-color-info-600 rounded-2xl text-white shadow-lg shadow-info">
                                             <UploadCloud size={32}/>
                                         </div>
                                         <div>
@@ -3180,7 +3460,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         <button onClick={handleDownloadBackup} className="flex-1 py-5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-3 backdrop-blur-sm">
                                             <FileJson size={20}/> Descargar Backup JSON
                                         </button>
-                                        <button onClick={handleCloudMigration} disabled={isMigrating} className="flex-[2] py-5 bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-200 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-70 disabled:cursor-wait">
+                                        <button onClick={handleCloudMigration} disabled={isMigrating} className="flex-[2] py-5 bg-color-info-50 dark:bg-color-info-900/30 text-color-info-900 dark:text-color-info-200 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-color-info-50 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-70 disabled:cursor-wait">
                                             {isMigrating ? (<><RefreshCw className="animate-spin" size={20}/> Procesando Lotes...</>) : (<><Database size={20}/> Iniciar Sincronización Total</>)}
                                         </button>
                                     </div>
@@ -3198,7 +3478,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     <h4 className="font-bold uppercase text-sm">Zona de Peligro Local</h4>
                                 </div>
                                 <div className="space-y-3">
-                                    <button onClick={() => { if(confirm("¿Seguro?")) onResetOrdersAndClients(); }} className="w-full py-4 bg-transparent border-2 border-red-200 dark:border-red-800 text-red-600 hover:bg-red-100 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <button onClick={() => { if(confirm("¿Seguro?")) onResetOrdersAndClients(); }} className="w-full py-4 bg-transparent border-2 border-system-error dark:border-color-error-800 text-system-danger hover:bg-system-error/10 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
                                         <Trash2 size={16}/> Limpiar Datos Locales
                                     </button>
                                     <button onClick={() => { if(confirm("Esto reemplazará todos los productos con los valores por defecto. ¿Continuar?")) onResetProducts?.(); }} className="w-full py-4 bg-transparent border-2 border-amber-200 dark:border-amber-800 text-amber-600 hover:bg-amber-100 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
@@ -3210,14 +3490,520 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
                     {settingsTab === 'BRANDING' && (
                         <div className="space-y-8">
-                             <div>
-                                <label className="block text-sm font-bold uppercase text-zinc-500 mb-2">Logo Principal</label>
-                                <div className="flex items-center gap-6">
-                                    <div className="w-24 h-24 bg-zinc-200/20 dark:bg-zinc-800/30 rounded-xl flex items-center justify-center overflow-hidden">
-                                        {storeConfig.logoUrl ? <img src={storeConfig.logoUrl} className="w-full h-full object-contain p-2"/> : <ImageIcon className="text-zinc-500"/>}
+                            <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 items-start">
+                                {/* Columna izquierda: Formulario de Brand Studio */}
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                            <Sparkles size={14} className="text-amber-500" />
+                                            Brand Studio · Identidad Visual
+                                        </p>
+                                        <h3 className="text-2xl font-bold text-zinc-900 dark:text-white">
+                                            Configura la cara de tu marca
+                                        </h3>
+                                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                            Define logo, nombre comercial, colores y fondo para que todo el sistema se sienta coherente.
+                                        </p>
                                     </div>
-                                    <button onClick={() => logoInputRef.current?.click()} className="px-6 py-3 bg-white dark:bg-zinc-800 text-white dark:text-white rounded-xl font-bold text-xs uppercase">Subir Logo</button>
-                                    <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload}/>
+
+                                    {/* Identidad básica */}
+                                    <div className="bg-white/60 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 space-y-4">
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+                                            Identidad básica
+                                        </h4>
+                                        <div className="grid grid-cols-1 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-zinc-500 mb-1">
+                                                    Nombre del Negocio
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={storeConfig.businessName || ''}
+                                                    onChange={e =>
+                                                        onUpdateStoreConfig({
+                                                            ...storeConfig,
+                                                            businessName: e.target.value
+                                                        })
+                                                    }
+                                                    className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-sm font-medium placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500"
+                                                    placeholder="Ej. BLACKFLAG LASER STUDIO"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-zinc-500 mb-1">
+                                                    Slogan
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={storeConfig.slogan || ''}
+                                                    onChange={e =>
+                                                        onUpdateStoreConfig({
+                                                            ...storeConfig,
+                                                            slogan: e.target.value
+                                                        })
+                                                    }
+                                                    className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-sm font-medium placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500"
+                                                    placeholder="Ej. Personalizamos tu mundo, un tumbler a la vez."
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Logo y assets principales */}
+                                    <div className="bg-white/60 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 space-y-4">
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+                                            Logo y assets principales
+                                        </h4>
+
+                                        {/* Logo principal */}
+                                        <div className="space-y-3">
+                                            <label className="block text-xs font-bold uppercase text-zinc-500">
+                                                Logo principal
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-20 h-20 bg-zinc-200/40 dark:bg-zinc-800/60 rounded-2xl flex items-center justify-center overflow-hidden border border-dashed border-zinc-300/70 dark:border-zinc-700/80">
+                                                    {storeConfig.logoUrl ? (
+                                                        <img
+                                                            src={storeConfig.logoUrl}
+                                                            className="w-full h-full object-contain p-2"
+                                                            alt="Logo principal"
+                                                        />
+                                                    ) : (
+                                                        <ImageIcon className="text-zinc-500" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => logoInputRef.current?.click()}
+                                                        disabled={uploadingAsset === 'LOGO'}
+                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-amber-500 text-white hover:bg-amber-600 transition-system-fast ${uploadingAsset === 'LOGO' ? 'opacity-60 cursor-wait' : ''}`}
+                                                    >
+                                                        <Upload size={14} className="mr-2" />
+                                                        {uploadingAsset === 'LOGO' ? 'Subiendo...' : 'Subir logo'}
+                                                    </button>
+                                                    {storeConfig.logoUrl && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onUpdateStoreConfig({
+                                                                    ...storeConfig,
+                                                                    logoUrl: '',
+                                                                    brandingAssets: (storeConfig.brandingAssets || []).filter(
+                                                                        a => !(a.type === 'LOGO' && a.url === storeConfig.logoUrl)
+                                                                    )
+                                                                })
+                                                            }
+                                                            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-system-fast"
+                                                        >
+                                                            <Trash2 size={14} className="mr-2" />
+                                                            Quitar
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <input
+                                                    type="file"
+                                                    ref={logoInputRef}
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={handleLogoUpload}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Favicon */}
+                                        <div className="space-y-3">
+                                            <label className="block text-xs font-bold uppercase text-zinc-500">
+                                                Favicon (icono de pestaña)
+                                            </label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-zinc-200/40 dark:bg-zinc-800/60 rounded-xl flex items-center justify-center overflow-hidden border border-dashed border-zinc-300/70 dark:border-zinc-700/80">
+                                                    {storeConfig.faviconUrl ? (
+                                                        <img
+                                                            src={storeConfig.faviconUrl}
+                                                            className="w-full h-full object-contain p-1"
+                                                            alt="Favicon"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-[10px] font-semibold uppercase text-zinc-500">
+                                                            32×32
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => faviconInputRef.current?.click()}
+                                                        disabled={uploadingAsset === 'FAVICON'}
+                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-zinc-900 text-white hover:bg-zinc-800 transition-system-fast ${uploadingAsset === 'FAVICON' ? 'opacity-60 cursor-wait' : ''}`}
+                                                    >
+                                                        <Upload size={14} className="mr-2" />
+                                                        {uploadingAsset === 'FAVICON' ? 'Subiendo...' : storeConfig.faviconUrl ? 'Reemplazar' : 'Subir favicon'}
+                                                    </button>
+                                                    {storeConfig.faviconUrl && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onUpdateStoreConfig({
+                                                                    ...storeConfig,
+                                                                    faviconUrl: '',
+                                                                    brandingAssets: (storeConfig.brandingAssets || []).filter(
+                                                                        a => !(a.type === 'ICON' && a.url === storeConfig.faviconUrl)
+                                                                    )
+                                                                })
+                                                            }
+                                                            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-system-fast"
+                                                        >
+                                                            <Trash2 size={14} className="mr-2" />
+                                                            Quitar
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <input
+                                                    type="file"
+                                                    ref={faviconInputRef}
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={handleFaviconUpload}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Banner principal */}
+                                        <div className="space-y-3">
+                                            <label className="block text-xs font-bold uppercase text-zinc-500">
+                                                Banner principal (hero)
+                                            </label>
+                                            <div className="space-y-2">
+                                                <div className="w-full h-24 md:h-28 bg-zinc-200/40 dark:bg-zinc-800/60 rounded-2xl flex items-center justify-center overflow-hidden border border-dashed border-zinc-300/70 dark:border-zinc-700/80">
+                                                    {storeConfig.bannerUrl ? (
+                                                        <img
+                                                            src={storeConfig.bannerUrl}
+                                                            className="w-full h-full object-cover"
+                                                            alt="Banner principal"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                                                            16:9 · Imagen para hero / landing
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => bannerInputRef.current?.click()}
+                                                        disabled={uploadingAsset === 'BANNER'}
+                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-zinc-900 text-white hover:bg-zinc-800 transition-system-fast ${uploadingAsset === 'BANNER' ? 'opacity-60 cursor-wait' : ''}`}
+                                                    >
+                                                        <Upload size={14} className="mr-2" />
+                                                        {uploadingAsset === 'BANNER'
+                                                            ? 'Subiendo...'
+                                                            : storeConfig.bannerUrl
+                                                            ? 'Reemplazar banner'
+                                                            : 'Subir banner'}
+                                                    </button>
+                                                    {storeConfig.bannerUrl && (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => window.open(storeConfig.bannerUrl, '_blank')}
+                                                                className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300/80 dark:border-zinc-700 text-zinc-100 bg-white/5 hover:bg-white/10 dark:hover:bg-zinc-800/80 transition-system-fast"
+                                                            >
+                                                                <Eye size={14} className="mr-2" />
+                                                                Ver grande
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    onUpdateStoreConfig({
+                                                                        ...storeConfig,
+                                                                        bannerUrl: '',
+                                                                        brandingAssets: (storeConfig.brandingAssets || []).filter(
+                                                                            a => !(a.type === 'ILUSTRACION' && a.url === storeConfig.bannerUrl)
+                                                                        )
+                                                                    })
+                                                                }
+                                                                className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-system-fast"
+                                                            >
+                                                                <Trash2 size={14} className="mr-2" />
+                                                                Quitar
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <input
+                                                    type="file"
+                                                    ref={bannerInputRef}
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={handleBannerUpload}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Colores y fondo de marca */}
+                                    <div className="bg-white/60 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-5 space-y-4">
+                                        <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+                                            Colores y fondo de marca
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="block text-xs font-bold uppercase text-zinc-500">
+                                                    Color de acento
+                                                </label>
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="color"
+                                                        value={storeConfig.accentColor || '#f59e0b'}
+                                                        onChange={e =>
+                                                            onUpdateStoreConfig({
+                                                                ...storeConfig,
+                                                                accentColor: e.target.value
+                                                            })
+                                                        }
+                                                        className="h-10 w-14 cursor-pointer rounded-lg border border-zinc-300 dark:border-zinc-700 bg-transparent"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={storeConfig.accentColor || '#f59e0b'}
+                                                        onChange={e =>
+                                                            onUpdateStoreConfig({
+                                                                ...storeConfig,
+                                                                accentColor: e.target.value
+                                                            })
+                                                        }
+                                                        className="flex-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-xs font-mono"
+                                                    />
+                                                </div>
+                                                <p className="text-[11px] text-zinc-500">
+                                                    Se usa en botones principales, resaltes y elementos interactivos.
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="block text-xs font-bold uppercase text-zinc-500">
+                                                    Fondo oscuro de marca
+                                                </label>
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="color"
+                                                        value={storeConfig.themeDarkModeBg || '#030712'}
+                                                        onChange={e =>
+                                                            onUpdateStoreConfig({
+                                                                ...storeConfig,
+                                                                themeDarkModeBg: e.target.value
+                                                            })
+                                                        }
+                                                        className="h-10 w-14 cursor-pointer rounded-lg border border-zinc-300 dark:border-zinc-700 bg-transparent"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={storeConfig.themeDarkModeBg || '#030712'}
+                                                        onChange={e =>
+                                                            onUpdateStoreConfig({
+                                                                ...storeConfig,
+                                                                themeDarkModeBg: e.target.value
+                                                            })
+                                                        }
+                                                        className="flex-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-xs font-mono"
+                                                    />
+                                                </div>
+                                                <p className="text-[11px] text-zinc-500">
+                                                    Ideal para el header o fondos hero en modo oscuro.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Tipografía de marca */}
+                                        <div className="mt-4 space-y-2">
+                                            <label className="block text-xs font-bold uppercase text-zinc-500">
+                                                Fuente de marca (logotipo)
+                                            </label>
+                                            <select
+                                                value={storeConfig.logoFont || ''}
+                                                onChange={e =>
+                                                    onUpdateStoreConfig({
+                                                        ...storeConfig,
+                                                        logoFont: e.target.value || undefined
+                                                    })
+                                                }
+                                                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-2.5 rounded-lg text-xs font-medium text-zinc-800 dark:text-zinc-100"
+                                            >
+                                                <option value="">Usar sistema por defecto</option>
+                                                {fonts
+                                                    .slice()
+                                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                                    .map(font => (
+                                                        <option key={font.id} value={font.cssFamily}>
+                                                            {font.name}
+                                                            {font.category ? ` · ${font.category}` : ''}
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                            <p
+                                                className={`text-sm mt-1 text-zinc-700 dark:text-zinc-300 font-bold uppercase tracking-tight ${storeConfig.logoFont || ''}`}
+                                            >
+                                                {storeConfig.businessName || 'Vista previa tipografía de marca'}
+                                            </p>
+                                            <p className="text-[11px] text-zinc-500">
+                                                Esta fuente se usa en el logo de la barra de navegación y en el personalizador.
+                                            </p>
+                                        </div>
+
+                                        {/* Patrón y presets de fondo (sólo afectan al preview y estilo general) */}
+                                        <div className="space-y-3 pt-2">
+                                            <label className="block text-xs font-bold uppercase text-zinc-500">
+                                                Patrón de fondo del sistema
+                                            </label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {(['none', 'dots', 'grid', 'lines'] as const).map(pattern => (
+                                                    <button
+                                                        key={pattern}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onUpdateStoreConfig({
+                                                                ...storeConfig,
+                                                                bgPattern: pattern
+                                                            })
+                                                        }
+                                                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest border ${
+                                                            storeConfig.bgPattern === pattern
+                                                                ? 'bg-amber-500 text-white border-amber-500'
+                                                                : 'bg-zinc-100 dark:bg-zinc-900/80 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300'
+                                                        }`}
+                                                    >
+                                                        {pattern === 'none'
+                                                            ? 'Sin patrón'
+                                                            : pattern === 'dots'
+                                                            ? 'Puntos'
+                                                            : pattern === 'grid'
+                                                            ? 'Grid'
+                                                            : 'Líneas'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div className="space-y-2 pt-3">
+                                                <span className="block text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                                                    Presets rápidos
+                                                </span>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onUpdateStoreConfig({
+                                                                ...storeConfig,
+                                                                accentColor: '#f59e0b',
+                                                                themeDarkModeBg: '#111827',
+                                                                bgPattern: 'dots'
+                                                            })
+                                                        }
+                                                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest border border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-system-fast"
+                                                    >
+                                                        Glass dorado
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onUpdateStoreConfig({
+                                                                ...storeConfig,
+                                                                accentColor: '#111827',
+                                                                themeDarkModeBg: '#f9fafb',
+                                                                bgPattern: 'none'
+                                                            })
+                                                        }
+                                                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 transition-system-fast"
+                                                    >
+                                                        Claro neutro
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Columna derecha: Brand Card Preview */}
+                                <div className="w-full">
+                                    <div className="bg-zinc-950 rounded-3xl p-1.5">
+                                        <div
+                                            className="relative rounded-2xl overflow-hidden p-6 md:p-8 min-h-[260px] flex flex-col justify-between"
+                                            style={{
+                                                background:
+                                                    storeConfig.themeDarkModeBg ||
+                                                    'radial-gradient(circle at top, #fbbf24 0, #111827 55%)'
+                                            }}
+                                        >
+                                            {/* Patrón visual según bgPattern */}
+                                            <div className="pointer-events-none absolute inset-0 opacity-40 mix-blend-soft-light">
+                                                {storeConfig.bgPattern === 'dots' && (
+                                                    <div className="w-full h-full bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08)_1px,_transparent_0)] bg-[length:18px_18px]" />
+                                                )}
+                                                {storeConfig.bgPattern === 'grid' && (
+                                                    <div className="w-full h-full bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_0),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[size:26px_26px]" />
+                                                )}
+                                                {storeConfig.bgPattern === 'lines' && (
+                                                    <div className="w-full h-full bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.12)_0,rgba(255,255,255,0.12)_1px,transparent_1px,transparent_8px)]" />
+                                                )}
+                                            </div>
+
+                                            <div className="relative z-10 flex items-start justify-between gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden">
+                                                        {storeConfig.logoUrl ? (
+                                                            <img
+                                                                src={storeConfig.logoUrl}
+                                                                alt="Logo preview"
+                                                                className="w-full h-full object-contain p-1.5"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-[11px] font-bold uppercase tracking-widest text-white/70">
+                                                                LOGO
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] uppercase tracking-[0.25em] text-amber-300/80 font-semibold">
+                                                            Vista previa de marca
+                                                        </p>
+                                                        <p className="text-xs text-white/60">
+                                                            Así se verá tu branding en la app.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span className="inline-flex items-center rounded-full bg-black/40 border border-white/10 px-3 py-1 text-[10px] font-semibold tracking-widest uppercase text-white/70">
+                                                    ADMIN BRANDING
+                                                </span>
+                                            </div>
+
+                                            <div className="relative z-10 space-y-4 mt-6">
+                                                <div>
+                                                    <h4 className={`text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight text-white ${storeConfig.logoFont || ''}`}>
+                                                        {storeConfig.businessName || 'Tu marca láser premium'}
+                                                    </h4>
+                                                    <p className="text-sm text-white/70 mt-1 max-w-md">
+                                                        {storeConfig.slogan ||
+                                                            'Crea experiencias memorables con productos personalizados de alto impacto.'}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <button
+                                                        type="button"
+                                                        className="inline-flex items-center justify-center px-4 md:px-5 py-2.5 rounded-full text-xs md:text-[11px] font-semibold uppercase tracking-[0.22em] shadow-accent-md"
+                                                        style={{
+                                                            backgroundColor: storeConfig.accentColor || '#f59e0b',
+                                                            color: '#111827'
+                                                        }}
+                                                    >
+                                                        Ver catálogo
+                                                        <ArrowUpRight size={14} className="ml-2" />
+                                                    </button>
+                                                    <span className="text-[11px] text-white/60 flex items-center gap-1.5">
+                                                        <Sparkles size={13} className="text-amber-300" />
+                                                        Personalizador, lealtad y WhatsApp integrados.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -3333,7 +4119,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       {/* Modals */}
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
-      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) onUpdateFont(editingFont.id, font); else onAddFont(font); setIsFontModalOpen(false); }} />
+      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} existingFonts={fonts} onSave={(font: FontOption) => { if (editingFont) onUpdateFont(editingFont.id, font); else onAddFont(font); setIsFontModalOpen(false); }} />
       <BulkDistributorModal isOpen={isBulkDistributorOpen} onClose={() => setIsBulkDistributorOpen(false)} products={products} onApplyChanges={handleBulkUpdateProducts} globalColors={storeConfig.globalColors}/>
       <BulkFontModal isOpen={isBulkFontModalOpen} onClose={() => setIsBulkFontModalOpen(false)} onAddFonts={onAddFonts || ((fonts) => fonts.forEach(f => onAddFont(f)))} existingFonts={fonts}/>
       {/* Image Cropper for Gallery */}
