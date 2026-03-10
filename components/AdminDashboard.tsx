@@ -744,55 +744,55 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
     
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="glass w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-                <div className="bg-system-accent/10 px-6 py-4 border-b border-system-accent/20">
+            <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+                <div className="bg-zinc-100 dark:bg-zinc-800 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-bold text-system-text-primary">{font ? 'Editar Fuente' : 'Nueva Fuente'}</h3>
-                        <button onClick={onClose} className="text-system-text-secondary hover:text-system-text-primary transition-colors"><X size={22}/></button>
+                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{font ? 'Editar Fuente' : 'Nueva Fuente'}</h3>
+                        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={22}/></button>
                     </div>
                 </div>
                 
                 <div className="p-6 space-y-5">
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-system-text-secondary uppercase tracking-wider">Archivo de Fuente</label>
+                        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Archivo de Fuente</label>
                         <div 
-                            className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${isUploading ? 'border-system-accent bg-system-accent/10' : fontFile ? 'border-system-success bg-system-success/10' : 'border-system-border hover:border-system-accent hover:bg-system-secondary/50'}`}
+                            className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${isUploading ? 'border-amber-500 bg-amber-500/10' : fontFile ? 'border-green-500 bg-green-500/10' : 'border-zinc-300 dark:border-zinc-700 hover:border-amber-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
                             onClick={() => !isUploading && fileInputRef.current?.click()}
                         >
                             <input type="file" ref={fileInputRef} className="hidden" accept=".ttf,.otf" onChange={handleFileUpload}/>
                             {isUploading ? (
                                 <div className="flex flex-col items-center gap-3">
-                                    <div className="w-40 h-2 bg-system-tertiary rounded-full overflow-hidden"><div className="h-full bg-system-accent transition-all" style={{width: `${uploadProgress}%`}}/></div>
-                                    <span className="text-system-accent text-sm font-medium">Cargando... {uploadProgress}%</span>
+                                    <div className="w-40 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div className="h-full bg-amber-500 transition-all" style={{width: `${uploadProgress}%`}}/></div>
+                                    <span className="text-amber-500 text-sm font-medium">Cargando... {uploadProgress}%</span>
                                 </div>
                             ) : fontFile ? (
-                                <div className="flex items-center gap-3 text-system-success"><CheckCircle size={22}/><span className="font-medium">Archivo cargado</span></div>
+                                <div className="flex items-center gap-3 text-green-500"><CheckCircle size={22}/><span className="font-medium text-zinc-700 dark:text-zinc-300">Archivo cargado</span></div>
                             ) : (
-                                <div className="text-system-text-secondary"><UploadCloud size={28} className="mx-auto mb-2"/><span className="text-sm">Click para subir .ttf o .otf</span></div>
+                                <div className="text-zinc-400"><UploadCloud size={28} className="mx-auto mb-2"/><span className="text-sm">Click para subir .ttf o .otf</span></div>
                             )}
                         </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold text-system-text-secondary uppercase tracking-wider">ID de Fuente</label>
+                            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">ID de Fuente</label>
                             <input type="number" value={data.id} onChange={handleIdChange} min={1} max={999}
-                                className={`w-full bg-system-primary border ${fontIdError ? 'border-system-error' : 'border-system-border'} rounded-xl px-4 py-3 text-system-text-primary font-mono text-lg focus:border-system-accent focus:outline-none transition-colors`}/>
-                            {fontIdError && <p className="text-system-error text-xs flex items-center gap-1"><AlertCircle size={12}/>{fontIdError}</p>}
+                                className={`w-full bg-zinc-100 dark:bg-zinc-800 border ${fontIdError ? 'border-red-500' : 'border-zinc-300 dark:border-zinc-700'} rounded-xl px-4 py-3 text-zinc-900 dark:text-white font-mono text-lg focus:border-amber-500 focus:outline-none transition-colors`}/>
+                            {fontIdError && <p className="text-red-500 text-xs flex items-center gap-1"><AlertCircle size={12}/>{fontIdError}</p>}
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold text-system-text-secondary uppercase tracking-wider">Nombre</label>
+                            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Nombre</label>
                             <input type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} placeholder="Nombre de la fuente"
-                                className="w-full bg-system-primary border border-system-border rounded-xl px-4 py-3 text-system-text-primary focus:border-system-accent focus:outline-none transition-colors"/>
+                                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:border-amber-500 focus:outline-none transition-colors"/>
                         </div>
                     </div>
                     
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-system-text-secondary uppercase tracking-wider">Categorías</label>
+                        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Categorías</label>
                         <div className="grid grid-cols-5 gap-2">
                             {ALL_CATEGORIES.map(cat => (
                                 <button key={cat} onClick={() => toggleCategory(cat)}
-                                    className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-system-accent text-system-bg-primary' : 'bg-system-tertiary text-system-text-secondary hover:bg-system-secondary'}`}>
+                                    className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-amber-500 text-zinc-900' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-700'}`}>
                                     {cat}
                                 </button>
                             ))}
@@ -800,33 +800,33 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
                     </div>
                     
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-system-text-secondary uppercase tracking-wider">Texto de Preview</label>
+                        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Texto de Preview</label>
                         <input type="text" value={previewText} onChange={e => setPreviewText(e.target.value)} placeholder="Escribe tu texto..."
-                            className="w-full bg-system-primary border border-system-border rounded-xl px-4 py-3 text-system-text-primary focus:border-system-accent focus:outline-none transition-colors"/>
+                            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:border-amber-500 focus:outline-none transition-colors"/>
                     </div>
                     
-                    <div className="bg-system-secondary rounded-xl p-5 border border-system-border space-y-3">
+                    <div className="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5 border border-zinc-200 dark:border-zinc-700 space-y-3">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-system-text-secondary uppercase tracking-wider">Vista Previa</span>
-                            <span className="text-xs text-system-text-tertiary">#{data.id} · {data.name || 'Sin nombre'}</span>
+                            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Vista Previa</span>
+                            <span className="text-xs text-zinc-400">#{data.id} · {data.name || 'Sin nombre'}</span>
                         </div>
-                        <div className="bg-system-primary rounded-lg p-6 border border-system-border">
+                        <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-700">
                             {fontFile ? (
-                                <p className="text-3xl md:text-4xl text-system-text-primary text-center break-words" style={{ fontFamily: `font-preview-${data.id}` }}>{previewText || 'Tu texto aquí'}</p>
+                                <p className="text-3xl md:text-4xl text-zinc-900 dark:text-white text-center break-words" style={{ fontFamily: `font-preview-${data.id}` }}>{previewText || 'Tu texto aquí'}</p>
                             ) : (
-                                <p className="text-3xl md:text-4xl text-system-text-primary text-center break-words">{previewText || 'Tu texto aquí'}</p>
+                                <p className="text-3xl md:text-4xl text-zinc-900 dark:text-white text-center break-words">{previewText || 'Tu texto aquí'}</p>
                             )}
                             {fontFile && <style>{`@font-face { font-family: 'font-preview-${data.id}'; src: url('${fontFile}'); }`}</style>}
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {selectedCategories.map(cat => (
-                                <span key={cat} className="px-2 py-1 bg-system-tertiary rounded-lg text-[10px] text-system-text-secondary">{cat}</span>
+                                <span key={cat} className="px-2 py-1 bg-zinc-200 dark:bg-zinc-700 rounded-lg text-[10px] text-zinc-600 dark:text-zinc-400">{cat}</span>
                             ))}
                         </div>
                     </div>
                     
                     <button onClick={handleSave} disabled={!!fontIdError || isUploading}
-                        className={`w-full btn-system btn-system-primary flex items-center justify-center gap-2 ${fontIdError || isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        className={`w-full bg-amber-500 hover:bg-amber-400 text-zinc-900 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 ${fontIdError || isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <Save size={20}/> {font ? 'Actualizar Fuente' : 'Crear Fuente'}
                     </button>
                 </div>
@@ -1419,7 +1419,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
         <div className="flex flex-col md:flex-row h-full bg-zinc-100 dark:bg-black font-sans overflow-hidden">
             {/* Sidebar glassmorphism */}
-            <aside className="hidden md:flex w-24 flex-col shrink-0 h-full items-center py-6 gap-4 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 rounded-3xl m-4 shadow-xl">
+            <aside className="flex w-24 flex-col shrink-0 h-full items-center py-6 gap-4 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 rounded-3xl m-4 shadow-xl">
                 <div className="flex flex-col items-center gap-8 w-full">
                     {/* Menu Items */}
                     {[ 
