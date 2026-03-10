@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingBag, Sun, Moon, UserCircle, LogOut, LayoutDashboard, Package, Type, Menu, X, Bell, Sparkles, Palette, ShoppingCart, Shield, Settings, Users, Calendar, DollarSign, Archive, Home } from 'lucide-react';
+import { ShoppingBag, Sun, Moon, UserCircle, LogOut, LayoutDashboard, Package, Type, Menu, X, Bell, Sparkles, Palette, ShoppingCart, Shield, Settings, Users, Calendar, DollarSign, Home, List, PenTool } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useCartPanel } from '../contexts/CartContext';
 import { User, ViewState, StoreConfig, UserRole } from '../types';
@@ -60,8 +60,8 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
   };
 
   return (
-    <nav className="h-24 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl sticky top-0 z-[150] px-6 md:px-12 flex items-center justify-between transition-all duration-300">
-      <div className="flex items-center gap-6 md:gap-16">
+    <nav className="h-16 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl sticky top-0 z-[150] px-4 md:px-8 flex items-center justify-between transition-all duration-300">
+      <div className="flex items-center gap-4 md:gap-8">
         <div onClick={() => handleNav('LANDING')} className="cursor-pointer flex items-center gap-4 group">
            {storeConfig.logoUrl ? (
                <img src={storeConfig.logoUrl} className="h-10 md:h-12 w-auto object-contain" alt="Logo" />
@@ -89,14 +89,14 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
         {/* Desktop Menu - Solo visible con login */}
         {user && (
           <div className="hidden md:flex items-center gap-2 bg-zinc-100/50 dark:bg-zinc-800/50 p-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
-             <button onClick={() => handleNav('SHOP')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
-               <Archive size={16} /> Catálogo
+             <button onClick={() => handleNav('SHOP')} className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+               <List size={14} /> Catálogo
              </button>
-             <button onClick={() => handleNav('FONTS_SHOWCASE')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+             <button onClick={() => handleNav('FONTS_SHOWCASE')} className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
                <Palette size={16} /> Fuentes
              </button>
-             <button onClick={() => handleNav('CUSTOMIZER')} className="px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest bg-yellow-400 text-black hover:bg-yellow-300 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
-               <Sparkles size={16} /> Personalizar
+             <button onClick={() => handleNav('CUSTOMIZER')} className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-yellow-400 text-black hover:bg-yellow-300 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+               <PenTool size={14} /> Personalizar
              </button>
           </div>
         )}
@@ -183,13 +183,13 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
               {user ? (
                   <>
                     <button onClick={() => handleNav('SHOP')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all flex items-center gap-4">
-                      <Archive size={32} /> Catálogo
+                      <List size={24} /> Catálogo
                     </button>
                     <button onClick={() => handleNav('FONTS_SHOWCASE')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all flex items-center gap-4">
                       <Palette size={32} /> Fuentes
                     </button>
                     <button onClick={() => handleNav('CUSTOMIZER')} className="text-left text-4xl font-black uppercase tracking-tighter text-amber-500 border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 transition-all flex items-center gap-4">
-                      <Sparkles size={32} /> Personalizar
+                      <PenTool size={24} /> Personalizar
                     </button>
                     {user.role === UserRole.ADMIN ? (
                       <>

@@ -120,6 +120,12 @@
   --shadow-accent: rgba(245, 158, 11, 0.15);
   --shadow-danger: rgba(239, 68, 68, 0.15);
   --shadow-success: rgba(16, 185, 129, 0.15);
+  --shadow-success-sm: 0 1px 3px var(--shadow-success), 0 1px 2px var(--shadow-soft);
+  --shadow-success-md: 0 4px 6px var(--shadow-success), 0 2px 4px var(--shadow-soft);
+  --shadow-success-lg: 0 10px 15px var(--shadow-success), 0 4px 6px var(--shadow-soft);
+  --shadow-danger-sm: 0 1px 3px var(--shadow-danger), 0 1px 2px var(--shadow-soft);
+  --shadow-danger-md: 0 4px 6px var(--shadow-danger), 0 2px 4px var(--shadow-soft);
+  --shadow-danger-lg: 0 10px 15px var(--shadow-danger), 0 4px 6px var(--shadow-soft);
 
   /* ===== SPACING SCALE ===== */
   --space-0: 0px;
@@ -354,6 +360,12 @@
   --shadow-accent: rgba(245, 158, 11, 0.3);
   --shadow-danger: rgba(239, 68, 68, 0.3);
   --shadow-success: rgba(16, 185, 129, 0.3);
+  --shadow-success-sm: 0 1px 3px var(--shadow-success), 0 1px 2px var(--shadow-soft);
+  --shadow-success-md: 0 4px 6px var(--shadow-success), 0 2px 4px var(--shadow-soft);
+  --shadow-success-lg: 0 10px 15px var(--shadow-success), 0 4px 6px var(--shadow-soft);
+  --shadow-danger-sm: 0 1px 3px var(--shadow-danger), 0 1px 2px var(--shadow-soft);
+  --shadow-danger-md: 0 4px 6px var(--shadow-danger), 0 2px 4px var(--shadow-soft);
+  --shadow-danger-lg: 0 10px 15px var(--shadow-danger), 0 4px 6px var(--shadow-soft);
 
   /* ===== DARK THEME SHADOWS ===== */
   --shadow-xs: 0 1px 2px var(--shadow-soft);
@@ -441,6 +453,14 @@
 .shadow-accent-sm { box-shadow: var(--shadow-accent-sm); }
 .shadow-accent-md { box-shadow: var(--shadow-accent-md); }
 .shadow-accent-lg { box-shadow: var(--shadow-accent-lg); }
+.shadow-success-xs { box-shadow: var(--shadow-xs); }
+.shadow-success-sm { box-shadow: var(--shadow-success-sm); }
+.shadow-success-md { box-shadow: var(--shadow-success-md); }
+.shadow-success-lg { box-shadow: var(--shadow-success-lg); }
+.shadow-danger-xs { box-shadow: var(--shadow-xs); }
+.shadow-danger-sm { box-shadow: var(--shadow-danger-sm); }
+.shadow-danger-md { box-shadow: var(--shadow-danger-md); }
+.shadow-danger-lg { box-shadow: var(--shadow-danger-lg); }
 
 /* ===== BACKGROUND UTILITIES ===== */
 .bg-system-primary { background-color: var(--bg-primary); }

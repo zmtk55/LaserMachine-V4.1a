@@ -2026,9 +2026,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 />
                                             </div>
                                             {selectedOrder.paymentStatus === 'PARCIAL' && (
-                                                <div className="flex items-center justify-between p-4 bg-system-error dark:bg-color-error-500/10 rounded-xl border border-color-error-200 dark:border-color-error-500/20">
-                                                    <span className="text-xs font-bold text-system-danger uppercase">Restante</span>
-                                                    <span className="text-xl font-black text-red-600">{formatCurrency(selectedOrder.total - (selectedOrder.amountPaid || 0))}</span>
+                                                <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-800/50">
+                                                    <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase">Restante</span>
+                                                    <span className="text-xl font-black text-red-600 dark:text-red-400">{formatCurrency(selectedOrder.total - (selectedOrder.amountPaid || 0))}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -2194,7 +2194,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             isSelected 
                                                 ? 'border-amber-400/30 bg-amber-500' 
                                                 : isPriority
-                                                    ? 'border-system-error dark:border-color-error-800/50 bg-system-error/10 dark:bg-color-error-900/10'
+                                                    ? 'border-red-800/50 bg-red-50 dark:bg-red-950/30'
                                                     : 'border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80'
                                         }`}>
                                             <div className="flex items-center gap-2">
@@ -3293,7 +3293,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             {/* Delete Button */}
                                             <button 
                                                 onClick={() => onUpdateStoreConfig({...storeConfig, galleryAssets: storeConfig.galleryAssets?.filter(a => a.id !== asset.id)})}
-                                                className="absolute top-2 right-2 bg-system-error text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-color-error-600"
+                                                className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                                                 title="Eliminar imagen"
                                             >
                                                 <X size={12}/>
@@ -3460,7 +3460,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     <h4 className="font-bold uppercase text-sm">Zona de Peligro Local</h4>
                                 </div>
                                 <div className="space-y-3">
-                                    <button onClick={() => { if(confirm("¿Seguro?")) onResetOrdersAndClients(); }} className="w-full py-4 bg-transparent border-2 border-system-error dark:border-color-error-800 text-system-danger hover:bg-system-error/10 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <button onClick={() => { if(confirm("¿Seguro?")) onResetOrdersAndClients(); }} className="w-full py-4 bg-transparent border-2 border-red-500 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
                                         <Trash2 size={16}/> Limpiar Datos Locales
                                     </button>
                                     <button onClick={() => { if(confirm("Esto reemplazará todos los productos con los valores por defecto. ¿Continuar?")) onResetProducts?.(); }} className="w-full py-4 bg-transparent border-2 border-amber-200 dark:border-amber-800 text-amber-600 hover:bg-amber-100 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
