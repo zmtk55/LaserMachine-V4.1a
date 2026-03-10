@@ -724,11 +724,12 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
     const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newId = parseInt(e.target.value) || 0;
         setData({ ...data, id: newId });
-        // Pasar el ID original de la fuente que se está editando
+        console.log('handleIdChange:', newId, 'font?.id:', font?.id);
         validateFontId(newId, font?.id);
     };
     
-const handleSave = () => {
+    const handleSave = () => {
+        console.log('handleSave - fontIdError:', fontIdError, 'data:', data);
         if (fontIdError) {
             alert('Corrige el número de fuente antes de guardar');
             return;
@@ -751,6 +752,7 @@ const handleSave = () => {
             active: true
         };
         onSave(fontData);
+        alert(font ? `Fuente #${fontData.id} actualizada correctamente` : `Fuente #${data.id} guardada`);
     };
     
     if (!isOpen) return null;
@@ -4152,7 +4154,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       {/* Modals */}
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
-      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) onUpdateFont(editingFont.id, font); else onAddFont(font); setIsFontModalOpen(false); }} existingFonts={fonts} />
+      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { console.log('FontFormModal onSave:', font); if (editingFont) { console.log('Calling onUpdateFont:', editingFont.id, font); onUpdateFont(editingFont.id, font); } else onAddFont(font); setIsFontModalOpen(false); }} existingFonts={fonts} />
       <BulkDistributorModal isOpen={isBulkDistributorOpen} onClose={() => setIsBulkDistributorOpen(false)} products={products} onApplyChanges={handleBulkUpdateProducts} globalColors={storeConfig.globalColors}/>
       <BulkFontModal isOpen={isBulkFontModalOpen} onClose={() => setIsBulkFontModalOpen(false)} onAddFonts={onAddFonts || ((fonts) => fonts.forEach(f => onAddFont(f)))} existingFonts={fonts}/>
       {/* Image Cropper for Gallery */}

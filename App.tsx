@@ -251,6 +251,7 @@ const App = () => {
 
   // Persistence Effect
   useEffect(() => {
+    console.log('Fonts state changed, saving to localStorage:', fonts.map(f => ({id: f.id, name: f.name})));
     localStorage.setItem('lm_products_v13', JSON.stringify(products));
     localStorage.setItem('lm_orders_v10', JSON.stringify(orders));
     localStorage.setItem('lm_store_v10', JSON.stringify(storeConfig));
@@ -1047,7 +1048,7 @@ const App = () => {
             onUpdateProduct={p => setProducts(products.map(x => x.id === p.id ? p : x))}
             onDeleteProduct={id => setProducts(products.filter(p => p.id !== id))}
             onAddFont={f => setFonts([...fonts, f])}
-            onUpdateFont={(oldId, f) => setFonts(prev => prev.map(font => font.id === oldId ? f : font))}
+            onUpdateFont={(oldId, f) => { console.log('onUpdateFont called:', oldId, f); setFonts(prev => prev.map(font => font.id === oldId ? f : font)); }}
             onDeleteFont={id => setFonts(fonts.filter(f => f.id !== id))}
             onUpdateClient={updateClientDetails}
             onDeleteClient={deleteClientHistory}
