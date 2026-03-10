@@ -4152,7 +4152,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       {/* Modals */}
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
-      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) onUpdateFont(editingFont.id, font); else onAddFont(font); setIsFontModalOpen(false); }} />
+      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) onUpdateFont(editingFont.id, font); else onAddFont(font); setIsFontModalOpen(false); }} existingFonts={fonts} />
       <BulkDistributorModal isOpen={isBulkDistributorOpen} onClose={() => setIsBulkDistributorOpen(false)} products={products} onApplyChanges={handleBulkUpdateProducts} globalColors={storeConfig.globalColors}/>
       <BulkFontModal isOpen={isBulkFontModalOpen} onClose={() => setIsBulkFontModalOpen(false)} onAddFonts={onAddFonts || ((fonts) => fonts.forEach(f => onAddFont(f)))} existingFonts={fonts}/>
       {/* Image Cropper for Gallery */}
