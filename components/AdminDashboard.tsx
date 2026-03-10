@@ -728,7 +728,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
         validateFontId(newId, font?.id);
     };
     
-    const handleSave = () => {
+const handleSave = () => {
         if (fontIdError) {
             alert('Corrige el número de fuente antes de guardar');
             return;
@@ -737,7 +737,9 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
             alert('Ingresa un nombre para la fuente');
             return;
         }
-        if (!fontFile && !font?.fileData) {
+        // Si es edición (ya tiene archivo en data) o si/subió nuevo archivo, puede guardar
+        const hasFile = fontFile || data.fileData;
+        if (!hasFile) {
             alert('Sube un archivo de fuente (.ttf o .otf)');
             return;
         }
@@ -745,7 +747,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
             ...data,
             cssFamily: `font-custom-${data.id}`,
             isCustom: true,
-            fileData: fontFile || font?.fileData,
+            fileData: fontFile || data.fileData,
             active: true
         };
         onSave(fontData);
@@ -2781,17 +2783,48 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     onChange={(e) => setFontSortBy(e.target.value as any)}
                                     className="bg-transparent border-none py-1.5 px-2 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
                                 >
-                                    <option value="id">#</option>
-                                    <option value="name">Nombre</option>
-                                    <option value="category">Cat.</option>
+                                    <option value="id">Número #</option>
+                                    <option value="name">Nombre A-Z</option>
+                                    <option value="category">Categoría</option>
                                 </select>
                                 <button 
                                     onClick={() => setFontSortOrder(fontSortOrder === 'asc' ? 'desc' : 'asc')}
-                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
-                                    title={fontSortOrder === 'asc' ? 'Asc' : 'Desc'}
+                                    className={`p-1.5 rounded-lg transition-colors ${fontSortOrder === 'asc' ? 'bg-amber-500 text-black' : 'bg-zinc-400 text-white'}`}
+                                    title={fontSortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
                                 >
                                     {fontSortOrder === 'asc' ? <ArrowUp size={14}/> : <ArrowDown size={14}/>}
                                 </button>
+                                {/* Botones de ordenamiento rápido */}
+                                <div className="flex border-l border-zinc-400 ml-1 pl-1 gap-0.5">
+                                    <button
+                                        onClick={() => { setFontSortBy('name'); setFontSortOrder('asc'); }}
+                                        className={`p-1 rounded text-[10px] font-bold ${fontSortBy === 'name' && fontSortOrder === 'asc' ? 'text-amber-500' : 'text-zinc-500'}`}
+                                        title="Ordenar A-Z"
+                                    >
+                                        A→Z
+                                    </button>
+                                    <button
+                                        onClick={() => { setFontSortBy('name'); setFontSortOrder('desc'); }}
+                                        className={`p-1 rounded text-[10px] font-bold ${fontSortBy === 'name' && fontSortOrder === 'desc' ? 'text-amber-500' : 'text-zinc-500'}`}
+                                        title="Ordenar Z-A"
+                                    >
+                                        Z→A
+                                    </button>
+                                    <button
+                                        onClick={() => { setFontSortBy('id'); setFontSortOrder('asc'); }}
+                                        className={`p-1 rounded text-[10px] font-bold ${fontSortBy === 'id' && fontSortOrder === 'asc' ? 'text-amber-500' : 'text-zinc-500'}`}
+                                        title="Número menor a mayor"
+                                    >
+                                        #↑
+                                    </button>
+                                    <button
+                                        onClick={() => { setFontSortBy('id'); setFontSortOrder('desc'); }}
+                                        className={`p-1 rounded text-[10px] font-bold ${fontSortBy === 'id' && fontSortOrder === 'desc' ? 'text-amber-500' : 'text-zinc-500'}`}
+                                        title="Número mayor a menor"
+                                    >
+                                        #↓
+                                    </button>
+                                </div>
                             </div>
                             
                             {/* Vista toggle */}
@@ -4119,7 +4152,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       {/* Modals */}
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
-      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} existingFonts={fonts} onSave={(font: FontOption) => { if (editingFont) onUpdateFont(editingFont.id, font); else onAddFont(font); setIsFontModalOpen(false); }} />
+      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) onUpdateFont(editingFont.id, font); else onAddFont(font); setIsFontModalOpen(false); }} />
       <BulkDistributorModal isOpen={isBulkDistributorOpen} onClose={() => setIsBulkDistributorOpen(false)} products={products} onApplyChanges={handleBulkUpdateProducts} globalColors={storeConfig.globalColors}/>
       <BulkFontModal isOpen={isBulkFontModalOpen} onClose={() => setIsBulkFontModalOpen(false)} onAddFonts={onAddFonts || ((fonts) => fonts.forEach(f => onAddFont(f)))} existingFonts={fonts}/>
       {/* Image Cropper for Gallery */}
