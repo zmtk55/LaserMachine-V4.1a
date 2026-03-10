@@ -738,17 +738,28 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
             alert('Ingresa un nombre para la fuente');
             return;
         }
-        // Si es edición (ya tiene archivo en data) o si/subió nuevo archivo, puede guardar
-        const hasFile = fontFile || data.fileData;
-        if (!hasFile) {
+        // Permitir guardar si:
+        // 1. Es edición de fuente existente (ya tiene fileData)
+        // 2. Subió nuevo archivo
+        // 3. La fuente existente no tenía fileData (fuentes del sistema)
+        const existingFileData = font?.fileData;
+        const newFileData = fontFile;
+        const hasFile = existingFileData || newFileData;
+        
+        // Si es nueva fuente sin archivo, no permitir
+        if (!font && !hasFile) {
             alert('Sube un archivo de fuente (.ttf o .otf)');
             return;
         }
+        
+        // Para fuentes del sistema (sin fileData), mantener su cssFamily original
+        const cssFamily = hasFile ? `font-custom-${data.id}` : (data.cssFamily || `font-system-${data.id}`);
+        
         const fontData = {
             ...data,
-            cssFamily: `font-custom-${data.id}`,
-            isCustom: true,
-            fileData: fontFile || data.fileData,
+            cssFamily: cssFamily,
+            isCustom: !!hasFile,
+            fileData: newFileData || existingFileData || null,
             active: true
         };
         onSave(fontData);
