@@ -2111,42 +2111,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     {/* TOP SECTION: Order List */}
                     <div className="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-                        {/* Search & Filters Row */}
-                        <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                <div className="relative flex-1 max-w-md w-full">
+                        {/* Search Row - Simplificado */}
+                        <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                            <div className="flex items-center gap-3">
+                                <div className="relative flex-1 max-w-sm">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
                                     <input 
-                                        className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 pl-10 pr-4 text-sm font-medium outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
-                                        placeholder="Buscar por orden, cliente, teléfono..."
+                                        className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg py-2 pl-10 pr-4 text-sm font-medium outline-none focus:border-amber-500 transition-all"
+                                        placeholder="Buscar orden, cliente..."
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                     />
                                 </div>
-                                {/* Date Filter */}
-                                <div className="flex items-center gap-2">
-                                    {(['ALL', 'TODAY', 'WEEK', 'MONTH'] as const).map((filter) => (
-                                        <button
-                                            key={filter}
-                                            onClick={() => setDateFilter(filter)}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
-                                                dateFilter === filter
-                                                    ? 'bg-amber-500 text-white'
-                                                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                                            }`}
-                                        >
-                                            {filter === 'ALL' ? 'Todas' : filter === 'TODAY' ? 'Hoy' : filter === 'WEEK' ? '7 días' : '30 días'}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="text-sm text-zinc-500 shrink-0">
+                                <span className="text-xs text-zinc-500">
                                     <span className="font-bold text-zinc-900 dark:text-white">{filteredOrders.length}</span> órdenes
-                                </div>
+                                </span>
                             </div>
                         </div>
                         
                         {/* Orders Horizontal Scroll */}
-                        <div className="flex overflow-x-auto gap-3 px-6 py-4 no-scrollbar">
+                        <div className="flex overflow-x-auto gap-3 px-4 py-3 no-scrollbar bg-white dark:bg-zinc-900">
                             {filteredOrders.length === 0 && (
                                 <div className="w-full flex items-center justify-center text-zinc-500 py-4">
                                     <Package size={20} className="mr-2"/>

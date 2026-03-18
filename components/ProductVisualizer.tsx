@@ -5,11 +5,13 @@ import {
   ArrowLeft, Type, Image as ImageIcon, RotateCcw, 
   Check, X, ChevronRight, ChevronLeft, Trash2, Wand2, Loader2,
   Maximize, RefreshCw,
-  ChevronUp, ChevronDown, Upload, Settings, TextCursor, Images, Package, Camera, Aperture, AlertOctagon, Save, Zap, Scissors
+  ChevronUp, ChevronDown, Upload, Settings, TextCursor, Images, Package, Camera, Aperture, AlertOctagon, Save, Zap, Scissors,
+  LayoutTemplate
 } from 'lucide-react';
 import { Product, FontOption, PricingConfig, OrderItem, DesignState, LogoItem, ColorPreset, FontCategory, BrandingAsset, StoreConfig } from '../types';
 import { VintageRollInput } from './VintageRollInput';
 import { ImageGallery } from './ImageGallery';
+import { DesignTemplates, DesignTemplate } from './DesignTemplates';
 
 interface ProductVisualizerProps {
   product: Product;
@@ -90,6 +92,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   // Control State
   const [activeTool, setActiveTool] = useState<ActiveTool>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -518,6 +521,8 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                         {showCameraHint && <div className="absolute right-16 top-1/2 -translate-y-1/2 bg-black/80 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg whitespace-nowrap animate-in slide-in-from-right-2 shadow-lg">¡Toma tu foto aquí! &rarr;</div>}
                     </div>
                     <div className="pointer-events-auto flex flex-col items-center gap-3 md:gap-5 bg-zinc-950/95 backdrop-blur-md text-white p-2 md:p-4 rounded-2xl md:rounded-3xl shadow-2xl border border-zinc-800">
+                        <button onClick={() => setShowTemplates(true)} className="relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:scale-110" title="Plantillas"><LayoutTemplate size={20} className="md:w-6 md:h-6" /></button>
+                        <div className="w-8 h-px bg-zinc-800 my-0.5"></div>
                         <button onClick={() => toggleTool('TEXT1')} className={`relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'TEXT1' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Type size={20} className="md:w-6 md:h-6" /><span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-zinc-700 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-zinc-900">1</span></button>
                         <button onClick={() => toggleTool('TEXT2')} className={`relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'TEXT2' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Type size={16} className="md:w-5 md:h-5"/><span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-zinc-700 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-zinc-900">2</span></button>
                         <button onClick={() => toggleTool('IMAGES')} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'IMAGES' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Images size={20} className="md:w-6 md:h-6" /></button>
@@ -775,6 +780,25 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                     </div>
                 </div>
             </div>
+        )}
+
+        {/* TEMPLATES MODAL */}
+        {showTemplates && (
+            <DesignTemplates
+                onSelectTemplate={(template) => {
+                    if (template.texts.length > 0) {
+                        if (view === 'FRONT') {
+                            setFrontText(template.texts[0]);
+                            if (template.texts.length > 1) setFrontText2(template.texts[1]);
+                        } else {
+                            setBackText(template.texts[0]);
+                            if (template.texts.length > 1) setBackText2(template.texts[1]);
+                        }
+                    }
+                    setShowTemplates(false);
+                }}
+                onClose={() => setShowTemplates(false)}
+            />
         )}
     </div>
   );

@@ -147,6 +147,13 @@ const App = () => {
     setIsAssistantOpen(true);
   }, []);
   
+  // Auto-select first product when navigating to customizer without a product selected
+  useEffect(() => {
+    if (view === 'CUSTOMIZER' && !selectedProduct && products.length > 0) {
+      setSelectedProduct(products[0]);
+    }
+  }, [view, selectedProduct, products]);
+  
   // Cmd+K keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -702,7 +709,12 @@ const App = () => {
           <LandingPage 
             storeConfig={storeConfig}
             products={products}
-            onNavigate={(view) => setView(view)}
+            onNavigate={(view) => {
+              if (view === 'CUSTOMIZER' && !selectedProduct && products.length > 0) {
+                setSelectedProduct(products[0]);
+              }
+              setView(view);
+            }}
             onLogin={() => setIsLoginOpen(true)}
           />
         )}

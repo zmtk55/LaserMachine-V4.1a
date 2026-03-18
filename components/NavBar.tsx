@@ -89,13 +89,13 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
         {/* Desktop Menu - Solo visible con login */}
         {user && (
           <div className="hidden md:flex items-center gap-2 bg-zinc-100/50 dark:bg-zinc-800/50 p-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
-             <button onClick={() => handleNav('SHOP')} className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+             <button onClick={() => handleNav('SHOP')} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-md flex items-center gap-2 ${currentView === 'SHOP' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800'}`}>
                <List size={14} /> Catálogo
              </button>
-             <button onClick={() => handleNav('FONTS_SHOWCASE')} className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+             <button onClick={() => handleNav('FONTS_SHOWCASE')} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-md flex items-center gap-2 ${currentView === 'FONTS_SHOWCASE' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-900 hover:bg-white dark:hover:text-white dark:hover:bg-zinc-800'}`}>
                <Palette size={16} /> Fuentes
              </button>
-             <button onClick={() => handleNav('CUSTOMIZER')} className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-yellow-400 text-black hover:bg-yellow-300 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+             <button onClick={() => handleNav('CUSTOMIZER')} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-md flex items-center gap-2 ${currentView === 'CUSTOMIZER' ? 'bg-yellow-400 text-black' : 'bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-400 hover:text-black'}`}>
                <PenTool size={14} /> Personalizar
              </button>
           </div>

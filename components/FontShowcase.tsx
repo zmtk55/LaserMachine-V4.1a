@@ -110,36 +110,36 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts = [], onSelect
           </div>
         </div>
         
-        {/* Global Font Size Slider */}
-        <div className="flex items-center gap-4 bg-zinc-100 dark:bg-zinc-800 px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-700">
-          <span className="text-xs font-bold text-zinc-500 uppercase whitespace-nowrap">Tamaño Global</span>
+        {/* Global Font Size Slider - Mejorado */}
+        <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800 px-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+          <span className="text-xs font-bold text-zinc-500 uppercase whitespace-nowrap">Tamaño</span>
           <button 
-            onClick={() => setGlobalFontSize(Math.max(20, globalFontSize - 8))}
-            className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center justify-center hover:bg-amber-50 transition-colors"
+            onClick={() => setGlobalFontSize(Math.max(20, globalFontSize - 4))}
+            className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center justify-center hover:border-amber-500 hover:text-amber-500 transition-all active:scale-95"
           >
-            <Minus className="w-4 h-4 text-zinc-600" />
+            <Minus className="w-4 h-4" />
           </button>
           <input
             type="range"
             min="20"
             max="120"
-            step="4"
+            step="2"
             value={globalFontSize}
             onChange={(e) => setGlobalFontSize(Number(e.target.value))}
-            className="w-32 accent-amber-500"
+            className="w-40 h-2 bg-zinc-300 dark:bg-zinc-600 rounded-lg appearance-none cursor-pointer accent-amber-500"
           />
           <button 
-            onClick={() => setGlobalFontSize(Math.min(120, globalFontSize + 8))}
-            className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center justify-center hover:bg-amber-50 transition-colors"
+            onClick={() => setGlobalFontSize(Math.min(120, globalFontSize + 4))}
+            className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center justify-center hover:border-amber-500 hover:text-amber-500 transition-all active:scale-95"
           >
-            <Plus className="w-4 h-4 text-zinc-600" />
+            <Plus className="w-4 h-4" />
           </button>
-          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 w-12 text-center">{globalFontSize}px</span>
+          <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 w-12 text-center tabular-nums">{globalFontSize}px</span>
           {(Object.keys(individualSizes).length > 0 || selectedFontId) && (
             <button
               onClick={resetIndividualSizes}
-              className="ml-2 p-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 transition-colors"
-              title="Resetear tamaños individuales"
+              className="ml-2 p-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 transition-all active:scale-95"
+              title="Resetear tamaños"
             >
               <RotateCcw className="w-4 h-4 text-zinc-600" />
             </button>

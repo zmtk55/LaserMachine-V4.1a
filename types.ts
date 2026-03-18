@@ -96,6 +96,12 @@ export interface BrandingAsset {
   name: string;
   url: string; // Base64 o URL
   type: 'LOGO' | 'ICON' | 'ILUSTRACION' | 'FORMS' | 'OTHER' | 'CLIPART';
+  tags?: string[];           // Etiquetas para búsqueda
+  usageCount?: number;       // Contador de uso
+  createdAt?: string;        // Fecha de creación
+  folderId?: string;         // ID de carpeta
+  size?: number;             // Tamaño en bytes
+  dimensions?: { width: number; height: number }; // Dimensiones
 }
 
 export interface StoreConfig {
