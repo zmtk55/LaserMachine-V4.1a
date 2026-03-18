@@ -11,7 +11,7 @@ import {
 import { Product, FontOption, PricingConfig, OrderItem, DesignState, LogoItem, ColorPreset, FontCategory, BrandingAsset, StoreConfig } from '../types';
 import { VintageRollInput } from './VintageRollInput';
 import { ImageGallery } from './ImageGallery';
-import { DesignTemplates, DesignTemplate } from './DesignTemplates';
+import { DesignTemplates, DesignTemplate, PREDEFINED_TEMPLATES } from './DesignTemplates';
 
 interface ProductVisualizerProps {
   product: Product;
@@ -30,7 +30,7 @@ interface ProductVisualizerProps {
   storeConfig: StoreConfig;
 }
 
-type ActiveTool = 'TEXT1' | 'TEXT2' | 'IMAGES' | 'MAGIC' | 'LAYERS' | 'SETTINGS' | null;
+type ActiveTool = 'TEXT1' | 'TEXT2' | 'IMAGES' | 'MAGIC' | 'LAYERS' | 'SETTINGS' | 'TEMPLATES' | null;
 
 const STAGE_WIDTH = 500;
 const STAGE_HEIGHT = 600;
@@ -46,8 +46,8 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const [clientItemBrand, setClientItemBrand] = useState(initialState?.clientItemBrand || 'YETI');
   const [clientItemColor, setClientItemColor] = useState(initialState?.clientItemColor || '');
   const [userUploadedImage, setUserUploadedImage] = useState<string | null>(initialState?.customBackgroundImage || null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [isRemovingBackground, setIsRemovingBackground] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   // --- AI BACKGROUND REMOVAL ---
   const handleRemoveBackground = async () => {
       if (!selectedLogoId) return;
@@ -92,6 +92,8 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   // Control State
   const [activeTool, setActiveTool] = useState<ActiveTool>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  
+  // Templates State
   const [showTemplates, setShowTemplates] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -391,6 +393,73 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const resetImage = (logoId: string) => {
       const update = (prev: LogoItem[]) => prev.map(l => l.id === logoId ? { ...l, url: l.originalUrl || l.url } : l);
       if (view === 'FRONT') setFrontLogos(update); else setBackLogos(update);
+  };
+
+  // --- TEMPLATE FUNCTIONS ---
+  const applyTemplate = (template: DesignTemplate) => {
+      // Apply text configurations
+      if (template.config.texts.length > 0) {
+          const text1 = template.config.texts[0];
+          if (view === 'FRONT') {
+              setFrontText(text1.content.replace('[TU NOMBRE]', '').replace('[LOGO]', ''));
+              setFrontDesign({ 
+                  x: text1.position.x, 
+                  y: text1.position.y, 
+                  scale: text1.size / 20, 
+                  rotate: text1.rotation || 0 
+              });
+          } else {
+              setBackText(text1.content.replace('[TU NOMBRE]', '').replace('[LOGO]', ''));
+              setBackDesign({ 
+                  x: text1.position.x, 
+                  y: text1.position.y, 
+                  scale: text1.size / 20, 
+                  rotate: text1.rotation || 0 
+              });
+          }
+      }
+      
+      if (template.config.texts.length > 1) {
+          const text2 = template.config.texts[1];
+          if (view === 'FRONT') {
+              setFrontText2(text2.content.replace('[TU NOMBRE]', '').replace('[LOGO]', ''));
+              setFrontDesign2({ 
+                  x: text2.position.x, 
+                  y: text2.position.y, 
+                  scale: text2.size / 20, 
+                  rotate: text2.rotation || 0 
+              });
+          } else {
+              setBackText2(text2.content.replace('[TU NOMBRE]', '').replace('[LOGO]', ''));
+              setBackDesign2({ 
+                  x: text2.position.x, 
+                  y: text2.position.y, 
+                  scale: text2.size / 20, 
+                  rotate: text2.rotation || 0 
+              });
+          }
+      }
+      
+      // Find font by name (approximate)
+      const fontMap: Record<string, number> = {
+          'Bebas Neue': 998,
+          'Anton': 997,
+          'Playfair Display': 996,
+          'Permanent Marker': 995,
+          'Plus Jakarta Sans': 999,
+          'JetBrains Mono': 994
+      };
+      
+      const fontId = fontMap[template.config.style.fontFamily] || defaultFontId;
+      if (view === 'FRONT') {
+          setFrontFontId(fontId);
+          if (template.config.texts.length > 1) setFrontFontId2(fontId);
+      } else {
+          setBackFontId(fontId);
+          if (template.config.texts.length > 1) setBackFontId2(fontId);
+      }
+      
+      setShowTemplates(false);
   };
 
   const handleSaveClick = (goToCart: boolean) => {
@@ -785,54 +854,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
         {/* TEMPLATES MODAL */}
         {showTemplates && (
             <DesignTemplates
-                templates={storeConfig.designTemplates}
-                onSelectTemplate={(template) => {
-                    if (template.texts.length > 0) {
-                        // Font ID mapping
-                        const fontMap: Record<string, number> = {
-                            'Plus Jakarta Sans': 999,
-                            'Bebas Neue': 998,
-                            'Anton': 997,
-                            'Playfair Display': 996,
-                            'Permanent Marker': 995,
-                            'JetBrains Mono': 994
-                        };
-                        
-                        if (view === 'FRONT') {
-                            // Apply first text
-                            const text1 = template.texts[0];
-                            setFrontText(typeof text1 === 'string' ? text1 : text1.content);
-                            setFrontFontId(fontMap[typeof text1 === 'string' ? 'Plus Jakarta Sans' : (text1.fontFamily || 'Plus Jakarta Sans')] || 999);
-                            
-                            // Apply second text if exists
-                            if (template.texts.length > 1) {
-                                const text2 = template.texts[1];
-                                setFrontText2(typeof text2 === 'string' ? text2 : text2.content);
-                                setFrontFontId2(fontMap[typeof text2 === 'string' ? 'Plus Jakarta Sans' : (text2.fontFamily || 'Plus Jakarta Sans')] || 999);
-                            }
-                            
-                            // Apply positions if defined
-                            if (typeof text1 !== 'string' && text1.yPosition !== undefined) {
-                                setFrontDesign(prev => ({ ...prev, y: text1.yPosition || 40 }));
-                            }
-                            if (template.texts[1] && typeof template.texts[1] !== 'string' && template.texts[1].yPosition !== undefined) {
-                                setFrontDesign2(prev => ({ ...prev, y: template.texts[1].yPosition || 65 }));
-                            }
-                        } else {
-                            // Apply to back
-                            const text1 = template.texts[0];
-                            setBackText(typeof text1 === 'string' ? text1 : text1.content);
-                            setBackFontId(fontMap[typeof text1 === 'string' ? 'Plus Jakarta Sans' : (text1.fontFamily || 'Plus Jakarta Sans')] || 999);
-                            
-                            if (template.texts.length > 1) {
-                                const text2 = template.texts[1];
-                                setBackText2(typeof text2 === 'string' ? text2 : text2.content);
-                                setBackFontId2(fontMap[typeof text2 === 'string' ? 'Plus Jakarta Sans' : (text2.fontFamily || 'Plus Jakarta Sans')] || 999);
-                            }
-                        }
-                    }
-                    setShowTemplates(false);
-                }}
+                onSelectTemplate={applyTemplate}
                 onClose={() => setShowTemplates(false)}
             />
         )}

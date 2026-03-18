@@ -91,17 +91,54 @@ export interface CustomTemplate {
   text: string;
 }
 
+export interface DesignTemplateText {
+  content: string;
+  fontFamily: string;
+  size?: number; // Tamaño relativo (1 = normal, 1.5 = grande, etc.)
+  color?: string; // Color opcional
+  xPosition?: number; // Posición X opcional (porcentaje, default 50)
+  yPosition?: number; // Posición Y opcional (porcentaje)
+  rotation?: number; // Rotación en grados
+}
+
+export interface DesignTemplate {
+  id: string;
+  name: string;
+  occasion: 'fathers-day' | 'mothers-day' | 'teachers-day' | 'birthday' | 'graduation' | 'anniversary' | 'christmas' | 'valentine' | 'general' | 'sports' | 'company';
+  preview: string; // Emoji o texto corto
+  previewImage?: string; // URL de imagen SVG/PNG opcional
+  previewColor?: string; // Color del vaso para preview (stainless, black, navy, etc.)
+  texts: DesignTemplateText[];
+  isActive: boolean;
+  isFavorite?: boolean;
+  usageCount?: number; // Contador de usos
+  createdAt: string;
+  updatedAt?: string;
+  tags?: string[];
+  order?: number; // Para ordenar templates
+  collection?: string; // ID de colección/carpeta
+  author?: string; // Quién creó el template
+}
+
+export type AssetFileType = 'PNG' | 'JPG' | 'SVG' | 'PDF' | 'WEBP';
+
 export interface BrandingAsset {
   id: string;
   name: string;
   url: string; // Base64 o URL
   type: 'LOGO' | 'ICON' | 'ILUSTRACION' | 'FORMS' | 'OTHER' | 'CLIPART';
+  fileType?: AssetFileType;  // Tipo de archivo
   tags?: string[];           // Etiquetas para búsqueda
   usageCount?: number;       // Contador de uso
   createdAt?: string;        // Fecha de creación
   folderId?: string;         // ID de carpeta
   size?: number;             // Tamaño en bytes
   dimensions?: { width: number; height: number }; // Dimensiones
+  // Para PDF
+  pdfData?: {
+    numPages?: number;
+    thumbnailUrl?: string;
+  };
 }
 
 export interface StoreConfig {
@@ -143,6 +180,7 @@ export interface StoreConfig {
   customTemplates?: CustomTemplate[];
   brandingAssets: BrandingAsset[];
   galleryAssets?: BrandingAsset[]; // Nueva galería de clipart
+  designTemplates?: DesignTemplate[]; // Templates para el personalizador
 
   // Desarrollador / API
   webhookUrl?: string;

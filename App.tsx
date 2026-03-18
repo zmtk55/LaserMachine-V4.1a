@@ -147,13 +147,6 @@ const App = () => {
     setIsAssistantOpen(true);
   }, []);
   
-  // Auto-select first product when navigating to customizer without a product selected
-  useEffect(() => {
-    if (view === 'CUSTOMIZER' && !selectedProduct && products.length > 0) {
-      setSelectedProduct(products[0]);
-    }
-  }, [view, selectedProduct, products]);
-  
   // Cmd+K keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -694,7 +687,13 @@ const App = () => {
       {view !== 'CUSTOMIZER' && view !== 'PUBLIC_TRACKING' && view !== 'CLIENT_DASHBOARD' && (
         <NavBar 
           user={user} cartCount={cart.length} 
-          onNavigate={setView} 
+          onNavigate={(newView) => {
+            // Auto-select first product when navigating to customizer without a product
+            if (newView === 'CUSTOMIZER' && !selectedProduct && products.length > 0) {
+              setSelectedProduct(products[0]);
+            }
+            setView(newView);
+          }} 
           onLogin={() => setIsLoginOpen(true)} 
           onLogout={handleLogout}
           isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} 
@@ -760,9 +759,11 @@ const App = () => {
           />
         )}
 
-        {view === 'CUSTOMIZER' && selectedProduct && (
+        {view === 'CUSTOMIZER' && (
           <ProductVisualizer 
-            product={selectedProduct} fonts={fonts} pricing={pricing}
+            product={selectedProduct || products[0]} 
+            fonts={fonts} 
+            pricing={pricing}
             availableColors={storeConfig.globalColors}
             initialFontId={preSelectedFontId || undefined}
             initialState={editingItem || (preSelectedText ? { frontText: preSelectedText, frontFontId: preSelectedFontId || undefined } as OrderItem : null)}
@@ -773,10 +774,11 @@ const App = () => {
             onSave={(config, goToCart) => { 
               const fontName = fonts.find(f => f.id === config.frontFontId)?.name || 'Default';
               const backFontName = fonts.find(f => f.id === config.backFontId)?.name || 'Default';
+              const productToUse = selectedProduct || products[0];
               
               const newItem: OrderItem = {
                 id: Date.now().toString(),
-                productId: selectedProduct.id,
+                productId: productToUse.id,
                 colorName: config.color,
                 frontText: config.frontText,
                 frontText2: config.frontText2, 

@@ -20,13 +20,15 @@ import {
   Flame, Ban, CheckCheck, Timer, CheckCircle, Play, MoreHorizontal, ChevronLeft, StickyNote,
   Layers, Forward, CheckSquare, Square, FileJson, EyeOff, ChevronUp, ImagePlus, Pencil, Crop,
   Paperclip, Lock, PhoneCall, Bell, CalendarClock, ShoppingBag, TrendingDown, PanelRight,
-  History, Banknote, QrCode, Grid3X3, AlignLeft
+  History, Banknote, QrCode, Grid3X3, AlignLeft,
+  LayoutTemplate
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui';
 import { ImageCropper } from './ImageCropper';
 import { BackgroundSettings } from './BackgroundSettings';
 import InventoryManager from './InventoryManager';
+import { TemplateManagerPro } from './TemplateManagerPro';
 import { AlertsWidget } from './AlertsWidget';
 import { migrateProductsToCloud, migrateFontsToCloud, migrateConfigToCloud, migrateOrdersToCloud } from '../services/firebaseService';
 import { ClientDashboard } from './ClientDashboard';
@@ -861,13 +863,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   activeTab: propActiveTab, onTabChange,
   settingsTab: propSettingsTab, onSettingsTabChange
 }) => {
-  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR'>('DASHBOARD');
+  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'TEMPLATES'>('DASHBOARD');
   const [internalSettingsTab, setInternalSettingsTab] = useState<'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM'>('BRANDING');
   
   // Gallery state
   const [gallerySearch, setGallerySearch] = useState('');
   const [galleryCategory, setGalleryCategory] = useState<'TODAS' | 'LOGO' | 'ICON' | 'ILUSTRACION' | 'FORMS' | 'CLIPART' | 'OTHER'>('TODAS');
   const [galleryViewMode, setGalleryViewMode] = useState<'folders' | 'grid' | 'compact' | 'list'>('folders');
+
+
 
   // Content config for client dashboard
   const [contentConfig, setContentConfig] = useState<{ banners: any[], promotions: any[] }>(() => {
@@ -1429,6 +1433,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         { id: 'INVENTORY', label: 'Inventario', icon: Package },
                         { id: 'CLIENTS', label: 'CRM Clientes', icon: Users },
                         { id: 'FONTS', label: 'Fonts', icon: Type },
+                        { id: 'TEMPLATES', label: 'Templates', icon: LayoutTemplate },
                         { id: 'GALERIA', label: 'Galería', icon: Images },
                         { id: 'CONTENT', label: 'Contenido', icon: LayoutGrid },
                         { id: 'SETTINGS', label: 'Ajustes', icon: Settings },
@@ -2639,6 +2644,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     onUpdateProduct={onUpdateProduct}
                     onDeleteProduct={onDeleteProduct}
                     onBulkDistributor={() => setIsBulkDistributorOpen(true)}
+                />
+            )}
+
+            {activeTab === 'TEMPLATES' && (
+                <TemplateManagerPro
+                    storeConfig={storeConfig}
+                    fonts={fonts}
+                    onUpdateStoreConfig={onUpdateStoreConfig}
                 />
             )}
 

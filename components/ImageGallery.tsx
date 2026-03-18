@@ -251,14 +251,34 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     e.stopPropagation();
     setIsDragging(false);
     
-    const files = Array.from(e.dataTransfer.files as FileList).filter((f: File) => f.type.startsWith('image/'));
+    const files = Array.from(e.dataTransfer.files as FileList).filter((f: File) => 
+      f.type.startsWith('image/') || f.type === 'application/pdf' || f.name.endsWith('.svg')
+    );
     files.forEach(file => onUploadImage(file));
   }, [onUploadImage]);
 
-  // File select
+  // File select - supports images, SVG and PDF
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    files.forEach(file => onUploadImage(file));
+    files.forEach(file => {
+      // Check file type
+      const isImage = file.type.startsWith('image/');
+      const isSVG = file.name.endsWith('.svg') || file.type === 'image/svg+xml';
+      const isPDF = file.type === 'application/pdf';
+      
+      if (isImage || isSVG) {
+        onUploadImage(file);
+      } else if (isPDF) {
+        // Handle PDF upload
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const result = ev.target?.result as string;
+          // Store PDF with special handling
+          onUploadImage(file);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
     e.target.value = '';
   };
 
