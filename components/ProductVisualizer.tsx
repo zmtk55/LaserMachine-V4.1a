@@ -11,7 +11,8 @@ import {
 import { Product, FontOption, PricingConfig, OrderItem, DesignState, LogoItem, ColorPreset, FontCategory, BrandingAsset, StoreConfig } from '../types';
 import { VintageRollInput } from './VintageRollInput';
 import { ImageGallery } from './ImageGallery';
-import { DesignTemplates, DesignTemplate } from './DesignTemplates';
+import { DesignTemplates } from './DesignTemplates';
+import { MonogramLibrary } from './MonogramLibrary';
 
 interface ProductVisualizerProps {
   product: Product;
@@ -93,6 +94,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const [activeTool, setActiveTool] = useState<ActiveTool>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+    const [showMonograms, setShowMonograms] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -522,6 +524,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                     </div>
                     <div className="pointer-events-auto flex flex-col items-center gap-3 md:gap-5 bg-zinc-950/95 backdrop-blur-md text-white p-2 md:p-4 rounded-2xl md:rounded-3xl shadow-2xl border border-zinc-800">
                         <button onClick={() => setShowTemplates(true)} className="relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:scale-110" title="Plantillas"><LayoutTemplate size={20} className="md:w-6 md:h-6" /></button>
+                        <button onClick={() => setShowMonograms(true)} className="relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg hover:scale-110" title="Monogramas"><Type size={20} className="md:w-6 md:h-6" /></button>
                         <div className="w-8 h-px bg-zinc-800 my-0.5"></div>
                         <button onClick={() => toggleTool('TEXT1')} className={`relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'TEXT1' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Type size={20} className="md:w-6 md:h-6" /><span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-zinc-700 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-zinc-900">1</span></button>
                         <button onClick={() => toggleTool('TEXT2')} className={`relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'TEXT2' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Type size={16} className="md:w-5 md:h-5"/><span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-zinc-700 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-zinc-900">2</span></button>
@@ -835,6 +838,37 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                 }}
                 onClose={() => setShowTemplates(false)}
             />
+        )}
+
+        {/* MONOGRAMS MODAL */}
+        {showMonograms && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <MonogramLibrary
+                        onSelectMonogram={(monogram) => {
+                            // Apply the monogram as text
+                            if (view === 'FRONT') {
+                                setFrontText(monogram.text);
+                            } else {
+                                setBackText(monogram.text);
+                            }
+                            setShowMonograms(false);
+                        }}
+                        onGenerateAI={async (prompt) => {
+                            // This would integrate with AI service
+                            // For now, return placeholder
+                            console.log('AI prompt:', prompt);
+                            return '';
+                        }}
+                    />
+                    <button
+                        onClick={() => setShowMonograms(false)}
+                        className="absolute top-4 right-4 p-2 bg-white dark:bg-zinc-800 rounded-full shadow-lg"
+                    >
+                        <X size={24} />
+                    </button>
+                </div>
+            </div>
         )}
     </div>
   );
