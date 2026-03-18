@@ -41,6 +41,7 @@
     "firebase": "^12.8.0",
     "lottie-react": "^2.4.1",
     "lucide-react": "0.344.0",
+    "puppeteer": "^24.39.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-easy-crop": "5.0.4"

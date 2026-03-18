@@ -95,7 +95,6 @@ export interface DesignTemplateText {
   content: string;
   fontFamily: string;
   size?: number; // Tamaño relativo (1 = normal, 1.5 = grande, etc.)
-  color?: string; // Color opcional
   xPosition?: number; // Posición X opcional (porcentaje, default 50)
   yPosition?: number; // Posición Y opcional (porcentaje)
   rotation?: number; // Rotación en grados

@@ -791,27 +791,36 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                 templates={storeConfig.designTemplates}
                 onSelectTemplate={(template) => {
                     if (template.texts.length > 0) {
-                        // Font ID mapping
-                        const fontMap: Record<string, number> = {
-                            'Plus Jakarta Sans': 999,
-                            'Bebas Neue': 998,
-                            'Anton': 997,
-                            'Playfair Display': 996,
-                            'Permanent Marker': 995,
-                            'JetBrains Mono': 994
+                        // Helper to find font ID by name
+                        const getFontId = (fontName: string): number => {
+                            const found = fonts.find(f => 
+                                f.name.toLowerCase() === fontName.toLowerCase() || 
+                                f.cssFamily?.toLowerCase() === fontName.toLowerCase()
+                            );
+                            return found?.id || initialFontId || 1;
                         };
                         
                         if (view === 'FRONT') {
                             // Apply first text
                             const text1 = template.texts[0];
-                            setFrontText(typeof text1 === 'string' ? text1 : text1.content);
-                            setFrontFontId(fontMap[typeof text1 === 'string' ? 'Plus Jakarta Sans' : (text1.fontFamily || 'Plus Jakarta Sans')] || 999);
+                            const content1 = typeof text1 === 'string' ? text1 : text1.content;
+                            const fontName1 = typeof text1 === 'string' ? 'Bebas Neue' : (text1.fontFamily || 'Bebas Neue');
+                            
+                            setFrontText(content1);
+                            setFrontFontId(getFontId(fontName1));
+                            
+
                             
                             // Apply second text if exists
                             if (template.texts.length > 1) {
                                 const text2 = template.texts[1];
-                                setFrontText2(typeof text2 === 'string' ? text2 : text2.content);
-                                setFrontFontId2(fontMap[typeof text2 === 'string' ? 'Plus Jakarta Sans' : (text2.fontFamily || 'Plus Jakarta Sans')] || 999);
+                                const content2 = typeof text2 === 'string' ? text2 : text2.content;
+                                const fontName2 = typeof text2 === 'string' ? 'Plus Jakarta Sans' : (text2.fontFamily || 'Plus Jakarta Sans');
+                                
+                                setFrontText2(content2);
+                                setFrontFontId2(getFontId(fontName2));
+                                
+
                             }
                             
                             // Apply positions if defined
@@ -824,13 +833,23 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                         } else {
                             // Apply to back
                             const text1 = template.texts[0];
-                            setBackText(typeof text1 === 'string' ? text1 : text1.content);
-                            setBackFontId(fontMap[typeof text1 === 'string' ? 'Plus Jakarta Sans' : (text1.fontFamily || 'Plus Jakarta Sans')] || 999);
+                            const content1 = typeof text1 === 'string' ? text1 : text1.content;
+                            const fontName1 = typeof text1 === 'string' ? 'Bebas Neue' : (text1.fontFamily || 'Bebas Neue');
+                            
+                            setBackText(content1);
+                            setBackFontId(getFontId(fontName1));
+                            
+
                             
                             if (template.texts.length > 1) {
                                 const text2 = template.texts[1];
-                                setBackText2(typeof text2 === 'string' ? text2 : text2.content);
-                                setBackFontId2(fontMap[typeof text2 === 'string' ? 'Plus Jakarta Sans' : (text2.fontFamily || 'Plus Jakarta Sans')] || 999);
+                                const content2 = typeof text2 === 'string' ? text2 : text2.content;
+                                const fontName2 = typeof text2 === 'string' ? 'Plus Jakarta Sans' : (text2.fontFamily || 'Plus Jakarta Sans');
+                                
+                                setBackText2(content2);
+                                setBackFontId2(getFontId(fontName2));
+                                
+
                             }
                         }
                     }

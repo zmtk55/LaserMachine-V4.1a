@@ -5,7 +5,7 @@ import {
   ChevronDown, Check, Zap, Crown, ArrowRight
 } from 'lucide-react';
 import { DesignTemplate } from '../types';
-import { TumblerMockup3D } from './TumblerMockup3D';
+import { TumblerPreview } from './TumblerPreview';
 
 export type TemplateOccasion = 
   | 'fathers-day' 
@@ -81,8 +81,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '👑', 
     previewColor: 'black',
     texts: [
-      { content: 'REY', fontFamily: 'Bebas Neue', size: 1.5, yPosition: 35, color: '#FFD700' },
-      { content: 'PAPÁ', fontFamily: 'Plus Jakarta Sans', size: 1, yPosition: 60, color: '#FFFFFF' }
+      { content: 'REY', fontFamily: 'Bebas Neue', size: 1.5, yPosition: 35 },
+      { content: 'PAPÁ', fontFamily: 'Plus Jakarta Sans', size: 1, yPosition: 60 }
     ],
     isActive: true, 
     isFavorite: true,
@@ -98,7 +98,7 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '💼', 
     previewColor: 'navy',
     texts: [
-      { content: 'THE BOSS', fontFamily: 'Anton', size: 1.3, yPosition: 50, color: '#FFFFFF' }
+      { content: 'THE BOSS', fontFamily: 'Anton', size: 1.3, yPosition: 50 }
     ],
     isActive: true, 
     usageCount: 189,
@@ -113,8 +113,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '💖', 
     previewColor: 'pink',
     texts: [
-      { content: 'BEST MOM', fontFamily: 'Playfair Display', size: 1.2, yPosition: 40, color: '#FFFFFF' },
-      { content: 'EVER', fontFamily: 'Bebas Neue', size: 1, yPosition: 65, color: '#FFFFFF' }
+      { content: 'BEST MOM', fontFamily: 'Playfair Display', size: 1.2, yPosition: 40 },
+      { content: 'EVER', fontFamily: 'Bebas Neue', size: 1, yPosition: 65 }
     ],
     isActive: true, 
     isFavorite: true,
@@ -130,8 +130,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '👑', 
     previewColor: 'white',
     texts: [
-      { content: 'QUEEN', fontFamily: 'Anton', size: 1.5, yPosition: 45, color: '#FFD700' },
-      { content: 'MOM', fontFamily: 'Plus Jakarta Sans', size: 0.9, yPosition: 70, color: '#333333' }
+      { content: 'QUEEN', fontFamily: 'Anton', size: 1.5, yPosition: 45 },
+      { content: 'MOM', fontFamily: 'Plus Jakarta Sans', size: 0.9, yPosition: 70 }
     ],
     isActive: true, 
     usageCount: 156,
@@ -146,8 +146,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '🎉', 
     previewColor: 'teal',
     texts: [
-      { content: 'HAPPY', fontFamily: 'Permanent Marker', size: 1.1, yPosition: 35, color: '#FFFFFF' },
-      { content: 'BIRTHDAY', fontFamily: 'Permanent Marker', size: 1.1, yPosition: 55, color: '#FFFFFF' }
+      { content: 'HAPPY', fontFamily: 'Permanent Marker', size: 1.1, yPosition: 35 },
+      { content: 'BIRTHDAY', fontFamily: 'Permanent Marker', size: 1.1, yPosition: 55 }
     ],
     isActive: true, 
     usageCount: 198,
@@ -162,8 +162,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '🎓', 
     previewColor: 'black',
     texts: [
-      { content: 'CLASS OF', fontFamily: 'Bebas Neue', size: 1, yPosition: 35, color: '#FFFFFF' },
-      { content: '2025', fontFamily: 'Anton', size: 1.8, yPosition: 60, color: '#FFFFFF' }
+      { content: 'CLASS OF', fontFamily: 'Bebas Neue', size: 1, yPosition: 35 },
+      { content: '2025', fontFamily: 'Anton', size: 1.8, yPosition: 60 }
     ],
     isActive: true, 
     usageCount: 134,
@@ -178,8 +178,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '🍎', 
     previewColor: 'stainless',
     texts: [
-      { content: 'BEST', fontFamily: 'Bebas Neue', size: 1, yPosition: 35, color: '#333333' },
-      { content: 'TEACHER', fontFamily: 'Plus Jakarta Sans', size: 1.2, yPosition: 55, color: '#333333' }
+      { content: 'BEST', fontFamily: 'Bebas Neue', size: 1, yPosition: 35 },
+      { content: 'TEACHER', fontFamily: 'Plus Jakarta Sans', size: 1.2, yPosition: 55 }
     ],
     isActive: true, 
     usageCount: 87,
@@ -194,7 +194,7 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '✨', 
     previewColor: 'copper',
     texts: [
-      { content: 'TU NOMBRE', fontFamily: 'Bebas Neue', size: 1.4, yPosition: 45, color: '#FFFFFF' }
+      { content: 'TU NOMBRE', fontFamily: 'Bebas Neue', size: 1.4, yPosition: 45 }
     ],
     isActive: true, 
     usageCount: 423,
@@ -209,8 +209,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '⭐', 
     previewColor: 'gold',
     texts: [
-      { content: 'SUPERSTAR', fontFamily: 'Anton', size: 1.3, yPosition: 40, color: '#000000' },
-      { content: '⭐', fontFamily: 'Arial', size: 1, yPosition: 65, color: '#FFD700' }
+      { content: 'SUPERSTAR', fontFamily: 'Anton', size: 1.3, yPosition: 40 },
+      { content: '⭐', fontFamily: 'Arial', size: 1, yPosition: 65 }
     ],
     isActive: true, 
     usageCount: 76,
@@ -225,8 +225,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '💪', 
     previewColor: 'black',
     texts: [
-      { content: 'BOSS', fontFamily: 'Anton', size: 1.4, yPosition: 35, color: '#FFFFFF' },
-      { content: 'LADY', fontFamily: 'Plus Jakarta Sans', size: 1, yPosition: 65, color: '#FFFFFF' }
+      { content: 'BOSS', fontFamily: 'Anton', size: 1.4, yPosition: 35 },
+      { content: 'LADY', fontFamily: 'Plus Jakarta Sans', size: 1, yPosition: 65 }
     ],
     isActive: true, 
     usageCount: 112,
@@ -241,9 +241,9 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '❤️', 
     previewColor: 'white',
     texts: [
-      { content: 'MY', fontFamily: 'Playfair Display', size: 1, yPosition: 30, color: '#333333' },
-      { content: 'FAVORITE', fontFamily: 'Playfair Display', size: 1.1, yPosition: 50, color: '#333333' },
-      { content: 'PERSON', fontFamily: 'Playfair Display', size: 1, yPosition: 70, color: '#333333' }
+      { content: 'MY', fontFamily: 'Playfair Display', size: 1, yPosition: 30 },
+      { content: 'FAVORITE', fontFamily: 'Playfair Display', size: 1.1, yPosition: 50 },
+      { content: 'PERSON', fontFamily: 'Playfair Display', size: 1, yPosition: 70 }
     ],
     isActive: true, 
     usageCount: 145,
@@ -258,8 +258,8 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
     preview: '🦸', 
     previewColor: 'stainless',
     texts: [
-      { content: 'DAD', fontFamily: 'Bebas Neue', size: 1.5, yPosition: 35, color: '#333333' },
-      { content: 'MY HERO', fontFamily: 'Plus Jakarta Sans', size: 0.9, yPosition: 65, color: '#333333' }
+      { content: 'DAD', fontFamily: 'Bebas Neue', size: 1.5, yPosition: 35 },
+      { content: 'MY HERO', fontFamily: 'Plus Jakarta Sans', size: 0.9, yPosition: 65 }
     ],
     isActive: true, 
     usageCount: 203,
@@ -441,13 +441,14 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
                 >
                   {/* Preview */}
                   <div className={`relative ${viewMode === 'grid' ? 'aspect-[4/5]' : 'h-32'} bg-gradient-to-br from-zinc-800 to-zinc-900`}>
-                    <TumblerMockup3D
-                      template={template}
-                      color={template.previewColor || 'stainless'}
-                      width={viewMode === 'grid' ? 300 : 120}
-                      height={viewMode === 'grid' ? 375 : 150}
-                      className="absolute inset-0 w-full h-full flex items-center justify-center"
-                    />
+                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                      <TumblerPreview
+                        template={template}
+                        color={template.previewColor || 'stainless'}
+                        width={viewMode === 'grid' ? 140 : 80}
+                        height={viewMode === 'grid' ? 210 : 120}
+                      />
+                    </div>
 
                     {/* Hover Overlay */}
                     <div className={`absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-opacity ${
