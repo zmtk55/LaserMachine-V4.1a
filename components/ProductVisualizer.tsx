@@ -6,7 +6,7 @@ import {
   Check, X, ChevronRight, ChevronLeft, Trash2, Wand2, Loader2,
   Maximize, RefreshCw,
   ChevronUp, ChevronDown, Upload, Settings, TextCursor, Images, Package, Camera, Aperture, AlertOctagon, Save, Zap, Scissors,
-  LayoutTemplate
+  LayoutTemplate, Heart, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { Product, FontOption, PricingConfig, OrderItem, DesignState, LogoItem, ColorPreset, FontCategory, BrandingAsset, StoreConfig } from '../types';
 import { VintageRollInput } from './VintageRollInput';
@@ -48,6 +48,12 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const [clientItemColor, setClientItemColor] = useState(initialState?.clientItemColor || '');
   const [userUploadedImage, setUserUploadedImage] = useState<string | null>(initialState?.customBackgroundImage || null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [favorites, setFavorites] = useState<DesignState[]>(() => {
+        try {
+            const saved = localStorage.getItem('lm_design_favorites');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
     const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   // --- AI BACKGROUND REMOVAL ---
   const handleRemoveBackground = async () => {
@@ -423,6 +429,25 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
       setDesignState(selectedElementId, { x: 50, y: 50, scale: 1, rotate: 0 });
   };
 
+  const handleSaveToFavorites = () => {
+      const currentDesign = getDesignState(selectedElementId);
+      if (!currentDesign) return;
+      const newFavorites = [...favorites, { ...currentDesign, id: Date.now().toString() }];
+      setFavorites(newFavorites);
+      localStorage.setItem('lm_design_favorites', JSON.stringify(newFavorites));
+  };
+
+  const handleLoadFromFavorites = (fav: DesignState) => {
+      if (!selectedElementId) return;
+      setDesignState(selectedElementId, { x: fav.x, y: fav.y, scale: fav.scale, rotate: fav.rotate });
+  };
+
+  const handleRemoveFavorite = (id: string) => {
+      const newFavorites = favorites.filter(f => f.id !== id);
+      setFavorites(newFavorites);
+      localStorage.setItem('lm_design_favorites', JSON.stringify(newFavorites));
+  };
+
   const openFontModal = (target: 'text1' | 'text2') => { setFontModalTarget(target); setSelectedElementId(target); setIsFontModalOpen(true); };
   const handleFontSelect = (fontId: number) => {
       if (view === 'FRONT') { if (fontModalTarget === 'text1') setFrontFontId(fontId); else setFrontFontId2(fontId); }
@@ -611,15 +636,98 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                     </div>
                                 )}
                                 {activeTool === 'SETTINGS' && (
-                                    <div className="bg-zinc-50 dark:bg-zinc-800/30 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
-                                        {isClientItem ? (
-                                            <div className="space-y-3">
-                                                 <div className="flex items-center gap-2 mb-1 text-zinc-900 dark:text-white"><Package size={14}/><span className="text-[10px] font-black uppercase tracking-widest">Personalizando tu termo</span></div>
-                                                 <div><label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Marca</label><select value={clientItemBrand} onChange={(e) => setClientItemBrand(e.target.value)} className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-[10px] font-bold uppercase outline-none focus:border-zinc-400 dark:text-white"><option value="YETI">YETI</option><option value="STANLEY">STANLEY</option><option value="HYDROFLASK">HYDROFLASK</option><option value="GENERICO">GENÉRICO</option></select></div>
-                                                 <div><label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Color (Descripción)</label><input value={clientItemColor} onChange={(e) => setClientItemColor(e.target.value)} className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-[10px] font-bold uppercase outline-none focus:border-zinc-400 dark:text-white" placeholder="EJ. NEGRO MATE"/></div>
-                                            </div>
+                                    <div className="bg-zinc-50 dark:bg-zinc-800/30 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm space-y-3">
+                                        {selectedElementId ? (
+                                            <>
+                                                {/* ZOOM & ROTATION CONTROLS */}
+                                                <div className="border-b border-zinc-200 dark:border-zinc-700 pb-3">
+                                                    <div className="flex items-center gap-2 mb-2 text-zinc-900 dark:text-white"><ZoomIn size={14}/><span className="text-[10px] font-black uppercase tracking-widest">Zoom & Rotación</span></div>
+                                                    
+                                                    {/* Scale Slider */}
+                                                    <div className="mb-3">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <label className="text-[8px] font-bold text-zinc-500 uppercase">Zoom</label>
+                                                            <span className="text-[8px] font-black text-yellow-600">{Math.round((getDesignState(selectedElementId)?.scale || 1) * 100)}%</span>
+                                                        </div>
+                                                        <input 
+                                                            type="range" 
+                                                            min="0.3" 
+                                                            max="3" 
+                                                            step="0.1" 
+                                                            value={getDesignState(selectedElementId)?.scale || 1}
+                                                            onChange={(e) => {
+                                                                const val = parseFloat(e.target.value);
+                                                                setDesignState(selectedElementId, { ...getDesignState(selectedElementId)!, scale: val });
+                                                            }}
+                                                            className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                                                        />
+                                                        <div className="flex justify-between text-[7px] text-zinc-400 mt-0.5">
+                                                            <span>30%</span>
+                                                            <span>300%</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Rotation Slider */}
+                                                    <div className="mb-3">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <label className="text-[8px] font-bold text-zinc-500 uppercase">Rotación</label>
+                                                            <span className="text-[8px] font-black text-yellow-600">{getDesignState(selectedElementId)?.rotate || 0}°</span>
+                                                        </div>
+                                                        <input 
+                                                            type="range" 
+                                                            min="-180" 
+                                                            max="180" 
+                                                            step="5" 
+                                                            value={getDesignState(selectedElementId)?.rotate || 0}
+                                                            onChange={(e) => {
+                                                                const val = parseInt(e.target.value);
+                                                                setDesignState(selectedElementId, { ...getDesignState(selectedElementId)!, rotate: val });
+                                                            }}
+                                                            className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                                                        />
+                                                        <div className="flex justify-between text-[7px] text-zinc-400 mt-0.5">
+                                                            <span>-180°</span>
+                                                            <span>180°</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Quick Actions */}
+                                                    <div className="flex gap-1">
+                                                        <button onClick={handleResetSelected} className="flex-1 py-1.5 px-2 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 rounded-lg text-[8px] font-bold uppercase text-zinc-600 dark:text-zinc-300 transition-colors"><RotateCcw size={10} className="inline mr-1"/>Reset</button>
+                                                        <button onClick={handleSaveToFavorites} className="flex-1 py-1.5 px-2 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-lg text-[8px] font-bold uppercase text-yellow-600 transition-colors"><Heart size={10} className="inline mr-1"/>Guardar</button>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* FAVORITES SECTION */}
+                                                {favorites.length > 0 && (
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-2 text-zinc-900 dark:text-white"><Heart size={14}/><span className="text-[10px] font-black uppercase tracking-widest">Mis Favoritos ({favorites.length})</span></div>
+                                                        <div className="grid grid-cols-3 gap-1 max-h-24 overflow-y-auto">
+                                                            {favorites.map((fav) => (
+                                                                <div key={fav.id} className="relative group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg p-1 cursor-pointer hover:border-yellow-400 transition-colors" onClick={() => handleLoadFromFavorites(fav)}>
+                                                                    <div className="text-[7px] text-center">
+                                                                        <div className="text-yellow-500 font-black">{Math.round((fav.scale || 1) * 100)}%</div>
+                                                                        <div className="text-zinc-400">{fav.rotate || 0}°</div>
+                                                                    </div>
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(fav.id!); }} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><X size={8}/></button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
                                         ) : (
-                                            <div className="text-center py-4"><p className="text-[10px] text-zinc-800 dark:text-zinc-200 font-bold">Estás personalizando un producto del catálogo.</p><p className="text-[9px] text-zinc-500 mt-1">Usa el botón superior para indicar si traes tu propio producto.</p></div>
+                                            <>
+                                                {isClientItem ? (
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2 mb-1 text-zinc-900 dark:text-white"><Package size={14}/><span className="text-[10px] font-black uppercase tracking-widest">Personalizando tu termo</span></div>
+                                                        <div><label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Marca</label><select value={clientItemBrand} onChange={(e) => setClientItemBrand(e.target.value)} className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-[10px] font-bold uppercase outline-none focus:border-zinc-400 dark:text-white"><option value="YETI">YETI</option><option value="STANLEY">STANLEY</option><option value="HYDROFLASK">HYDROFLASK</option><option value="GENERICO">GENÉRICO</option></select></div>
+                                                        <div><label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Color (Descripción)</label><input value={clientItemColor} onChange={(e) => setClientItemColor(e.target.value)} className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-[10px] font-bold uppercase outline-none focus:border-zinc-400 dark:text-white" placeholder="EJ. NEGRO MATE"/></div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-4"><p className="text-[10px] text-zinc-800 dark:text-zinc-200 font-bold">Selecciona un elemento para ajustar zoom y rotación</p><p className="text-[9px] text-zinc-500 mt-1">Toca cualquier texto o imagen en el termo</p></div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 )}
