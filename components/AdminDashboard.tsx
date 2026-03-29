@@ -910,6 +910,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [rabInputValue, setRabInputValue] = useState('');
   
+  // Context Menu Hook
+  const { showMenu } = useContextMenu();
+  
   // States
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isFontModalOpen, setIsFontModalOpen] = useState(false);
@@ -2242,15 +2245,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 const isSelected = selectedOrder?.id === order.id;
                                 const isPriority = order.isPriority;
                                 return (
-                                  <ContextMenuTrigger
-                                    key={`${order.id}-${index}`}
-                                    items={getOrderContextMenuItems(order)}
-                                    data={order}
-                                    className="shrink-0"
-                                  >
                                     <button
+                                        key={`${order.id}-${index}`}
                                         onClick={() => setSelectedOrder(order)}
-                                        className={`w-[280px] rounded-xl border text-left transition-all duration-200 overflow-hidden relative ${
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            showMenu(
+                                                { x: e.clientX, y: e.clientY },
+                                                getOrderContextMenuItems(order),
+                                                order
+                                            );
+                                        }}
+                                        className={`shrink-0 w-[280px] rounded-xl border text-left transition-all duration-200 overflow-hidden relative ${
                                             isSelected 
                                                 ? 'bg-amber-500 border-amber-500 shadow-lg shadow-amber-500/25 ring-2 ring-amber-500/20' 
                                                 : isPriority
@@ -2299,7 +2305,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             </span>
                                         </div>
                                     </button>
-                                  </ContextMenuTrigger>
                                 );
                             })}
                         </div>
