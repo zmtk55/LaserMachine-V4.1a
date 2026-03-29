@@ -166,7 +166,7 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
                 </button>
              )}
              <div className="flex items-center gap-2 cursor-pointer group relative">
-                <img src={user.avatarUrl} className="w-11 h-11 rounded-full border-2 border-zinc-200 dark:border-zinc-700 group-hover:border-amber-400 transition-colors object-cover" alt="Avatar"/>
+                 <img src={user.avatarUrl} className="w-11 h-11 rounded-full border-2 border-zinc-200 dark:border-zinc-700 group-hover:border-amber-400 transition-colors object-cover" alt={`Avatar de ${user.name}`}/>
                 <button onClick={onLogout} className="absolute -bottom-1 -right-1 bg-white dark:bg-zinc-900 text-zinc-400 hover:text-red-500 p-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 transition-colors shadow-sm hover:scale-110" title="Cerrar Sesión"><LogOut size={12}/></button>
              </div>
            </div>
@@ -179,7 +179,7 @@ export const NavBar: React.FC<NavBarProps> = ({ user, cartCount, onNavigate, onL
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
-          <div className="fixed inset-0 top-0 w-full h-screen bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl z-[150] flex flex-col p-10 pt-32 gap-8 animate-in slide-in-from-right duration-300 md:hidden">
+          <div className="fixed inset-0 top-0 w-full h-screen bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl z-[150] flex flex-col p-10 pt-32 gap-8 animate-in slide-in-from-right duration-300 md:hidden" role="dialog" aria-modal="true" aria-label="Menú de navegación">
               {user ? (
                   <>
                     <button onClick={() => handleNav('SHOP')} className="text-left text-4xl font-black uppercase tracking-tighter text-zinc-900 dark:text-white border-b-2 border-zinc-200 dark:border-zinc-800 pb-6 hover:pl-4 hover:text-amber-500 transition-all flex items-center gap-4">

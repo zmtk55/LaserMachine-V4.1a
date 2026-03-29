@@ -10,12 +10,12 @@ import { getStorage, FirebaseStorage } from 'firebase/storage';
 // Opcional: Se puede sobrescribir desde localStorage para desarrollo
 
 const productionFirebaseConfig = {
-  apiKey: "AIzaSyDJ8eeftZ2LaQ1XYYt5EmC5grDCxWBU-7o",
-  authDomain: "lasermachine-250bb.firebaseapp.com",
-  projectId: "lasermachine-250bb",
-  storageBucket: "lasermachine-250bb.appspot.com",
-  messagingSenderId: "350837441350",
-  appId: "1:350837441350:web:adfe7aba53efbd2089db47"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const getConfiguration = () => {
