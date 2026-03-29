@@ -848,15 +848,15 @@ const App = () => {
                               </div>
                               
                               <div className="mt-3 flex flex-wrap gap-2">
-                                  <button onClick={() => setPreviewItem(item)} className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-500 hover:text-black border border-amber-500/50 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors">
-                                      <Eye size={12}/> Ver Diseño Final
-                                  </button>
-                                  <button onClick={() => handleEditCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors">
-                                      <Edit2 size={12}/> Editar
-                                  </button>
-                                  <button onClick={() => setCart(cart.filter(c => c.id !== item.id))} className="px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors">
-                                      <Trash2 size={12}/> Borrar
-                                  </button>
+                                   <button onClick={() => setPreviewItem(item)} className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-500 hover:text-black border border-amber-500/50 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Eye size={12}/> Ver Diseño Final
+                                   </button>
+                                   <button onClick={() => handleEditCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Edit2 size={12}/> Editar
+                                   </button>
+                                   <button onClick={() => setCart(cart.filter(c => c.id !== item.id))} className="px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Trash2 size={12}/> Borrar
+                                   </button>
                               </div>
 
                               {/* Price Breakdown Mini */}
@@ -885,16 +885,38 @@ const App = () => {
                         {/* Customer Form */}
                         <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Nombre Completo*</label>
-                                <input value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value.toUpperCase()})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-sm outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" placeholder="NOMBRE Y APELLIDO"/>
+                                <label htmlFor="customer-name" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Nombre Completo*</label>
+                                <input 
+                                    id="customer-name"
+                                    value={customerInfo.name} 
+                                    onChange={e => setCustomerInfo({...customerInfo, name: e.target.value.toUpperCase()})} 
+                                    className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-base outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
+                                    placeholder="NOMBRE Y APELLIDO"
+                                    aria-required="true"
+                                />
                             </div>
                             <div>
-                                <label className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">WhatsApp / Teléfono*</label>
-                                <input value={customerInfo.phone} onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-sm outline-none focus:border-amber-500 transition-colors font-mono placeholder:text-zinc-300 dark:placeholder:text-zinc-700" type="tel" placeholder="10 DÍGITOS"/>
+                                <label htmlFor="customer-phone" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">WhatsApp / Teléfono*</label>
+                                <input 
+                                    id="customer-phone"
+                                    value={customerInfo.phone} 
+                                    onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} 
+                                    className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-base outline-none focus:border-amber-500 transition-colors font-mono placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
+                                    type="tel" 
+                                    placeholder="10 DÍGITOS"
+                                    aria-required="true"
+                                />
                             </div>
                             <div>
-                                <label className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Email (Opcional)</label>
-                                <input value={customerInfo.email} onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold text-sm outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" type="email" placeholder="PARA REGISTRO CLIENTE"/>
+                                <label htmlFor="customer-email" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Email (Opcional)</label>
+                                <input 
+                                    id="customer-email"
+                                    value={customerInfo.email} 
+                                    onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} 
+                                    className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold text-base outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
+                                    type="email" 
+                                    placeholder="PARA REGISTRO CLIENTE"
+                                />
                             </div>
                         </div>
 
@@ -912,7 +934,9 @@ const App = () => {
                                         <button 
                                             key={m.id}
                                             onClick={() => setSelectedPaymentMethod(m.id)}
-                                            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 text-[10px] font-black uppercase transition-all ${selectedPaymentMethod === m.id ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent shadow-lg' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
+                                            aria-label={`Seleccionar método de pago: ${m.label}`}
+                                            aria-pressed={selectedPaymentMethod === m.id}
+                                            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 text-xs font-black uppercase transition-all cursor-pointer ${selectedPaymentMethod === m.id ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent shadow-lg' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
                                         >
                                             <m.icon size={16}/> {m.label}
                                         </button>
@@ -934,7 +958,8 @@ const App = () => {
                                     <button 
                                         onClick={() => setUsePoints(!usePoints)}
                                         disabled={user.laserPoints <= 0}
-                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${usePoints ? 'bg-amber-500 text-black shadow-lg' : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}
+                                        aria-label={usePoints ? `Canjeando ${user.laserPoints} puntos` : `Canjear ${user.laserPoints} puntos disponibles`}
+                                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all cursor-pointer ${usePoints ? 'bg-amber-500 text-black shadow-lg' : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}
                                     >
                                         {usePoints ? 'Canjeados' : 'Canjear'}
                                     </button>
@@ -942,15 +967,17 @@ const App = () => {
                             )}
 
                             <div>
-                                <label className="text-xs font-black text-zinc-500 uppercase block mb-3 tracking-widest">Cupón de Descuento</label>
+                                <label htmlFor="coupon-code" className="text-xs font-black text-zinc-500 uppercase block mb-3 tracking-widest">Cupón de Descuento</label>
                                 <div className="flex gap-2">
                                     <input 
+                                        id="coupon-code"
                                         value={couponCode}
                                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                                        className="flex-1 bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl font-bold uppercase text-xs outline-none focus:border-amber-500"
+                                        className="flex-1 bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl font-bold uppercase text-sm outline-none focus:border-amber-500"
                                         placeholder="CÓDIGO"
+                                        aria-describedby="coupon-help"
                                     />
-                                    <button onClick={handleApplyCoupon} className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-black dark:text-white px-4 rounded-xl font-bold text-xs uppercase"><Ticket size={16}/></button>
+                                    <button onClick={handleApplyCoupon} aria-label="Aplicar cupón de descuento" className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-black dark:text-white px-4 rounded-xl font-bold text-xs uppercase cursor-pointer"><Ticket size={16}/></button>
                                 </div>
                                 {appliedCoupon && (
                                     <div className="mt-2 text-xs font-bold text-green-500 flex items-center gap-2">

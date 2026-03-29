@@ -117,7 +117,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
         <div className="absolute inset-0 overflow-hidden">
           {/* Primary blob - Yellow/Orange */}
           <div 
-            className="absolute -top-40 -right-40 w-[800px] h-[800px] bg-gradient-to-br from-yellow-400/30 via-amber-500/20 to-orange-500/30 morph-blob blur-[100px] gradient-animate"
+            className="absolute -top-40 -right-40 w-[800px] h-[800px] bg-gradient-to-br from-accent-400/30 via-accent-600/20 to-warning-500/30 morph-blob blur-[100px] gradient-animate"
             style={{ 
               transform: `translate(${scrollY * 0.1}px, ${scrollY * 0.2}px)`,
               animation: 'morph 8s ease-in-out infinite, gradient-shift 8s ease infinite'
@@ -165,9 +165,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
             {/* Left: Content */}
             <div className="space-y-8">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400/10 dark:bg-yellow-400/20 rounded-full border border-yellow-400/20">
-                <Sparkles size={14} className="text-yellow-500" />
-                <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent-400/10 dark:bg-accent-400/20 rounded-full border border-accent-400/20">
+                <Sparkles size={14} className="text-accent-500" />
+                <span className="text-xs font-bold text-yellow-600 dark:text-accent-400 uppercase tracking-wider">
                   Personalización Láser
                 </span>
               </div>
@@ -182,7 +182,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                   </span>
                   <span className="block overflow-hidden">
                     <span 
-                      className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 gradient-animate"
+                      className="block text-transparent bg-clip-text bg-gradient-to-r from-accent-400 via-accent-600 to-yellow-600 gradient-animate"
                       style={{ 
                         animationDelay: '0.2s',
                         backgroundSize: '200% 200%'
@@ -208,9 +208,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               >
                 <button 
                   onClick={onLogin}
-                  className="group relative px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider rounded-2xl flex items-center gap-3 transition-all hover:shadow-xl overflow-hidden"
+                  className="group relative px-8 py-4 bg-warning-500 hover:bg-warning-400 text-black font-black uppercase text-sm tracking-wider rounded-2xl flex items-center gap-3 transition-all hover:shadow-xl overflow-hidden"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-yellow-300 to-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-warning-400 to-warning-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative flex items-center gap-3">
                     Ver Catálogo
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -218,9 +218,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                 </button>
                 <button 
                   onClick={onLogin}
-                  className="group px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-black uppercase text-sm tracking-wider rounded-2xl hover:opacity-90 transition-all flex items-center gap-2 overflow-hidden relative"
+                  className="group px-8 py-4 bg-accent-500 dark:bg-accent-600 text-white font-black uppercase text-sm tracking-wider rounded-2xl hover:opacity-90 transition-all flex items-center gap-2 overflow-hidden relative"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-zinc-800 to-zinc-700 dark:from-zinc-200 dark:to-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-accent-600 to-accent-700 dark:from-accent-700 dark:to-accent-800 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative flex items-center gap-2">
                     <Zap size={18} className="group-hover:scale-110 transition-transform" />
                     ¡Ya tengo mi termo!
@@ -231,22 +231,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               {/* Bring your own */}
               <p className="text-sm text-zinc-500 flex items-center gap-2">
                 <span className="w-8 h-px bg-zinc-300"></span>
-                ¿Ya cuentas con el tuyo? <span className="text-yellow-500 font-bold">También lo personalizamos</span>
+                ¿Ya cuentas con el tuyo? <span className="text-accent-500 font-bold">También lo personalizamos</span>
                 <span className="w-8 h-px bg-zinc-300"></span>
               </p>
 
               {/* Trust badges */}
               <div className="flex flex-wrap gap-6 pt-4">
                 <div className="flex items-center gap-2 text-zinc-500">
-                  <Shield size={16} className="text-yellow-500" />
+                  <Shield size={16} className="text-accent-500" />
                   <span className="text-xs font-bold uppercase">Garantía de Calidad</span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-500">
-                  <Truck size={16} className="text-yellow-500" />
+                  <Truck size={16} className="text-accent-500" />
                   <span className="text-xs font-bold uppercase">Envíos Rápidos</span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-500">
-                  <Star size={16} className="text-yellow-500" />
+                  <Star size={16} className="text-accent-500" />
                   <span className="text-xs font-bold uppercase">+1000 Clientes</span>
                 </div>
               </div>
@@ -263,7 +263,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                 }}
               />
               <div 
-                className="absolute w-[300px] h-[300px] lg:w-[400px] lg:h-[400px] rounded-full bg-yellow-400/5"
+                className="absolute w-[300px] h-[300px] lg:w-[400px] lg:h-[400px] rounded-full bg-accent-400/5"
                 style={{ 
                   transform: `translateY(${scrollY * -0.1}px)`,
                   transition: 'transform 0.1s ease-out'
@@ -272,7 +272,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
 
               {/* Product image with float animation */}
               <div className="relative z-10">
-                {HERO_PRODUCTS.map((product, index) => (
+                    {HERO_PRODUCTS.map((product, index) => (
                   <div
                     key={product.id}
                     className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${
@@ -280,10 +280,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                         ? 'opacity-100 scale-100 translate-y-0' 
                         : 'opacity-0 scale-95 translate-y-4'
                     }`}
+                    role="img"
+                    aria-label={`${product.name} - Precio $${product.price} MXN`}
+                    aria-hidden={index !== currentSlide}
                   >
                     <img
                       src={product.image}
-                      alt={product.name}
+                      alt={`Producto destacado: ${product.name} de ${product.price} pesos`}
                       className="w-64 h-64 lg:w-80 lg:h-80 object-contain drop-shadow-2xl"
                       style={{
                         animation: index === currentSlide ? 'float 3s ease-in-out infinite' : 'none',
@@ -300,7 +303,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                   <h3 className="font-bold text-zinc-900 dark:text-white whitespace-nowrap">
                     {HERO_PRODUCTS[currentSlide].name}
                   </h3>
-                  <p className="text-yellow-500 font-black text-lg">
+                  <p className="text-accent-500 font-black text-lg">
                     ${HERO_PRODUCTS[currentSlide].price}
                   </p>
                 </div>
@@ -309,27 +312,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               {/* Navigation arrows */}
               <button 
                 onClick={prevSlide}
-                className="absolute left-0 top-1/2 -translate-y-1/2 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                aria-label="Producto anterior"
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
               >
                 <ChevronLeft size={20} />
               </button>
               <button 
                 onClick={nextSlide}
-                className="absolute right-0 top-1/2 -translate-y-1/2 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                aria-label="Siguiente producto"
+                className="absolute right-0 top-1/2 -translate-y-1/2 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
               >
                 <ChevronRight size={20} />
               </button>
 
               {/* Slide indicators */}
-              <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex gap-2">
-                {HERO_PRODUCTS.map((_, index) => (
+              <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex gap-2" role="tablist" aria-label="Indicadores de producto">
+                {HERO_PRODUCTS.map((product, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
-                    className={`w-2 h-2 rounded-full transition-all ${
+                    role="tab"
+                    aria-selected={index === currentSlide}
+                    aria-label={`Ir a ${product.name}`}
+                    className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
                       index === currentSlide 
-                        ? 'w-8 bg-yellow-400' 
-                        : 'bg-zinc-300 dark:bg-zinc-700'
+                        ? 'w-8 bg-accent-400' 
+                        : 'bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400'
                     }`}
                   />
                 ))}
@@ -344,19 +352,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
       {/* PRODUCTS CAROUSEL SECTION - Opera Neon Style */}
       <section className="py-20 px-6 lg:px-12 bg-white dark:bg-zinc-950 relative overflow-hidden">
         {/* Background decoration */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-yellow-400/5 to-transparent rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-accent-400/5 to-transparent rounded-full blur-[100px]" />
         
         <div className="max-w-7xl mx-auto relative">
           <div className="flex items-end justify-between mb-12">
             <div className="reveal-on-scroll">
-              <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Catálogo</span>
+              <span className="text-xs font-bold text-accent-500 uppercase tracking-widest">Catálogo</span>
               <h3 className="text-3xl md:text-5xl font-black text-zinc-900 dark:text-white uppercase mt-2">
                 Productos Populares
               </h3>
             </div>
             <button 
               onClick={() => onNavigate('SHOP')}
-              className="hidden md:flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-yellow-500 transition-colors uppercase tracking-wider group"
+              className="hidden md:flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-accent-500 transition-colors uppercase tracking-wider group"
             >
               Ver Todo 
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -367,13 +375,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
           <div className="relative">
             <button 
               onClick={() => scrollProducts('left')}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all hidden md:flex card-hover"
+              aria-label="Desplazar productos a la izquierda"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all hidden md:flex card-hover cursor-pointer"
             >
               <ChevronLeft size={20} />
             </button>
             <button 
               onClick={() => scrollProducts('right')}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all hidden md:flex card-hover"
+              aria-label="Desplazar productos a la derecha"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all hidden md:flex card-hover cursor-pointer"
             >
               <ChevronRight size={20} />
             </button>
@@ -394,25 +404,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               >
                 <div className="relative aspect-square bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-lg group-hover:shadow-2xl transition-shadow duration-500">
                   {/* Floating badge */}
-                  <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-yellow-400 text-black text-xs font-bold rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform -translate-y-2 group-hover:translate-y-0">
+                  <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-accent-400 text-black text-xs font-bold rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform -translate-y-2 group-hover:translate-y-0">
                     ${product.price}
                   </div>
                   
                   <img
                     src={product.imageUrl || product.colors[0]?.imageUrl}
-                    alt={product.name}
+                    alt={`${product.brand} ${product.name} - Personalizable con grabado láser`}
                     className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-xl"
                   />
                   
                   {/* Hover overlay with glass effect */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-8">
-                    <span className="px-6 py-3 bg-yellow-400 text-black font-bold rounded-full text-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 shadow-lg">
+                    <span className="px-6 py-3 bg-accent-400 text-black font-bold rounded-full text-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 shadow-lg">
                       Personalizar
                     </span>
                   </div>
                 </div>
                 <div className="space-y-1 px-2">
-                  <h4 className="font-bold text-zinc-900 dark:text-white truncate group-hover:text-yellow-500 transition-colors">{product.name}</h4>
+                  <h4 className="font-bold text-zinc-900 dark:text-white truncate group-hover:text-accent-500 transition-colors">{product.name}</h4>
                   <p className="text-sm text-zinc-500">{product.brand}</p>
                 </div>
               </div>
@@ -434,13 +444,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
       <section className="py-20 px-6 lg:px-12 bg-zinc-50 dark:bg-black relative overflow-hidden">
         {/* Animated background elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-yellow-400/5 rounded-full blur-[100px]" />
-          <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px]" />
+          <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-accent-400/5 rounded-full blur-[100px]" />
+          <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-accent-600/5 rounded-full blur-[80px]" />
         </div>
         
         <div className="max-w-5xl mx-auto relative">
           <div className="text-center mb-16">
-            <span className="inline-block px-4 py-2 bg-yellow-400/10 rounded-full text-xs font-bold text-yellow-500 uppercase tracking-widest mb-4">
+            <span className="inline-block px-4 py-2 bg-accent-400/10 rounded-full text-xs font-bold text-accent-500 uppercase tracking-widest mb-4">
               Proceso
             </span>
             <h3 className="text-3xl md:text-5xl font-black text-zinc-900 dark:text-white uppercase">
@@ -476,13 +486,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               >
                 {/* Connector line */}
                 {index < 2 && (
-                  <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-yellow-400/50 to-transparent" />
+                  <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-accent-400/50 to-transparent" />
                 )}
                 
                 <div className="relative w-20 h-20 mx-auto mb-6">
   
                   
-                  <div className="relative w-full h-full bg-gradient-to-br from-yellow-400 to-amber-500 rounded-3xl flex items-center justify-center shadow-lg dark:shadow-none transition-all duration-300">
+                  <div className="relative w-full h-full bg-gradient-to-br from-accent-400 to-accent-600 rounded-3xl flex items-center justify-center shadow-lg dark:shadow-none transition-all duration-300">
                     <item.icon size={32} className="text-black" />
                   </div>
                 </div>
@@ -491,7 +501,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                   {item.step}
                 </span>
                 
-                <h4 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-yellow-500 transition-colors">
+                <h4 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-accent-500 transition-colors">
                   {item.title}
                 </h4>
                 <p className="text-sm text-zinc-500 max-w-xs mx-auto">{item.desc}</p>
@@ -507,7 +517,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left: Content */}
             <div className="space-y-6">
-              <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">App Móvil</span>
+              <span className="text-xs font-bold text-accent-500 uppercase tracking-widest">App Móvil</span>
               <h3 className="text-3xl md:text-5xl font-black text-zinc-900 dark:text-white uppercase leading-tight">
                 Diseña desde tu celular
               </h3>
@@ -517,19 +527,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               </p>
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
-                  <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-accent-400 rounded-full flex items-center justify-center">
                     <Zap size={14} className="text-black" />
                   </div>
                   Vista previa en tiempo real
                 </li>
                 <li className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
-                  <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-accent-400 rounded-full flex items-center justify-center">
                     <Star size={14} className="text-black" />
                   </div>
                   Múltiples fuentes y diseños
                 </li>
                 <li className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
-                  <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-accent-400 rounded-full flex items-center justify-center">
                     <Shield size={14} className="text-black" />
                   </div>
                   Calidad garantizada
@@ -551,7 +561,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                 {/* Phone Screen */}
                 <div className="w-full h-full bg-white dark:bg-zinc-950 rounded-[2.5rem] overflow-hidden relative">
                   {/* Mockup Header */}
-                  <div className="h-14 bg-yellow-400 flex items-center justify-between px-4">
+                  <div className="h-14 bg-accent-400 flex items-center justify-between px-4">
                     <span className="font-black text-black text-sm">LM</span>
                     <div className="flex gap-1">
                       <div className="w-2 h-2 rounded-full bg-black/30"></div>
@@ -579,7 +589,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                         <span className="text-xs text-zinc-400">Escribe tu texto...</span>
                       </div>
                       <div className="flex gap-2">
-                        <div className="flex-1 h-10 bg-yellow-400 rounded-xl flex items-center justify-center">
+                        <div className="flex-1 h-10 bg-accent-400 rounded-xl flex items-center justify-center">
                           <span className="text-xs font-bold text-black">Personalizar</span>
                         </div>
                         <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-xl flex items-center justify-center">
@@ -600,7 +610,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               </div>
 
               {/* Decorative blur */}
-              <div className="absolute -z-10 w-64 h-64 bg-yellow-400/20 rounded-full blur-[80px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+              <div className="absolute -z-10 w-64 h-64 bg-accent-400/20 rounded-full blur-[80px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
             </div>
           </div>
         </div>
@@ -611,8 +621,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
         <div className="max-w-5xl mx-auto">
           <div className="relative bg-zinc-900 dark:bg-zinc-800 rounded-[2rem] overflow-hidden">
             {/* Background decoration */}
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-transparent" />
-            <div className="absolute right-0 top-0 w-64 h-64 bg-yellow-400/10 rounded-full blur-[80px]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-accent-400/20 to-transparent" />
+            <div className="absolute right-0 top-0 w-64 h-64 bg-accent-400/10 rounded-full blur-[80px]" />
             
             <div className="relative z-10 px-8 py-16 md:px-16 md:py-20 text-center md:text-left">
               <div className="flex flex-col md:flex-row items-center justify-between gap-8">
@@ -626,7 +636,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                 </div>
                 <button 
                   onClick={() => onNavigate('CUSTOMIZER')}
-                  className="group px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider rounded-2xl flex items-center gap-3 transition-all hover:scale-105 whitespace-nowrap"
+                  className="group px-8 py-4 bg-accent-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider rounded-2xl flex items-center gap-3 transition-all hover:scale-105 whitespace-nowrap"
                 >
                   Empezar a Diseñar
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -644,7 +654,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
             {/* Logo y descripción */}
             <div className="md:col-span-2 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-accent-400 rounded-xl flex items-center justify-center">
                   <span className="font-black text-black text-lg">LM</span>
                 </div>
                 <span className="font-black text-2xl uppercase text-zinc-900 dark:text-white">
@@ -694,10 +704,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
               © {new Date().getFullYear()} {storeConfig.businessName}. Todos los derechos reservados.
             </p>
             <div className="flex gap-6 text-xs text-zinc-500">
-              <button onClick={onLogin} className="hover:text-yellow-500 transition-colors">
+              <button onClick={onLogin} className="hover:text-accent-500 transition-colors">
                 Iniciar Sesión
               </button>
-              <button onClick={() => onNavigate('LANDING')} className="hover:text-yellow-500 transition-colors">
+              <button onClick={() => onNavigate('LANDING')} className="hover:text-accent-500 transition-colors">
                 Inicio
               </button>
             </div>

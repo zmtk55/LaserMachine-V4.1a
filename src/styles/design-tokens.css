@@ -22,18 +22,18 @@
   --color-neutral-900: #111827;
   --color-neutral-950: #030712;
 
-  /* ===== ACCENT / PRIMARY ===== */
-  --color-accent-50: #fffbeb;
-  --color-accent-100: #fef3c7;
-  --color-accent-200: #fde68a;
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
-  --color-accent-800: #92400e;
-  --color-accent-900: #78350f;
-  --color-accent-950: #451a03;
+  /* ===== ACCENT / PRIMARY (Green - UI/UX Pro Max) ===== */
+  --color-accent-50: #ecfdf5;
+  --color-accent-100: #d1fae5;
+  --color-accent-200: #a7f3d0;
+  --color-accent-300: #6ee7b7;
+  --color-accent-400: #34d399;
+  --color-accent-500: #10b981;
+  --color-accent-600: #059669;
+  --color-accent-700: #047857;
+  --color-accent-800: #065f46;
+  --color-accent-900: #064e3b;
+  --color-accent-950: #022c22;
 
   /* ===== SUPPORT COLORS ===== */
   --color-success-50: #ecfdf5;
@@ -47,16 +47,16 @@
   --color-success-800: #065f46;
   --color-success-900: #064e3b;
 
-  --color-warning-50: #fffbeb;
-  --color-warning-100: #fef3c7;
-  --color-warning-200: #fde68a;
-  --color-warning-300: #fcd34d;
-  --color-warning-400: #fbbf24;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
-  --color-warning-700: #b45309;
-  --color-warning-800: #92400e;
-  --color-warning-900: #78350f;
+  --color-warning-50: #fff7ed;
+  --color-warning-100: #ffedd5;
+  --color-warning-200: #fed7aa;
+  --color-warning-300: #fdba74;
+  --color-warning-400: #fb923c;
+  --color-warning-500: #f97316;
+  --color-warning-600: #ea580c;
+  --color-warning-700: #c2410c;
+  --color-warning-800: #9a3412;
+  --color-warning-900: #7c2d12;
 
   --color-error-50: #fef2f2;
   --color-error-100: #fee2e2;
@@ -117,7 +117,7 @@
   --shadow-soft: rgba(0, 0, 0, 0.05);
   --shadow-medium: rgba(0, 0, 0, 0.10);
   --shadow-hard: rgba(0, 0, 0, 0.15);
-  --shadow-accent: rgba(245, 158, 11, 0.15);
+  --shadow-accent: rgba(16, 185, 129, 0.15);
   --shadow-danger: rgba(239, 68, 68, 0.15);
   --shadow-success: rgba(16, 185, 129, 0.15);
   --shadow-success-sm: 0 1px 3px var(--shadow-success), 0 1px 2px var(--shadow-soft);
@@ -357,7 +357,7 @@
   --shadow-soft: rgba(0, 0, 0, 0.3);
   --shadow-medium: rgba(0, 0, 0, 0.4);
   --shadow-hard: rgba(0, 0, 0, 0.5);
-  --shadow-accent: rgba(245, 158, 11, 0.3);
+  --shadow-accent: rgba(16, 185, 129, 0.3);
   --shadow-danger: rgba(239, 68, 68, 0.3);
   --shadow-success: rgba(16, 185, 129, 0.3);
   --shadow-success-sm: 0 1px 3px var(--shadow-success), 0 1px 2px var(--shadow-soft);
@@ -655,6 +655,24 @@
 .focus-system {
   outline: 2px solid var(--color-accent-500);
   outline-offset: 2px;
+}
+
+/* Global focus-visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Ensure buttons have visible focus states */
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
 }
 
 /* High contrast mode support */
