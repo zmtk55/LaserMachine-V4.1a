@@ -1700,7 +1700,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 direction: revenueChange >= 0 ? 'up' : 'down'
                             }}
                             accent="amber"
-                            onClick={() => { setStatusFilter('TODOS'); setActiveTab('ORDERS'); }}
+                            onClick={() => {
+                                document.getElementById('advanced-stats-section')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
                         />
 
                         {/* Ventas Semana */}
@@ -1715,7 +1717,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 direction: weeklyChange >= 0 ? 'up' : 'down'
                             }}
                             accent="success"
-                            onClick={() => { setDateFilter('WEEK'); setActiveTab('ORDERS'); }}
+                            onClick={() => {
+                                document.getElementById('advanced-stats-section')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
                         />
 
                         {/* Por Aprobar */}
@@ -1735,7 +1739,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             subtitle={urgentOrdersCount > 0 ? `${urgentOrdersCount} urgentes` : 'Sin urgentes'}
                             icon={<Zap size={18} />}
                             accent={urgentOrdersCount > 0 ? 'danger' : 'amber'}
-                            onClick={() => { setStatusFilter(OrderStatus.IN_PRODUCTION); setActiveTab('ORDERS'); }}
+                            onClick={() => setActiveTab('PRODUCTION')}
                         />
 
                         {/* Completados Hoy */}
@@ -1755,7 +1759,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             subtitle={`${formatCurrency(todaysRevenue)} / ${formatCurrency(DAILY_GOAL)}`}
                             icon={<Target size={18} />}
                             accent={dailyGoalMet ? 'success' : 'amber'}
-                            onClick={() => { setStatusFilter('TODOS'); setActiveTab('ORDERS'); }}
+                            onClick={() => {
+                                document.getElementById('advanced-stats-section')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
                         />
                     </div>
 
@@ -1972,7 +1978,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* Advanced Stats - Only show on DASHBOARD tab */}
             {activeTab === 'DASHBOARD' && (
-            <div className="p-6 md:p-12 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
+            <div id="advanced-stats-section" className="p-6 md:p-12 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
                 <AdvancedStats orders={orders} products={products} />
             </div>
             )}
