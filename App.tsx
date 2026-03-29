@@ -135,7 +135,7 @@ const App = () => {
   const [preSelectedOrderId, setPreSelectedOrderId] = useState<string | null>(null);
   
   // Admin Dashboard Tab State (for NavBar title)
-  const [adminActiveTab, setAdminActiveTab] = useState<string>('DASHBOARD');
+  const [adminActiveTab, setAdminActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT'>('DASHBOARD');
   
   // Command Assistant State
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);

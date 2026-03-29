@@ -864,7 +864,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   activeTab: propActiveTab, onTabChange,
   settingsTab: propSettingsTab, onSettingsTabChange
 }) => {
-  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR'>('DASHBOARD');
+  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT'>('DASHBOARD');
   const [internalSettingsTab, setInternalSettingsTab] = useState<'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM'>('BRANDING');
   
   // Gallery state
