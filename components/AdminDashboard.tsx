@@ -33,6 +33,8 @@ import { ClientDashboard } from './ClientDashboard';
 import { CouponManager } from './CouponManager';
 import { ContentManager } from './ContentManager';
 import ProductionSection from './ProductionSection';
+import ContextMenuTrigger from './ContextMenuTrigger';
+import { useContextMenu } from '../contexts/ContextMenuContext';
 import { Sparkles } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -1346,8 +1348,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       order.id,
       order.customerName,
       newStatus,
-      order.total
+      order.customerPhone
     );
+  };
+
+  const handleWhatsAppClick = (order: Order) => {
+    const link = generateWhatsAppLink(order.customerPhone, 'confirmation', order.id, order.customerName);
+    window.open(link, '_blank');
+  };
+
+  const handleDuplicateOrder = (order: Order) => {
+    const newOrder: Order = {
+      ...order,
+      id: `LM-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      status: OrderStatus.RECEIVED,
+      history: [{ timestamp: new Date().toISOString(), status: OrderStatus.RECEIVED, operator: 'ADMIN', note: `Duplicado de ${order.id}` }],
+      isPriority: false
+    };
+    onAddOrder(newOrder);
+    setSelectedOrder(newOrder);
   };
    
    
@@ -1403,6 +1423,69 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
     // ...existing code...
   const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { setNotes(e.target.value); localStorage.setItem('admin_dashboard_notes', e.target.value); };
+
+  // Context Menu Helper for Orders
+  const getOrderContextMenuItems = (order: Order): import('../types').ContextMenuItem[] => [
+    {
+      id: 'edit',
+      label: 'Editar orden',
+      icon: <Edit size={16} />,
+      onClick: () => { setSelectedOrder(order); setIsOrderModalOpen(true); }
+    },
+    {
+      id: 'duplicate',
+      label: 'Duplicar orden',
+      icon: <Copy size={16} />,
+      onClick: () => handleDuplicateOrder(order)
+    },
+    {
+      id: 'priority',
+      label: order.isPriority ? 'Quitar prioridad' : 'Marcar prioridad',
+      icon: <Star size={16} className={order.isPriority ? 'fill-amber-500 text-amber-500' : ''} />,
+      onClick: () => onUpdateOrderPriority(order.id, !order.isPriority)
+    },
+    {
+      id: 'whatsapp',
+      label: 'Enviar WhatsApp',
+      icon: <MessageCircle size={16} />,
+      onClick: () => handleWhatsAppClick(order)
+    },
+    {
+      id: 'print',
+      label: 'Imprimir / PDF',
+      icon: <Printer size={16} />,
+      onClick: () => window.print()
+    },
+    {
+      id: 'separator1',
+      label: '---'
+    },
+    {
+      id: 'status',
+      label: 'Cambiar estado',
+      icon: <ArrowRight size={16} />,
+      submenu: Object.values(OrderStatus).map(status => ({
+        id: `status-${status}`,
+        label: status.replace('_', ' '),
+        onClick: () => handleStatusChange(order, status)
+      }))
+    },
+    {
+      id: 'separator2',
+      label: '---'
+    },
+    {
+      id: 'delete',
+      label: 'Eliminar orden',
+      icon: <Trash2 size={16} />,
+      danger: true,
+      onClick: () => {
+        if (confirm(`¿Eliminar orden ${order.id}?`)) {
+          onUpdateOrder({ ...order, status: OrderStatus.CANCELLED });
+        }
+      }
+    }
+  ];
 
   // Calendar Helpers
   const getDaysInMonth = (date: Date) => {
@@ -2159,10 +2242,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 const isSelected = selectedOrder?.id === order.id;
                                 const isPriority = order.isPriority;
                                 return (
+                                  <ContextMenuTrigger
+                                    key={`${order.id}-${index}`}
+                                    items={getOrderContextMenuItems(order)}
+                                    data={order}
+                                    className="shrink-0"
+                                  >
                                     <button
-                                        key={`${order.id}-${index}`}
                                         onClick={() => setSelectedOrder(order)}
-                                        className={`shrink-0 w-[280px] rounded-xl border text-left transition-all duration-200 overflow-hidden relative ${
+                                        className={`w-[280px] rounded-xl border text-left transition-all duration-200 overflow-hidden relative ${
                                             isSelected 
                                                 ? 'bg-amber-500 border-amber-500 shadow-lg shadow-amber-500/25 ring-2 ring-amber-500/20' 
                                                 : isPriority
@@ -2211,6 +2299,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             </span>
                                         </div>
                                     </button>
+                                  </ContextMenuTrigger>
                                 );
                             })}
                         </div>
