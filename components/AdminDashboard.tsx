@@ -20,7 +20,7 @@ import {
   Flame, Ban, CheckCheck, Timer, CheckCircle, Play, MoreHorizontal, ChevronLeft, StickyNote,
   Layers, Forward, CheckSquare, Square, FileJson, EyeOff, ChevronUp, ImagePlus, Pencil, Crop,
   Paperclip, Lock, PhoneCall, Bell, CalendarClock, ShoppingBag, TrendingDown, PanelRight,
-  History, Banknote, QrCode, Grid3X3, AlignLeft
+  History, Banknote, QrCode, Grid3X3, AlignLeft, Target, CheckCircle2
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui';
@@ -36,6 +36,8 @@ import ProductionSection from './ProductionSection';
 import ContextMenuTrigger from './ContextMenuTrigger';
 import { useContextMenu } from '../contexts/ContextMenuContext';
 import { Sparkles } from 'lucide-react';
+import KPICard from './dashboard/KPICard';
+import Sparkline from './dashboard/Sparkline';
 
 interface AdminDashboardProps {
   orders: Order[];
@@ -1068,6 +1070,116 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
   [orders]);
 
+  // ===== NEW ENHANCED METRICS FOR DASHBOARD =====
+  
+  // Revenue comparison with yesterday
+  const yesterdayRevenue = useMemo(() => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      return orders
+          .filter(o => new Date(o.createdAt).toDateString() === yesterday.toDateString() && o.status !== OrderStatus.CANCELLED)
+          .reduce((sum, o) => sum + o.total, 0);
+  }, [orders]);
+
+  const revenueChange = useMemo(() => {
+      if (yesterdayRevenue === 0) return 100; // If no sales yesterday, consider 100% increase
+      return ((todaysRevenue - yesterdayRevenue) / yesterdayRevenue) * 100;
+  }, [todaysRevenue, yesterdayRevenue]);
+
+  // Weekly comparison
+  const lastWeekRevenue = useMemo(() => {
+      const today = new Date();
+      let total = 0;
+      for (let i = 7; i < 14; i++) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          total += orders
+              .filter(o => new Date(o.createdAt).toDateString() === date.toDateString() && o.status !== OrderStatus.CANCELLED)
+              .reduce((sum, o) => sum + o.total, 0);
+      }
+      return total;
+  }, [orders]);
+
+  const weeklyChange = useMemo(() => {
+      if (lastWeekRevenue === 0) return 100;
+      return ((weeklyRevenue - lastWeekRevenue) / lastWeekRevenue) * 100;
+  }, [weeklyRevenue, lastWeekRevenue]);
+
+  // Completed orders today
+  const completedToday = useMemo(() => {
+      const today = new Date().toDateString();
+      return orders.filter(o => 
+          o.status === OrderStatus.COMPLETED && 
+          o.history?.some(h => h.status === OrderStatus.COMPLETED && new Date(h.timestamp).toDateString() === today)
+      ).length;
+  }, [orders]);
+
+  // Average production time (hours)
+  const avgProductionTime = useMemo(() => {
+      const completedOrders = orders.filter(o => 
+          o.status === OrderStatus.COMPLETED && 
+          o.history && 
+          o.history.some(h => h.status === OrderStatus.IN_PRODUCTION)
+      );
+      
+      if (completedOrders.length === 0) return 0;
+      
+      const totalHours = completedOrders.reduce((sum, o) => {
+          const productionStart = o.history.find(h => h.status === OrderStatus.IN_PRODUCTION)?.timestamp;
+          const productionEnd = o.history.find(h => h.status === OrderStatus.COMPLETED)?.timestamp;
+          
+          if (productionStart && productionEnd) {
+              const hours = (new Date(productionEnd).getTime() - new Date(productionStart).getTime()) / (1000 * 60 * 60);
+              return sum + hours;
+          }
+          return sum;
+      }, 0);
+      
+      return Math.round(totalHours / completedOrders.length);
+  }, [orders]);
+
+  // Daily revenue goal (example: $10,000)
+  const DAILY_GOAL = 10000;
+  const dailyGoalProgress = Math.min((todaysRevenue / DAILY_GOAL) * 100, 100);
+  const dailyGoalMet = todaysRevenue >= DAILY_GOAL;
+
+  // Pending amount
+  const pendingAmount = useMemo(() => {
+      return orders
+          .filter(o => o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.COMPLETED)
+          .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
+  }, [orders]);
+
+  // Pending orders count
+  const pendingOrdersCount = useMemo(() => {
+      return orders.filter(o => 
+          o.status !== OrderStatus.CANCELLED && 
+          o.status !== OrderStatus.COMPLETED
+      ).length;
+  }, [orders]);
+
+  // Urgent orders (in production with priority)
+  const urgentOrdersCount = useMemo(() => {
+      return orders.filter(o => 
+          o.status === OrderStatus.IN_PRODUCTION && 
+          o.isPriority
+      ).length;
+  }, [orders]);
+
+  // Sparkline data (last 7 days revenue)
+  const sparklineData = useMemo(() => {
+      const data = [];
+      for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const amount = orders
+              .filter(o => new Date(o.createdAt).toDateString() === date.toDateString() && o.status !== OrderStatus.CANCELLED)
+              .reduce((sum, o) => sum + o.total, 0);
+          data.push(amount);
+      }
+      return data;
+  }, [orders]);
+
   // Format time ago
   const formatTimeAgo = (dateStr: string) => {
       const date = new Date(dateStr);
@@ -1573,67 +1685,98 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <div className={`flex-1 overflow-y-auto custom-scrollbar ${activeTab === 'ORDERS' ? 'p-0' : 'p-6 md:p-12'}`}>
             {activeTab === 'DASHBOARD' && (
-                <div className="space-y-4">
-                    {/* Compact KPI Cards Row */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {/* Ventas Hoy - Compact */}
-                        <button 
+                <div className="space-y-6">
+                    {/* Enhanced KPI Cards Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {/* Ventas Hoy */}
+                        <KPICard
+                            title="Ventas Hoy"
+                            value={formatCurrency(todaysRevenue)}
+                            subtitle={yesterdayRevenue > 0 ? `vs ${formatCurrency(yesterdayRevenue)} ayer` : 'Sin ventas ayer'}
+                            icon={<DollarSign size={18} />}
+                            trend={{
+                                value: Math.abs(Math.round(revenueChange)),
+                                label: 'vs ayer',
+                                direction: revenueChange >= 0 ? 'up' : 'down'
+                            }}
+                            accent="amber"
                             onClick={() => { setStatusFilter('TODOS'); setActiveTab('ORDERS'); }}
-                            className="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left hover:border-amber-500/50 transition-all"
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                    <DollarSign size={14} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"/>
-                                </div>
-                                <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase">Ventas Hoy</p>
-                            </div>
-                            <p className="text-lg font-black text-zinc-900 dark:text-white">{formatCurrency(todaysRevenue)}</p>
-                        </button>
+                        />
 
-                        {/* Por Aprobar - Compact */}
-                        <button 
+                        {/* Ventas Semana */}
+                        <KPICard
+                            title="Ventas Semana"
+                            value={formatCurrency(weeklyRevenue)}
+                            subtitle="Últimos 7 días"
+                            icon={<TrendingUp size={18} />}
+                            trend={{
+                                value: Math.abs(Math.round(weeklyChange)),
+                                label: 'vs semana pasada',
+                                direction: weeklyChange >= 0 ? 'up' : 'down'
+                            }}
+                            accent="success"
+                            onClick={() => { setDateFilter('WEEK'); setActiveTab('ORDERS'); }}
+                        />
+
+                        {/* Por Aprobar */}
+                        <KPICard
+                            title="Por Aprobar"
+                            value={`${ordersByStatus[OrderStatus.WAITING_APPROVAL] || 0}`}
+                            subtitle="Órdenes pendientes"
+                            icon={<Eye size={18} />}
+                            accent="info"
                             onClick={() => { setStatusFilter(OrderStatus.WAITING_APPROVAL); setActiveTab('ORDERS'); }}
-                            className="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left hover:border-amber-500/50 transition-all"
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                    <Eye size={14} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"/>
-                                </div>
-                                <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase">Por Aprobar</p>
-                                {ordersByStatus[OrderStatus.WAITING_APPROVAL] > 0 && (
-                                    <span className="ml-auto w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"/>
-                                )}
-                            </div>
-                            <p className="text-lg font-black text-zinc-900 dark:text-white">{ordersByStatus[OrderStatus.WAITING_APPROVAL] || 0}</p>
-                        </button>
+                        />
 
-                        {/* En Producción - Compact */}
-                        <button 
+                        {/* En Producción */}
+                        <KPICard
+                            title="En Producción"
+                            value={`${ordersByStatus[OrderStatus.IN_PRODUCTION] || 0}`}
+                            subtitle={urgentOrdersCount > 0 ? `${urgentOrdersCount} urgentes` : 'Sin urgentes'}
+                            icon={<Zap size={18} />}
+                            accent={urgentOrdersCount > 0 ? 'danger' : 'amber'}
                             onClick={() => { setStatusFilter(OrderStatus.IN_PRODUCTION); setActiveTab('ORDERS'); }}
-                            className="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left hover:border-amber-500/50 transition-all"
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                    <Zap size={14} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"/>
-                                </div>
-                                <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase">Producción</p>
-                            </div>
-                            <p className="text-lg font-black text-zinc-900 dark:text-white">{ordersByStatus[OrderStatus.IN_PRODUCTION] || 0}</p>
-                        </button>
+                        />
 
-                        {/* Stock Crítico - Compact */}
-                        <button 
-                            onClick={() => setActiveTab('INVENTORY')}
-                            className={`group relative overflow-hidden rounded-xl p-3 text-left transition-all ${lowStockProducts.length > 0 ? 'bg-amber-500 border-amber-500' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50'}`}
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className={`p-1.5 rounded-lg transition-colors ${lowStockProducts.length > 0 ? 'bg-white/20' : 'bg-zinc-100 dark:bg-zinc-800 group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20'}`}>
-                                    <Package size={14} className={lowStockProducts.length > 0 ? 'text-white' : 'text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400'}/>
-                                </div>
-                                <p className={`text-[10px] font-medium uppercase ${lowStockProducts.length > 0 ? 'text-white/80' : 'text-zinc-500 dark:text-zinc-400'}`}>Stock Bajo</p>
-                            </div>
-                            <p className={`text-lg font-black ${lowStockProducts.length > 0 ? 'text-white' : 'text-zinc-900 dark:text-white'}`}>{lowStockProducts.length}</p>
-                        </button>
+                        {/* Completados Hoy */}
+                        <KPICard
+                            title="Completados Hoy"
+                            value={`${completedToday}`}
+                            subtitle={avgProductionTime > 0 ? `Prom: ${avgProductionTime}h` : 'Sin datos'}
+                            icon={<CheckCircle2 size={18} />}
+                            accent="success"
+                            onClick={() => { setStatusFilter(OrderStatus.COMPLETED); setActiveTab('ORDERS'); }}
+                        />
+
+                        {/* Meta del Día */}
+                        <KPICard
+                            title="Meta del Día"
+                            value={`${Math.round(dailyGoalProgress)}%`}
+                            subtitle={`${formatCurrency(todaysRevenue)} / ${formatCurrency(DAILY_GOAL)}`}
+                            icon={<Target size={18} />}
+                            accent={dailyGoalMet ? 'success' : 'amber'}
+                            onClick={() => { setStatusFilter('TODOS'); setActiveTab('ORDERS'); }}
+                        />
+                    </div>
+
+                    {/* Sparkline Chart */}
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Tendencia de Ventas</h4>
+                            <span className="text-xs text-zinc-500">Últimos 7 días</span>
+                        </div>
+                        <div className="flex items-end gap-2">
+                            <Sparkline 
+                                data={sparklineData} 
+                                width={200} 
+                                height={40}
+                                color="var(--color-accent-500)"
+                            />
+                            <span className="text-xs text-zinc-500 mb-1">
+                                {sparklineData[sparklineData.length - 1] > sparklineData[sparklineData.length - 2] ? '↑' : '↓'} 
+                                {' '}{formatCurrency(sparklineData[sparklineData.length - 1])}
+                            </span>
+                        </div>
                     </div>
 
                     {/* RAB Widget */}
