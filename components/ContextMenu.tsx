@@ -78,6 +78,7 @@ const ContextMenuItemComponent: React.FC<ContextMenuItemComponentProps> = ({
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const submenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = () => {
     if (item.disabled || item.submenu) return;
@@ -86,6 +87,8 @@ const ContextMenuItemComponent: React.FC<ContextMenuItemComponentProps> = ({
   };
 
   const handleMouseEnter = () => {
+    setIsHovered(true);
+    
     if (item.submenu && itemRef.current) {
       const rect = itemRef.current.getBoundingClientRect();
       const newPosition = { x: rect.right - 4, y: rect.top - 4 };
@@ -103,6 +106,8 @@ const ContextMenuItemComponent: React.FC<ContextMenuItemComponentProps> = ({
   };
 
   const handleMouseLeave = () => {
+    setIsHovered(false);
+    
     if (submenuTimeoutRef.current) {
       clearTimeout(submenuTimeoutRef.current);
       submenuTimeoutRef.current = null;
@@ -127,6 +132,9 @@ const ContextMenuItemComponent: React.FC<ContextMenuItemComponentProps> = ({
         : item.danger 
           ? colors.textDanger 
           : colors.textPrimary,
+      backgroundColor: isHovered 
+        ? (item.danger ? colors.statusErrorBg : colors.bgTertiary)
+        : 'transparent',
     };
 
     return baseStyles;
@@ -272,16 +280,6 @@ const ContextMenu: React.FC = () => {
 
   const handleSubmenuOpen = (items: ContextMenuItem[], position: { x: number; y: number }) => {
     setActiveSubmenu({ items, position });
-  };
-
-  // Hover state management for items
-  const handleItemHover = (e: React.MouseEvent<HTMLDivElement>, isHovering: boolean) => {
-    const target = e.currentTarget;
-    if (isHovering) {
-      target.style.backgroundColor = item.danger ? colors.statusErrorBg : colors.bgTertiary;
-    } else {
-      target.style.backgroundColor = 'transparent';
-    }
   };
 
   if (!state.isOpen) return null;

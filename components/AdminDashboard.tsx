@@ -1418,8 +1418,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
         <div className="flex flex-col md:flex-row h-full bg-zinc-100 dark:bg-black font-sans overflow-hidden">
-            {/* Sidebar glassmorphism */}
-            <aside className="flex w-24 flex-col shrink-0 h-full items-center py-6 gap-4 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 rounded-3xl m-4 shadow-xl">
+            {/* Sidebar glassmorphism - Desktop only */}
+            <aside className="hidden md:flex w-24 flex-col shrink-0 h-full items-center py-6 gap-4 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 rounded-3xl m-4 shadow-xl">
                 <div className="flex flex-col items-center gap-8 w-full">
                     {/* Menu Items */}
                     {[ 
@@ -4098,6 +4098,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 z-50 pb-safe">
+        <div className="flex justify-around items-center h-16">
+          {[
+            { id: 'DASHBOARD', icon: BarChart3, label: 'Home' },
+            { id: 'ORDERS', icon: LayoutDashboard, label: 'Pedidos' },
+            { id: 'INVENTORY', icon: Package, label: 'Stock' },
+            { id: 'CLIENTS', icon: Users, label: 'Clientes' },
+            { id: 'SETTINGS', icon: Settings, label: 'Más' },
+          ].map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id as any)}
+              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
+                activeTab === item.id 
+                  ? 'text-amber-500' 
+                  : 'text-zinc-400 dark:text-zinc-500'
+              }`}
+            >
+              <item.icon size={20} />
+              <span className="text-[10px] mt-1 font-medium">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Mobile nav spacer - adds padding to prevent content being hidden */}
+      <div className="md:hidden h-16" />
       
       {/* Modals */}
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
