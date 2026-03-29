@@ -32,6 +32,7 @@ import { migrateProductsToCloud, migrateFontsToCloud, migrateConfigToCloud, migr
 import { ClientDashboard } from './ClientDashboard';
 import { CouponManager } from './CouponManager';
 import { ContentManager } from './ContentManager';
+import ProductionSection from './ProductionSection';
 import { Sparkles } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -61,8 +62,8 @@ interface AdminDashboardProps {
   onAddFonts?: (fonts: FontOption[]) => void;
   onOpenAssistant?: (query?: string) => void;
   // Navigation Control for Assistant
-  activeTab?: 'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT';
-  onTabChange?: (tab: 'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT') => void;
+  activeTab?: 'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT';
+  onTabChange?: (tab: 'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT') => void;
   settingsTab?: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM';
   onSettingsTabChange?: (tab: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM') => void;
 }
@@ -1424,7 +1425,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {/* Menu Items */}
                     {[ 
                         { id: 'DASHBOARD', label: 'Dashboard', icon: BarChart3 },
-                        { id: 'ORDERS', label: 'Producción', icon: LayoutDashboard },
+                        { id: 'PRODUCTION', label: 'Producción', icon: Zap },
+                        { id: 'ORDERS', label: 'Pedidos', icon: LayoutDashboard },
                         { id: 'CALENDAR', label: 'Calendario', icon: CalendarDays },
                         { id: 'INVENTORY', label: 'Inventario', icon: Package },
                         { id: 'CLIENTS', label: 'CRM Clientes', icon: Users },
@@ -2644,6 +2646,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                     </div>
                 </div>
+            )}
+
+            {activeTab === 'PRODUCTION' && (
+                <ProductionSection
+                    orders={orders}
+                    products={products}
+                    fonts={fonts}
+                    onUpdateOrder={(orderId, updates) => {
+                        const order = orders.find(o => o.id === orderId);
+                        if (order) {
+                            onUpdateOrder({ ...order, ...updates });
+                        }
+                    }}
+                />
             )}
 
             {activeTab === 'INVENTORY' && (
@@ -4104,9 +4120,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="flex justify-around items-center h-16">
           {[
             { id: 'DASHBOARD', icon: BarChart3, label: 'Home' },
+            { id: 'PRODUCTION', icon: Zap, label: 'Grabado' },
             { id: 'ORDERS', icon: LayoutDashboard, label: 'Pedidos' },
             { id: 'INVENTORY', icon: Package, label: 'Stock' },
-            { id: 'CLIENTS', icon: Users, label: 'Clientes' },
             { id: 'SETTINGS', icon: Settings, label: 'Más' },
           ].map(item => (
             <button
