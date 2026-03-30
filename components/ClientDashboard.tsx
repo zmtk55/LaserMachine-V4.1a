@@ -8,7 +8,8 @@ import {
   Type, ChevronDown, ExternalLink, RefreshCcw, X,
   AlertTriangle, CheckCircle, Clock4, PackageCheck,
   Gift, TrendingUp, Bell, Sun, Moon, Ticket, Wallet,
-  History, Award, ArrowUpRight, MinusCircle, PlusCircle
+  History, Award, ArrowUpRight, MinusCircle, PlusCircle,
+  ArrowRight
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
 import { Button, Card, Tooltip } from './ui';
@@ -30,6 +31,9 @@ interface ClientDashboardProps {
   contentConfig?: ContentConfig;
   isDarkMode?: boolean;
   toggleTheme?: () => void;
+  onBackToAdmin?: () => void;
+  onProductSelect?: (product: Product) => void;
+  onSelectFontForCustomizer?: (fontId: number, text: string) => void;
 }
 
 interface ContentConfig {
@@ -92,7 +96,8 @@ const DEFAULT_PROMOTIONS: Promotion[] = [
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ 
   user, orders, products, fonts, coupons = [], onReorder, onApproveMockup,
-  contentConfig, isDarkMode: propIsDarkMode, toggleTheme: propToggleTheme 
+  contentConfig, isDarkMode: propIsDarkMode, toggleTheme: propToggleTheme,
+  onBackToAdmin, onProductSelect, onSelectFontForCustomizer
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -100,6 +105,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [showCopied, setShowCopied] = useState<string | null>(null);
   // State for previewing font text in the Fonts tab
   const [previewText, setPreviewText] = useState('');
+  // State for fonts tab
+  const [fontSearchQuery, setFontSearchQuery] = useState('');
+  const [fontSize, setFontSize] = useState(32);
+  const [selectedFontId, setSelectedFontId] = useState<string | null>(null);
   // State for mockup approval modal
   const [mockupOrder, setMockupOrder] = useState<Order | null>(null);
   
@@ -869,10 +878,17 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     );
   };
 
-  // FONTS TAB - Usa las mismas fuentes del admin (props)
+  // FONTS TAB - Versión mejorada con búsqueda, slider, badges
   const renderFonts = () => {
-    // Filter active fonts
+    // Filter active fonts + search
     const activeFonts = fonts.filter(f => f.isActive !== false);
+    const filteredFonts = activeFonts.filter(f =>
+      f.name.toLowerCase().includes(fontSearchQuery.toLowerCase()) ||
+      f.category?.toLowerCase().includes(fontSearchQuery.toLowerCase())
+    );
+
+    // Sample preview text if user hasn't typed
+    const displayText = previewText || 'Tu Nombre';
 
     return (
       <div className="space-y-6">
@@ -885,58 +901,142 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             Escribe tu nombre para ver cómo se ve en cada fuente
           </p>
         </div>
-        
-        {/* Text Input */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
+
+        {/* Toolbar: Input + Slider + Search */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 space-y-4">
+          {/* Text Input */}
           <div className="relative">
             <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
             <input
               value={previewText}
               onChange={(e) => setPreviewText(e.target.value)}
               placeholder="Escribe tu nombre aquí..."
+              maxLength={20}
               className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-14 pr-4 rounded-xl text-xl font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400"
             />
           </div>
-        </div>
-        
-        {/* Fonts Grid - Nombre de fuente escrito con esa fuente */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {activeFonts.map((font) => (
-            <div
-              key={font.id}
-              className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
-            >
-              {/* Preview: Nombre del usuario en esta fuente - usa clase CSS */}
-              <div className="h-32 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-4">
-                <p
-                  className={`text-2xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight ${font.cssFamily}`}
-                >
-                  {previewText || 'Aa'}
-                </p>
-              </div>
-              
-              {/* Info: Nombre de la fuente en esa fuente - usa clase CSS */}
-              <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mb-1">
-                  #{font.id}
-                </p>
-                <h3 
-                  className={`text-lg text-zinc-900 dark:text-white truncate ${font.cssFamily}`}
-                >
-                  {font.name}
-                </h3>
-              </div>
+
+          {/* Controls Row */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Font Size Slider */}
+            <div className="flex items-center gap-3 flex-1 min-w-[200px]">
+              <span className="text-sm text-zinc-500 whitespace-nowrap">{fontSize}px</span>
+              <input
+                type="range"
+                min={20}
+                max={64}
+                step={4}
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
             </div>
-          ))}
+
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+              <input
+                type="text"
+                value={fontSearchQuery}
+                onChange={(e) => setFontSearchQuery(e.target.value)}
+                placeholder="Buscar fuente..."
+                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-2.5 pl-10 pr-4 rounded-xl text-sm text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Fonts Grid - 2 columns with selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredFonts.map((font) => {
+            const isSelected = selectedFontId === String(font.id);
+            const isPopular = [999, 101, 201].includes(Number(font.id)); // Example popular IDs
+            const isNew = [205, 110].includes(Number(font.id)); // Example new IDs
+
+            return (
+              <button
+                key={font.id}
+                onClick={() => setSelectedFontId(String(font.id))}
+                className={`relative p-5 rounded-2xl border-2 text-left transition-all ${
+                  isSelected
+                    ? 'border-amber-500 bg-amber-500/10 dark:bg-amber-500/10'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-amber-500/50'
+                }`}
+              >
+                {/* Badges */}
+                <div className="absolute top-3 right-3 flex gap-1">
+                  {isPopular && (
+                    <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      POPULAR
+                    </span>
+                  )}
+                  {isNew && (
+                    <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      NUEVA
+                    </span>
+                  )}
+                </div>
+
+                {/* Preview with user text */}
+                <div
+                  className={`mb-3 truncate ${isSelected ? 'text-amber-500' : 'text-zinc-800 dark:text-zinc-200'}`}
+                  style={{
+                    fontSize: `${fontSize}px`,
+                    lineHeight: 1.2
+                  }}
+                >
+                  <span className={font.cssFamily}>
+                    {displayText}
+                  </span>
+                </div>
+
+                {/* Info */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mb-0.5">
+                      #{font.id}
+                    </p>
+                    <p className={`font-semibold text-sm ${font.cssFamily}`}>
+                      {font.name}
+                    </p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                      {font.category}
+                    </p>
+                  </div>
+                  {isSelected && (
+                    <CheckCircle2 className="w-6 h-6 text-amber-500" />
+                  )}
+                </div>
+
+                {/* Botón Usar esta fuente */}
+                {isSelected && onSelectFontForCustomizer && (
+                  <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectFontForCustomizer(font.id, displayText);
+                      }}
+                      className="w-full py-3 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ArrowRight size={18} />
+                      <span>Usar esta fuente</span>
+                    </button>
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Empty state */}
-        {activeFonts.length === 0 && (
+        {filteredFonts.length === 0 && (
           <div className="text-center py-12">
             <Type size={48} className="mx-auto text-zinc-300 dark:text-zinc-700 mb-4" />
-            <p className="text-zinc-500 mb-2">No hay fuentes disponibles</p>
+            <p className="text-zinc-500 mb-2">
+              {fontSearchQuery ? 'No se encontraron fuentes' : 'No hay fuentes disponibles'}
+            </p>
             <p className="text-sm text-zinc-400">
-              Las fuentes se configuran desde el panel de administración
+              {fontSearchQuery ? 'Intenta con otra búsqueda' : 'Las fuentes se configuran desde el panel de administración'}
             </p>
           </div>
         )}

@@ -1145,6 +1145,11 @@ const App = () => {
                 setEditingItem(null);
                 setView('CUSTOMIZER');
               }}
+              onSelectFontForCustomizer={(fontId, text) => {
+                setPreSelectedFontId(fontId);
+                setPreSelectedText(text);
+                setView('SHOP');
+              }}
             />
           </div>
         )}
