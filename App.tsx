@@ -25,6 +25,7 @@ import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingCon
 import { PRODUCTS as CONST_PRODUCTS, FONTS as CONST_FONTS, ADMIN_USER, MOCK_ORDERS } from './constants';
 import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, CreditCard, QrCode, Ticket, Eye, Banknote, CreditCard as CardIcon, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2 } from 'lucide-react';
 import { onAuthChange, logoutUser, isFirebaseConfigured } from './services/auth';
+import { useStrapiProducts } from './hooks/useStrapi';
 
 // Import Lottie animation
 // import playfulAnimation from './src/lotties/playful.json';
@@ -74,10 +75,10 @@ const DEFAULT_STORE: StoreConfig = {
   productCategories: ['Tumblers', 'Botellas', 'Tazas', 'Accesorios', 'Termos'],
   adminEmails: [],
   pointsPercentage: 5, // Default 5%
-  whatsapp: '5216371321998',
-  instagramUrl: 'lasermachine_mx',
+  whatsapp: '526371247095',
+  instagramUrl: '',
   facebookUrl: 'lasermachinemexico',
-  bankInfo: '🏦 BBVA MÉXICO\nCLABE: 012345678901234567\nTITULAR: LASERMACHINE S.A. DE C.V.',
+  bankInfo: 'H.CABORCA SONORA MEXICO \nCALLE 9 AV, L N79\nCP 83600',
   shippingInfo: '',
   coupons: [],
   globalColors: DEFAULT_COLORS,
@@ -162,33 +163,19 @@ const App = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
   
+  // Strapi Integration - Load products from backend
+  const { products: strapiProducts, loading: productsLoading } = useStrapiProducts();
+  
   // Persistent State Initialization
   // Bumped to v13 to force image refresh with YETI product images
-  const [products, setProducts] = useState<Product[]>(() => {
-      try {
-          const saved = localStorage.getItem('lm_products_v13');
-          if (saved) {
-              // Merge saved products with default images to ensure images are updated
-              const parsed = JSON.parse(saved);
-              return parsed.map((savedProduct: Product) => {
-                  const defaultProduct = CONST_PRODUCTS.find(p => p.id === savedProduct.id);
-                  if (defaultProduct) {
-                      // Update images from default while preserving stock and other data
-                      return {
-                          ...savedProduct,
-                          imageUrl: defaultProduct.imageUrl,
-                          colors: savedProduct.colors.map((savedColor: ProductColor) => {
-                              const defaultColor = defaultProduct.colors.find(c => c.name === savedColor.name);
-                              return defaultColor ? { ...savedColor, imageUrl: defaultColor.imageUrl } : savedColor;
-                          })
-                      };
-                  }
-                  return savedProduct;
-              });
-          }
-          return CONST_PRODUCTS;
-      } catch (e) { return CONST_PRODUCTS; }
-  });
+  const [products, setProducts] = useState<Product[]>(CONST_PRODUCTS);
+  
+  // Update products when Strapi data loads
+  useEffect(() => {
+    if (strapiProducts && strapiProducts.length > 0) {
+      setProducts(strapiProducts);
+    }
+  }, [strapiProducts]);
   
   const [orders, setOrders] = useState<Order[]>(() => {
       try {
@@ -252,7 +239,7 @@ const App = () => {
   // Persistence Effect
   useEffect(() => {
     console.log('Fonts state changed, saving to localStorage:', fonts.map(f => ({id: f.id, name: f.name})));
-    localStorage.setItem('lm_products_v13', JSON.stringify(products));
+    localStorage.setItem('lm_products_strapi', JSON.stringify(products));
     localStorage.setItem('lm_orders_v10', JSON.stringify(orders));
     localStorage.setItem('lm_store_v10', JSON.stringify(storeConfig));
     localStorage.setItem('lm_pricing_v10', JSON.stringify(pricing));
