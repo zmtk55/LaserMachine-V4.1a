@@ -147,46 +147,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     return false;
   });
 
-  // Load fonts from props (same as admin) - INJECT @font-face for custom fonts
-  useEffect(() => {
-    if (!fonts.length) return;
-
-    // Remove existing dashboard font styles
-    const existing = document.getElementById('dashboard-fonts');
-    if (existing) existing.remove();
-
-    const style = document.createElement('style');
-    style.id = 'dashboard-fonts';
-    let css = '';
-
-    fonts.forEach(font => {
-      if (font.fileData && font.cssFamily) {
-        // Use fileData directly (base64 or data URL)
-        const fontUrl = font.fileData.startsWith('data:') 
-          ? font.fileData 
-          : `data:font/truetype;base64,${font.fileData}`;
-        
-        css += `
-          @font-face {
-            font-family: '${font.cssFamily}';
-            src: url('${fontUrl}') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-          }
-        `;
-      }
-    });
-
-    if (css) {
-      style.textContent = css;
-      document.head.appendChild(style);
-    }
-
-    return () => {
-      if (style) style.remove();
-    };
-  }, [fonts]);
+  // Fonts are loaded via CSS classes from index.css (Google Fonts)
+  // No need to inject @font-face for system fonts
 
   const isDarkMode = propIsDarkMode !== undefined ? propIsDarkMode : localDarkMode;
   
@@ -944,24 +906,22 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               key={font.id}
               className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
             >
-              {/* Preview: Nombre del usuario en esta fuente */}
+              {/* Preview: Nombre del usuario en esta fuente - usa clase CSS */}
               <div className="h-32 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-4">
                 <p
-                  className="text-2xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight"
-                  style={{ fontFamily: font.cssFamily, fontWeight: 'normal' }}
+                  className={`text-2xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight ${font.cssFamily}`}
                 >
                   {previewText || 'Aa'}
                 </p>
               </div>
               
-              {/* Info: Nombre de la fuente en esa fuente */}
+              {/* Info: Nombre de la fuente en esa fuente - usa clase CSS */}
               <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mb-1">
                   #{font.id}
                 </p>
                 <h3 
-                  className="text-lg text-zinc-900 dark:text-white truncate"
-                  style={{ fontFamily: font.cssFamily }}
+                  className={`text-lg text-zinc-900 dark:text-white truncate ${font.cssFamily}`}
                 >
                   {font.name}
                 </h3>
