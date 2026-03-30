@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Order, User, OrderStatus, Product, FontOption, Coupon } from '../types';
 import { 
   Package, Clock, Search, Percent, Phone, MapPin, 
@@ -122,17 +122,22 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     hasPendingApprovals 
   } = useMockupNotifications(orders, userId);
   
-  // Process completed orders for points
+  // Process completed orders for points - FIXED: prevent infinite loop
+  const processedOrderIds = useRef<Set<string>>(new Set());
+  
   useEffect(() => {
     const completedOrders = orders.filter(o => 
       o.status === OrderStatus.COMPLETED && 
+      !processedOrderIds.current.has(o.id) &&
       !pointsSummary?.recentTransactions.some(t => t.orderId === o.id)
     );
     
     completedOrders.forEach(order => {
+      processedOrderIds.current.add(order.id);
       processOrder(order);
     });
-  }, [orders, processOrder, pointsSummary]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]); // Only depend on orders, not processOrder or pointsSummary
   
   // Theme - use props if provided, otherwise local state
   const [localDarkMode, setLocalDarkMode] = useState(() => {
