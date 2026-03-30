@@ -14,6 +14,7 @@ import { TechnicalPreview } from './TechnicalPreview';
 import { Button, Card, Tooltip } from './ui';
 import { useLaserPoints } from '../hooks/useLaserPoints';
 import { useMockupNotifications } from '../hooks/useMockupNotifications';
+import { useStrapiFonts, StrapiFont } from '../hooks/useStrapiFonts';
 import { formatPoints, formatPointsValue, calculatePotentialPoints } from '../services/pointsService';
 import { MockupApprovalModal } from './client/MockupApprovalModal';
 import { requiresMockupApproval } from '../services/mockupApprovalService';
@@ -147,31 +148,15 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     return false;
   });
 
-  // Load custom fonts from FontOption.fileData (Base64) to enable preview in the Fonts tab
+  // Load fonts from Strapi
+  const { fonts: strapiFonts, loading: fontsLoading, injectFontStyles } = useStrapiFonts();
+  
+  // Inject font styles when Strapi fonts are loaded
   useEffect(() => {
-    // Remove any previously injected custom font styles
-    const existing = document.getElementById('client-dashboard-custom-fonts');
-    if (existing) existing.remove();
-
-    const style = document.createElement('style');
-    style.id = 'client-dashboard-custom-fonts';
-    let css = '';
-    fonts.forEach(font => {
-      if (font.fileData && font.cssFamily) {
-        const dataUrl = font.fileData.startsWith('data:') ? font.fileData : `data:font/truetype;base64,${font.fileData}`;
-        css += `@font-face {
-          font-family: '${font.cssFamily}';
-          src: url('${dataUrl}') format('truetype');
-          font-weight: normal;
-          font-style: normal;
-        }\n`;
-      }
-    });
-    if (css) {
-      style.textContent = css;
-      document.head.appendChild(style);
+    if (strapiFonts.length > 0) {
+      injectFontStyles();
     }
-  }, [fonts]);
+  }, [strapiFonts, injectFontStyles]);
 
   const isDarkMode = propIsDarkMode !== undefined ? propIsDarkMode : localDarkMode;
   
@@ -892,98 +877,88 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     );
   };
 
-  // Load fonts dynamically
-  useEffect(() => {
-    if (!fonts.length) return;
-    
-    let styleTag = document.getElementById('dashboard-fonts') as HTMLStyleElement;
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = 'dashboard-fonts';
-      document.head.appendChild(styleTag);
+  // FONTS TAB - Simple: usa fuentes de Strapi
+  const renderFonts = () => {
+    // Loading state
+    if (fontsLoading) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+        </div>
+      );
     }
 
-    let cssRules = '';
-    fonts.forEach(font => {
-      if (font.isCustom && font.fileData) {
-        cssRules += `
-          @font-face {
-            font-family: '${font.cssFamily}';
-            src: url('${font.fileData}') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-          }
-        `;
-      }
-    });
-
-    styleTag.textContent = cssRules;
-    
-    return () => {
-      if (styleTag) styleTag.remove();
-    };
-  }, [fonts]);
-
-  // FONTS TAB - Simple: solo escribir nombre y ver en todas las fuentes
-  const renderFonts = () => (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
-          Fuentes disponibles
-        </h2>
-        <p className="text-zinc-500">
-          Escribe tu nombre para ver cómo se ve en cada fuente
-        </p>
-      </div>
-      
-      {/* Text Input - Solo esto */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
-        <div className="relative">
-          <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
-          <input
-            value={previewText}
-            onChange={(e) => setPreviewText(e.target.value)}
-            placeholder="Escribe tu nombre aquí..."
-            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-14 pr-4 rounded-xl text-xl font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400"
-          />
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
+            Fuentes disponibles
+          </h2>
+          <p className="text-zinc-500">
+            Escribe tu nombre para ver cómo se ve en cada fuente
+          </p>
         </div>
-      </div>
-      
-      {/* Fonts Grid - Nombre de fuente escrito con esa fuente */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {fonts.filter(f => f.isActive !== false).map((font) => (
-          <div
-            key={font.id}
-            className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
-          >
-            {/* Preview: Nombre del usuario en esta fuente */}
-            <div className="h-32 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-4">
-              <p
-                className="text-2xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight"
-                style={{ fontFamily: font.cssFamily, fontWeight: 'normal' }}
-              >
-                {previewText || 'Tu nombre'}
-              </p>
-            </div>
-            
-            {/* Info: Nombre de la fuente en esa fuente */}
-            <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mb-1">
-                #{font.id}
-              </p>
-              <h3 
-                className="text-lg text-zinc-900 dark:text-white truncate"
-                style={{ fontFamily: font.cssFamily }}
-              >
-                {font.name}
-              </h3>
-            </div>
+        
+        {/* Text Input */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
+          <div className="relative">
+            <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+            <input
+              value={previewText}
+              onChange={(e) => setPreviewText(e.target.value)}
+              placeholder="Escribe tu nombre aquí..."
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-14 pr-4 rounded-xl text-xl font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400"
+            />
           </div>
-        ))}
+        </div>
+        
+        {/* Fonts Grid - Nombre de fuente escrito con esa fuente */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {strapiFonts.map((font) => (
+            <div
+              key={font.id}
+              className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+            >
+              {/* Preview: Nombre del usuario en esta fuente */}
+              <div className="h-32 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-4">
+                <p
+                  className="text-2xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight"
+                  style={{ fontFamily: font.cssFamily, fontWeight: 'normal' }}
+                >
+                  {previewText || font.previewText}
+                </p>
+              </div>
+              
+              {/* Info: Nombre de la fuente en esa fuente */}
+              <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mb-1">
+                  #{font.id}
+                </p>
+                <h3 
+                  className="text-lg text-zinc-900 dark:text-white truncate"
+                  style={{ fontFamily: font.cssFamily }}
+                >
+                  {font.name}
+                </h3>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Empty state */}
+        {strapiFonts.length === 0 && !fontsLoading && (
+          <div className="text-center py-12">
+            <Type size={48} className="mx-auto text-zinc-300 dark:text-zinc-700 mb-4" />
+            <p className="text-zinc-500 mb-2">No hay fuentes disponibles</p>
+            <p className="text-sm text-zinc-400">
+              Sube fuentes desde el panel de administración de Strapi
+            </p>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   // ORDER DETAILS MODAL
   if (selectedOrder) {

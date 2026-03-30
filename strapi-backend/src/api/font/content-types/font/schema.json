@@ -1,0 +1,60 @@
+{
+  "kind": "collectionType",
+  "collectionName": "fonts",
+  "info": {
+    "singularName": "font",
+    "pluralName": "fonts",
+    "displayName": "Font",
+    "description": "Tipografías disponibles para personalización de productos"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "cssFamily": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "description": "Identificador único CSS (ej: sports-bold, sans-serif-pro)"
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": [
+        "DEPORTE",
+        "CURSIVA",
+        "FONTS_2026",
+        "KIDS",
+        "BASICAS"
+      ],
+      "default": "BASICAS",
+      "required": true
+    },
+    "fontFile": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "files"
+      ]
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "displayOrder": {
+      "type": "integer",
+      "default": 0
+    },
+    "previewText": {
+      "type": "string",
+      "default": "Aa",
+      "description": "Texto de preview por defecto"
+    }
+  }
+}
