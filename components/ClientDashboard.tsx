@@ -14,7 +14,6 @@ import { TechnicalPreview } from './TechnicalPreview';
 import { Button, Card, Tooltip } from './ui';
 import { useLaserPoints } from '../hooks/useLaserPoints';
 import { useMockupNotifications } from '../hooks/useMockupNotifications';
-import { useStrapiFonts, StrapiFont } from '../hooks/useStrapiFonts';
 import { formatPoints, formatPointsValue, calculatePotentialPoints } from '../services/pointsService';
 import { MockupApprovalModal } from './client/MockupApprovalModal';
 import { requiresMockupApproval } from '../services/mockupApprovalService';
@@ -148,15 +147,46 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     return false;
   });
 
-  // Load fonts from Strapi
-  const { fonts: strapiFonts, loading: fontsLoading, injectFontStyles } = useStrapiFonts();
-  
-  // Inject font styles when Strapi fonts are loaded
+  // Load fonts from props (same as admin) - INJECT @font-face for custom fonts
   useEffect(() => {
-    if (strapiFonts.length > 0) {
-      injectFontStyles();
+    if (!fonts.length) return;
+
+    // Remove existing dashboard font styles
+    const existing = document.getElementById('dashboard-fonts');
+    if (existing) existing.remove();
+
+    const style = document.createElement('style');
+    style.id = 'dashboard-fonts';
+    let css = '';
+
+    fonts.forEach(font => {
+      if (font.fileData && font.cssFamily) {
+        // Use fileData directly (base64 or data URL)
+        const fontUrl = font.fileData.startsWith('data:') 
+          ? font.fileData 
+          : `data:font/truetype;base64,${font.fileData}`;
+        
+        css += `
+          @font-face {
+            font-family: '${font.cssFamily}';
+            src: url('${fontUrl}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+          }
+        `;
+      }
+    });
+
+    if (css) {
+      style.textContent = css;
+      document.head.appendChild(style);
     }
-  }, [strapiFonts, injectFontStyles]);
+
+    return () => {
+      if (style) style.remove();
+    };
+  }, [fonts]);
 
   const isDarkMode = propIsDarkMode !== undefined ? propIsDarkMode : localDarkMode;
   
@@ -877,16 +907,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     );
   };
 
-  // FONTS TAB - Simple: usa fuentes de Strapi
+  // FONTS TAB - Usa las mismas fuentes del admin (props)
   const renderFonts = () => {
-    // Loading state
-    if (fontsLoading) {
-      return (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
-        </div>
-      );
-    }
+    // Filter active fonts
+    const activeFonts = fonts.filter(f => f.isActive !== false);
 
     return (
       <div className="space-y-6">
@@ -915,7 +939,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         
         {/* Fonts Grid - Nombre de fuente escrito con esa fuente */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {strapiFonts.map((font) => (
+          {activeFonts.map((font) => (
             <div
               key={font.id}
               className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
@@ -926,7 +950,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   className="text-2xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight"
                   style={{ fontFamily: font.cssFamily, fontWeight: 'normal' }}
                 >
-                  {previewText || font.previewText}
+                  {previewText || 'Aa'}
                 </p>
               </div>
               
@@ -947,12 +971,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         </div>
 
         {/* Empty state */}
-        {strapiFonts.length === 0 && !fontsLoading && (
+        {activeFonts.length === 0 && (
           <div className="text-center py-12">
             <Type size={48} className="mx-auto text-zinc-300 dark:text-zinc-700 mb-4" />
             <p className="text-zinc-500 mb-2">No hay fuentes disponibles</p>
             <p className="text-sm text-zinc-400">
-              Sube fuentes desde el panel de administración de Strapi
+              Las fuentes se configuran desde el panel de administración
             </p>
           </div>
         )}
