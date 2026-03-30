@@ -892,6 +892,38 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     );
   };
 
+  // Load fonts dynamically
+  useEffect(() => {
+    if (!fonts.length) return;
+    
+    let styleTag = document.getElementById('dashboard-fonts') as HTMLStyleElement;
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'dashboard-fonts';
+      document.head.appendChild(styleTag);
+    }
+
+    let cssRules = '';
+    fonts.forEach(font => {
+      if (font.isCustom && font.fileData) {
+        cssRules += `
+          @font-face {
+            font-family: '${font.cssFamily}';
+            src: url('${font.fileData}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+          }
+        `;
+      }
+    });
+
+    styleTag.textContent = cssRules;
+    
+    return () => {
+      if (styleTag) styleTag.remove();
+    };
+  }, [fonts]);
+
   // FONTS TAB - Simple: solo escribir nombre y ver en todas las fuentes
   const renderFonts = () => (
     <div className="space-y-6">
@@ -918,29 +950,32 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         </div>
       </div>
       
-      {/* Fonts Grid - Simple: Numero + Nombre + Preview */}
+      {/* Fonts Grid - Nombre de fuente escrito con esa fuente */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {fonts.filter(f => f.isActive !== false).map((font) => (
           <div
             key={font.id}
             className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
           >
-            {/* Preview con el texto del usuario */}
-            <div className="h-28 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-4">
+            {/* Preview: Nombre del usuario en esta fuente */}
+            <div className="h-32 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-4">
               <p
-                className="text-3xl text-zinc-800 dark:text-zinc-200 text-center break-all"
-                style={{ fontFamily: font.cssFamily }}
+                className="text-2xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight"
+                style={{ fontFamily: font.cssFamily, fontWeight: 'normal' }}
               >
-                {previewText || font.name}
+                {previewText || 'Tu nombre'}
               </p>
             </div>
             
-            {/* Info simple: Numero + Nombre */}
+            {/* Info: Nombre de la fuente en esa fuente */}
             <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
               <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mb-1">
                 #{font.id}
               </p>
-              <h3 className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+              <h3 
+                className="text-lg text-zinc-900 dark:text-white truncate"
+                style={{ fontFamily: font.cssFamily }}
+              >
                 {font.name}
               </h3>
             </div>
