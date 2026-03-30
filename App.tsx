@@ -809,6 +809,57 @@ const App = () => {
           />
         )}
 
+        {/* Customizer without product selected - show product selector */}
+        {view === 'CUSTOMIZER' && !selectedProduct && (
+          <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-12">
+            <div className="max-w-5xl mx-auto px-4">
+              <div className="text-center mb-8">
+                <h1 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">
+                  Personalizar Producto
+                </h1>
+                <p className="text-zinc-500">
+                  Selecciona un producto para comenzar a diseñar
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products.filter(p => p.isActive).map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => { setSelectedProduct(product); }}
+                    className="group bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 hover:border-yellow-400 dark:hover:border-yellow-600 transition-all text-left"
+                  >
+                    <div className="aspect-square bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-zinc-900 dark:text-white">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-zinc-500">
+                        Desde ${product.basePrice}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => setView('SHOP')}
+                  className="px-6 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold rounded-xl hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                >
+                  ← Volver al catálogo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {view === 'CART' && (
           <div className="max-w-[95%] mx-auto px-4 md:px-10 py-12 md:py-24 min-h-screen bg-white/90 dark:bg-black/80 backdrop-blur-sm">
             <h2 className="nike-title text-4xl md:text-5xl italic mb-10 text-zinc-900 dark:text-white uppercase tracking-tighter">Checkout Final</h2>

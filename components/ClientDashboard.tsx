@@ -892,149 +892,61 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     );
   };
 
-  // FONTS TAB
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [fontSearch, setFontSearch] = useState('');
-  
-  const categories = ['ALL', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS', 'BASICAS'];
-  
-  const filteredFonts = fonts.filter(f => {
-    const matchesCategory = selectedCategory === 'ALL' || 
-      f.category === selectedCategory || 
-      f.categories?.includes(selectedCategory as any);
-    const matchesSearch = fontSearch === '' || 
-      f.name.toLowerCase().includes(fontSearch.toLowerCase());
-    return f.isActive !== false && matchesCategory && matchesSearch;
-  });
-  
+  // FONTS TAB - Simple: solo escribir nombre y ver en todas las fuentes
   const renderFonts = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h2 className="text-2xl font-black text-zinc-900 dark:text-white">
+      <div className="text-center">
+        <h2 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
           Fuentes disponibles
-          <span className="ml-3 text-sm font-normal text-zinc-500">
-            {filteredFonts.length} fuentes
-          </span>
         </h2>
+        <p className="text-zinc-500">
+          Escribe tu nombre para ver cómo se ve en cada fuente
+        </p>
       </div>
       
-      {/* Search & Filter Bar */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 space-y-4">
-        {/* Search */}
+      {/* Text Input - Solo esto */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-          <input
-            value={fontSearch}
-            onChange={(e) => setFontSearch(e.target.value)}
-            placeholder="Buscar fuente..."
-            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-3 pl-12 pr-4 rounded-xl text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400"
-          />
-        </div>
-        
-        {/* Category Pills */}
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                selectedCategory === cat
-                  ? 'bg-amber-400 text-black'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-              }`}
-            >
-              {cat === 'ALL' ? 'Todas' : cat}
-            </button>
-          ))}
-        </div>
-        
-        {/* Custom Text Preview */}
-        <div className="relative pt-2 border-t border-zinc-200 dark:border-zinc-800">
-          <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+          <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
           <input
             value={previewText}
             onChange={(e) => setPreviewText(e.target.value)}
-            placeholder="Escribe aquí para previsualizar tus fuentes..."
-            className="w-full bg-transparent py-2 pl-12 pr-4 text-lg font-medium text-zinc-900 dark:text-white outline-none placeholder:text-zinc-400"
+            placeholder="Escribe tu nombre aquí..."
+            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-14 pr-4 rounded-xl text-xl font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400"
           />
         </div>
       </div>
       
-      {/* Fonts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredFonts.map((font) => (
+      {/* Fonts Grid - Simple: Numero + Nombre + Preview */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {fonts.filter(f => f.isActive !== false).map((font) => (
           <div
             key={font.id}
-            className="group bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-600 transition-all overflow-hidden"
+            className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
           >
-            {/* Preview Area */}
-            <div className="h-32 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-6 relative overflow-hidden">
+            {/* Preview con el texto del usuario */}
+            <div className="h-28 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 flex items-center justify-center p-4">
               <p
-                className="text-4xl text-zinc-800 dark:text-zinc-200 text-center break-all leading-tight"
+                className="text-3xl text-zinc-800 dark:text-zinc-200 text-center break-all"
                 style={{ fontFamily: font.cssFamily }}
               >
-                {previewText || 'Aa Bb Cc'}
+                {previewText || font.name}
               </p>
-              
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-amber-400/0 group-hover:bg-amber-400/10 transition-colors" />
             </div>
             
-            {/* Info */}
-            <div className="p-4">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="font-bold text-zinc-900 dark:text-white truncate">
-                  {font.name}
-                </h3>
-              </div>
-              
-              {/* Categories */}
-              <div className="flex flex-wrap gap-1.5">
-                {font.categories?.map((cat) => (
-                  <span
-                    key={cat}
-                    className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[10px] font-bold text-zinc-500"
-                  >
-                    {cat}
-                  </span>
-                )) || (
-                  <span className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[10px] font-bold text-zinc-500">
-                    {font.category || 'BASICAS'}
-                  </span>
-                )}
-              </div>
-              
-              {/* Full alphabet preview - small */}
-              <p
-                className="mt-3 text-xs text-zinc-400 dark:text-zinc-600 truncate"
-                style={{ fontFamily: font.cssFamily }}
-              >
-                A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+            {/* Info simple: Numero + Nombre */}
+            <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mb-1">
+                #{font.id}
               </p>
-              <p
-                className="text-xs text-zinc-400 dark:text-zinc-600 truncate"
-                style={{ fontFamily: font.cssFamily }}
-              >
-                a b c d e f g h i j k l m n o p q r s t u v w x y z
-              </p>
+              <h3 className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                {font.name}
+              </h3>
             </div>
           </div>
         ))}
       </div>
-      
-      {filteredFonts.length === 0 && (
-        <div className="text-center py-16">
-          <Type size={48} className="mx-auto text-zinc-300 dark:text-zinc-700 mb-4" />
-          <p className="text-zinc-500">No se encontraron fuentes</p>
-          <button
-            onClick={() => { setSelectedCategory('ALL'); setFontSearch(''); }}
-            className="mt-4 text-amber-500 font-bold text-sm hover:underline"
-          >
-            Limpiar filtros
-          </button>
-        </div>
-      )}
     </div>
   );
 
