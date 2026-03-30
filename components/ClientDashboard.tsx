@@ -13,7 +13,10 @@ import {
 import { TechnicalPreview } from './TechnicalPreview';
 import { Button, Card, Tooltip } from './ui';
 import { useLaserPoints } from '../hooks/useLaserPoints';
+import { useMockupNotifications } from '../hooks/useMockupNotifications';
 import { formatPoints, formatPointsValue, calculatePotentialPoints } from '../services/pointsService';
+import { MockupApprovalModal } from './client/MockupApprovalModal';
+import { requiresMockupApproval } from '../services/mockupApprovalService';
 // Removed unused FontShowcase import
 
 interface ClientDashboardProps {
@@ -97,6 +100,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [showCopied, setShowCopied] = useState<string | null>(null);
   // State for previewing font text in the Fonts tab
   const [previewText, setPreviewText] = useState('');
+  // State for mockup approval modal
+  const [mockupOrder, setMockupOrder] = useState<Order | null>(null);
   
   // Points system
   const userId = user.email || user.phone || 'guest';
@@ -108,6 +113,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     pointsSummary,
     processOrder
   } = useLaserPoints(userId);
+  
+  // Mockup notifications
+  const { 
+    permission: notificationPermission, 
+    requestPermission: requestNotificationPermission,
+    pendingApprovals,
+    hasPendingApprovals 
+  } = useMockupNotifications(orders, userId);
   
   // Process completed orders for points
   useEffect(() => {
@@ -698,6 +711,15 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
+                      {order.status === OrderStatus.WAITING_APPROVAL && requiresMockupApproval(order) && (
+                        <button 
+                          onClick={() => setMockupOrder(order)}
+                          className="flex-1 py-2.5 bg-purple-500 hover:bg-purple-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors animate-pulse"
+                        >
+                          <Sparkles size={14} />
+                          Aprobar diseño
+                        </button>
+                      )}
                       <button 
                         onClick={() => setSelectedOrder(order)}
                         className="flex-1 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
@@ -1039,6 +1061,51 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         {activeTab === 'coupons' && renderCoupons()}
         {activeTab === 'fonts' && renderFonts()}
       </div>
+
+      {/* Pending Approvals Alert Banner */}
+      {hasPendingApprovals && (
+        <div className="fixed top-[73px] left-0 right-0 z-30 bg-purple-500 text-white px-4 py-3">
+          <div className="max-w-5xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={18} />
+              <span className="font-bold text-sm">
+                {pendingApprovals.length} pedido{pendingApprovals.length > 1 ? 's' : ''} esperando aprobación de diseño
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setActiveTab('orders');
+                // Scroll to first pending order
+                const firstPending = pendingApprovals[0];
+                if (firstPending) {
+                  setExpandedOrder(firstPending.id);
+                }
+              }}
+              className="text-xs font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Ver ahora →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mockup Approval Modal */}
+      {mockupOrder && (
+        <MockupApprovalModal
+          order={mockupOrder}
+          products={products}
+          fonts={fonts}
+          whatsappNumber="5210000000000" // Replace with actual number from config
+          onClose={() => setMockupOrder(null)}
+          onApproved={() => {
+            onApproveMockup?.(mockupOrder.id, true);
+          }}
+          onRejected={(reason) => {
+            onApproveMockup?.(mockupOrder.id, false);
+            console.log('Rejection reason:', reason);
+          }}
+        />
+      )}
 
       {/* Bottom Navigation */}
       {renderBottomNav()}
