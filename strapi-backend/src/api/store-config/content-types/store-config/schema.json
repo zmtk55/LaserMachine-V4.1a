@@ -1,0 +1,64 @@
+{
+  "kind": "singleType",
+  "collectionName": "store_config",
+  "info": {
+    "singularName": "store-config",
+    "pluralName": "store-configs",
+    "displayName": "Store Config",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "businessName": {
+      "type": "string",
+      "default": "LASERMACHINE"
+    },
+    "logoUrl": {
+      "type": "string"
+    },
+    "accentColor": {
+      "type": "string",
+      "default": "#f59e0b"
+    },
+    "nextOrderId": {
+      "type": "integer",
+      "default": 1000
+    },
+    "pointsPercentage": {
+      "type": "decimal",
+      "default": 5
+    },
+    "whatsapp": {
+      "type": "string",
+      "default": "526371247095"
+    },
+    "instagramUrl": {
+      "type": "string"
+    },
+    "facebookUrl": {
+      "type": "string",
+      "default": "lasermachinemexico"
+    },
+    "bankInfo": {
+      "type": "richtext"
+    },
+    "baseEngravingPrice": {
+      "type": "decimal",
+      "default": 100
+    },
+    "extraSidePrice": {
+      "type": "decimal",
+      "default": 50
+    },
+    "logoSurcharge": {
+      "type": "decimal",
+      "default": 50
+    },
+    "shippingInfo": {
+      "type": "richtext"
+    }
+  }
+}

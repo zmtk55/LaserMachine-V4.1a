@@ -1,0 +1,80 @@
+{
+  "kind": "collectionType",
+  "collectionName": "order_items",
+  "info": {
+    "singularName": "order-item",
+    "pluralName": "order-items",
+    "displayName": "Order Item",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "itemId": {
+      "type": "string",
+      "required": true
+    },
+    "productId": {
+      "type": "string",
+      "required": true
+    },
+    "productName": {
+      "type": "string",
+      "required": true
+    },
+    "colorName": {
+      "type": "string",
+      "required": true
+    },
+    "frontText": {
+      "type": "string"
+    },
+    "frontFontId": {
+      "type": "integer"
+    },
+    "frontFontName": {
+      "type": "string"
+    },
+    "frontDesignState": {
+      "type": "json"
+    },
+    "frontLogos": {
+      "type": "json"
+    },
+    "backText": {
+      "type": "string"
+    },
+    "backFontId": {
+      "type": "integer"
+    },
+    "backFontName": {
+      "type": "string"
+    },
+    "backDesignState": {
+      "type": "json"
+    },
+    "backLogos": {
+      "type": "json"
+    },
+    "quantity": {
+      "type": "integer",
+      "required": true,
+      "min": 1
+    },
+    "unitPrice": {
+      "type": "decimal",
+      "required": true
+    },
+    "totalPrice": {
+      "type": "decimal",
+      "required": true
+    },
+    "order": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::order.order"
+    }
+  }
+}

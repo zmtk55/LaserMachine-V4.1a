@@ -1,0 +1,94 @@
+{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "Order"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "orderId": {
+      "type": "string",
+      "unique": true,
+      "required": true
+    },
+    "customerName": {
+      "type": "string",
+      "required": true
+    },
+    "customerPhone": {
+      "type": "string",
+      "required": true
+    },
+    "customerEmail": {
+      "type": "email"
+    },
+    "total": {
+      "type": "decimal",
+      "required": true
+    },
+    "amountPaid": {
+      "type": "decimal",
+      "default": 0
+    },
+    "paymentStatus": {
+      "type": "enumeration",
+      "enum": [
+        "PENDING",
+        "PAID",
+        "PARTIAL",
+        "REFUNDED"
+      ],
+      "default": "PENDING"
+    },
+    "paymentMethod": {
+      "type": "enumeration",
+      "enum": [
+        "CASH",
+        "TRANSFER",
+        "CARD",
+        "POINTS"
+      ],
+      "default": "CASH"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "RECEIVED",
+        "IN_PRODUCTION",
+        "READY",
+        "COMPLETED",
+        "CANCELLED"
+      ],
+      "default": "RECEIVED"
+    },
+    "deliveryMethod": {
+      "type": "enumeration",
+      "enum": [
+        "PICKUP",
+        "DELIVERY"
+      ],
+      "default": "PICKUP"
+    },
+    "notes": {
+      "type": "richtext"
+    },
+    "history": {
+      "type": "json"
+    },
+    "couponCode": {
+      "type": "string"
+    },
+    "discount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "trackingId": {
+      "type": "string"
+    }
+  }
+}
