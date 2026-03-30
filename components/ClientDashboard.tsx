@@ -7,10 +7,13 @@ import {
   Sparkles, Zap, Calendar, MessageCircle, Home, Grid3X3,
   Type, ChevronDown, ExternalLink, RefreshCcw, X,
   AlertTriangle, CheckCircle, Clock4, PackageCheck,
-  Gift, TrendingUp, Bell, Sun, Moon, Ticket
+  Gift, TrendingUp, Bell, Sun, Moon, Ticket, Wallet,
+  History, Award, ArrowUpRight, MinusCircle, PlusCircle
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
 import { Button, Card, Tooltip } from './ui';
+import { useLaserPoints } from '../hooks/useLaserPoints';
+import { formatPoints, formatPointsValue, calculatePotentialPoints } from '../services/pointsService';
 // Removed unused FontShowcase import
 
 interface ClientDashboardProps {
@@ -94,6 +97,29 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [showCopied, setShowCopied] = useState<string | null>(null);
   // State for previewing font text in the Fonts tab
   const [previewText, setPreviewText] = useState('');
+  
+  // Points system
+  const userId = user.email || user.phone || 'guest';
+  const {
+    totalPoints,
+    pointsValue,
+    formattedPoints,
+    recentTransactions,
+    pointsSummary,
+    processOrder
+  } = useLaserPoints(userId);
+  
+  // Process completed orders for points
+  useEffect(() => {
+    const completedOrders = orders.filter(o => 
+      o.status === OrderStatus.COMPLETED && 
+      !pointsSummary?.recentTransactions.some(t => t.orderId === o.id)
+    );
+    
+    completedOrders.forEach(order => {
+      processOrder(order);
+    });
+  }, [orders, processOrder, pointsSummary]);
   
   // Theme - use props if provided, otherwise local state
   const [localDarkMode, setLocalDarkMode] = useState(() => {
@@ -303,23 +329,39 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             </div>
           </div>
           
-          {/* Points Only */}
-          <div className="bg-white/10 backdrop-blur rounded-2xl p-4 mt-4">
+          {/* Enhanced Points Card */}
+          <div className="bg-gradient-to-r from-yellow-500/20 via-yellow-400/10 to-transparent backdrop-blur rounded-2xl p-4 mt-4 border border-yellow-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-zinc-400 mb-1">Tus puntos acumulados</p>
+                <p className="text-xs text-yellow-400/80 mb-1 flex items-center gap-1">
+                  <Award size={12} /> Tus puntos acumulados
+                </p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-yellow-400">{user.laserPoints || 0}</span>
+                  <span className="text-3xl font-black text-yellow-400">{formattedPoints}</span>
                   <span className="text-sm text-yellow-400/80">pts</span>
                 </div>
+                <p className="text-xs text-white/60 mt-1">
+                  = {pointsValue} de descuento
+                </p>
               </div>
-              <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/30">
                 <Star size={24} className="text-black" />
               </div>
             </div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              Usa tus puntos en tu próxima compra
-            </p>
+            <div className="flex gap-2 mt-3">
+              <button 
+                onClick={() => setActiveTab('coupons')}
+                className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                <Wallet size={14} /> Canjear
+              </button>
+              <button 
+                onClick={() => document.getElementById('points-history')?.scrollIntoView({ behavior: 'smooth' })}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                <History size={14} /> Historial
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -375,6 +417,66 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           <p className="text-[10px] text-zinc-500">En proceso</p>
         </div>
       </div>
+
+      {/* Points History */}
+      {recentTransactions.length > 0 && (
+        <div id="points-history" className="space-y-3">
+          <h3 className="font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            <History size={16} className="text-yellow-500" />
+            Historial de Puntos
+          </h3>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            {recentTransactions.slice(0, 5).map((transaction, index) => (
+              <div 
+                key={transaction.id}
+                className={`flex items-center justify-between p-4 ${
+                  index !== recentTransactions.slice(0, 5).length - 1 
+                    ? 'border-b border-zinc-100 dark:border-zinc-800' 
+                    : ''
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    transaction.points > 0 
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                      : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                  }`}>
+                    {transaction.points > 0 ? (
+                      <PlusCircle size={20} />
+                    ) : (
+                      <MinusCircle size={20} />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-zinc-900 dark:text-white">
+                      {transaction.description}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {new Date(transaction.createdAt).toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <span className={`font-bold ${
+                  transaction.points > 0 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-red-600 dark:text-red-400'
+                }`}>
+                  {transaction.points > 0 ? '+' : ''}{formatPoints(transaction.points)}
+                </span>
+              </div>
+            ))}
+          </div>
+          {recentTransactions.length > 5 && (
+            <button className="w-full text-center text-xs text-yellow-500 font-bold py-2">
+              Ver historial completo →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Promotions */}
       {promotions.length > 0 && (
