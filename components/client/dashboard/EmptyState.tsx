@@ -60,7 +60,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
         {title || config.defaultTitle}
       </h3>
-      <p className="text-sm text-zinc-500 max-w-[260px] mb-5">
+      <p className="text-sm font-medium text-zinc-500 max-w-[260px] mb-5">
         {description || config.defaultDescription}
       </p>
       {action}

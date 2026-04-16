@@ -51,14 +51,18 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className="relative flex flex-col items-center justify-center py-2 px-3 min-w-[56px] group"
+                className="relative flex flex-col items-center justify-center py-2 px-3 min-w-[56px] cursor-pointer group"
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {/* Active pill background */}
-                {isActive && (
-                  <span className="absolute inset-x-1 inset-y-0 bg-amber-400/15 dark:bg-amber-400/20 rounded-2xl transition-all duration-300" />
-                )}
+                <span
+                  className={`absolute inset-x-1 inset-y-0 rounded-2xl transition-all duration-300 ${
+                    isActive
+                      ? 'bg-amber-400/15 dark:bg-amber-400/20'
+                      : 'bg-transparent group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800/50'
+                  }`}
+                />
                 
                 <div className="relative">
                   <item.icon
@@ -78,7 +82,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 </div>
                 
                 <span
-                  className={`mt-1 text-[10px] font-medium transition-colors duration-200 ${
+                  className={`mt-1 text-[10px] font-bold transition-colors duration-200 ${
                     isActive
                       ? 'text-amber-600 dark:text-amber-400'
                       : 'text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'

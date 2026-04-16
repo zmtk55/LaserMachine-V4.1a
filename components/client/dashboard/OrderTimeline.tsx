@@ -1,6 +1,7 @@
 import React from 'react';
 import { OrderStatus } from '../../../types';
 import { CheckCircle2, Circle } from 'lucide-react';
+import { getStatusConfig } from './StatusBadge';
 
 interface TimelineStep {
   label: string;
@@ -29,6 +30,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
   compact = false,
 }) => {
   const currentIndex = getStepIndex(currentStatus);
+  const statusConfig = getStatusConfig(currentStatus);
 
   if (compact) {
     return (
@@ -42,7 +44,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
                 className={`h-1.5 rounded-full transition-all duration-500 ${
                   isCompleted
                     ? isCurrent
-                      ? 'w-6 bg-amber-500'
+                      ? `w-6 ${statusConfig.color}`
                       : 'w-4 bg-emerald-500'
                     : 'w-4 bg-zinc-200 dark:bg-zinc-800'
                 }`}
@@ -65,16 +67,18 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                   isCompleted
-                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                    ? isCurrent
+                      ? `${statusConfig.color} ${statusConfig.border} text-white ${statusConfig.ring} ring-4 scale-110`
+                      : 'bg-emerald-500 border-emerald-500 text-white'
                     : 'bg-zinc-100 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-400'
-                } ${isCurrent ? 'ring-4 ring-emerald-500/20 scale-110' : ''}`}
+                }`}
               >
                 {isCompleted ? <CheckCircle2 size={16} /> : <Circle size={14} />}
               </div>
               <span
                 className={`text-[10px] font-medium transition-colors ${
                   isCurrent
-                    ? 'text-amber-500 font-semibold'
+                    ? `${statusConfig.text} font-semibold`
                     : isCompleted
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-zinc-400'
@@ -89,7 +93,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({
       {/* Progress bar background */}
       <div className="absolute top-4 left-0 right-0 h-0.5 bg-zinc-200 dark:bg-zinc-800 -z-10 mx-4" />
       <div
-        className="absolute top-4 left-4 h-0.5 bg-gradient-to-r from-emerald-500 to-amber-400 -z-10 transition-all duration-500"
+        className={`absolute top-4 left-4 h-0.5 bg-gradient-to-r ${statusConfig.gradient} -z-10 transition-all duration-500`}
         style={{ width: `calc(${Math.min((currentIndex / (steps.length - 1)) * 100, 100)}% - 2rem)` }}
       />
     </div>

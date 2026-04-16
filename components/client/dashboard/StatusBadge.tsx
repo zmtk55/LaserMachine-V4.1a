@@ -2,7 +2,7 @@ import React from 'react';
 import { OrderStatus } from '../../../types';
 import { CheckCircle, PackageCheck, Zap, Sparkles, Clock4 } from 'lucide-react';
 
-interface StatusConfig {
+export interface StatusConfig {
   color: string;
   bg: string;
   text: string;
@@ -11,6 +11,8 @@ interface StatusConfig {
   label: string;
   description: string;
   gradient: string;
+  ring: string;
+  shadow: string;
 }
 
 export const getStatusConfig = (status: OrderStatus): StatusConfig => {
@@ -25,6 +27,8 @@ export const getStatusConfig = (status: OrderStatus): StatusConfig => {
         label: 'Entregado',
         description: 'Tu pedido fue entregado exitosamente',
         gradient: 'from-emerald-500/20 to-emerald-600/5',
+        ring: 'ring-emerald-500/20',
+        shadow: 'shadow-emerald-500/20',
       };
     case OrderStatus.READY:
       return {
@@ -36,6 +40,8 @@ export const getStatusConfig = (status: OrderStatus): StatusConfig => {
         label: 'Listo para entrega',
         description: 'Puedes pasar a recoger tu pedido',
         gradient: 'from-sky-500/20 to-sky-600/5',
+        ring: 'ring-sky-500/20',
+        shadow: 'shadow-sky-500/20',
       };
     case OrderStatus.IN_PRODUCTION:
       return {
@@ -47,6 +53,8 @@ export const getStatusConfig = (status: OrderStatus): StatusConfig => {
         label: 'En producción',
         description: 'Estamos personalizando tu producto',
         gradient: 'from-amber-500/20 to-amber-600/5',
+        ring: 'ring-amber-500/20',
+        shadow: 'shadow-amber-500/20',
       };
     case OrderStatus.WAITING_APPROVAL:
       return {
@@ -58,6 +66,8 @@ export const getStatusConfig = (status: OrderStatus): StatusConfig => {
         label: 'Esperando tu aprobación',
         description: 'Revisa y aprueba el diseño',
         gradient: 'from-purple-500/20 to-purple-600/5',
+        ring: 'ring-purple-500/20',
+        shadow: 'shadow-purple-500/20',
       };
     default:
       return {
@@ -69,6 +79,8 @@ export const getStatusConfig = (status: OrderStatus): StatusConfig => {
         label: 'Recibido',
         description: 'Tu pedido está en cola',
         gradient: 'from-zinc-500/10 to-zinc-600/5',
+        ring: 'ring-zinc-500/20',
+        shadow: 'shadow-zinc-500/10',
       };
   }
 };
@@ -109,7 +121,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-semibold border ${config.bg} ${config.text} ${config.border} ${sizeClasses[size]} ${pulse ? 'animate-pulse' : ''}`}
+      className={`inline-flex items-center rounded-full font-semibold border ${config.bg} ${config.text} ${config.border} ${sizeClasses[size]} ${pulse ? `animate-pulse ring-2 ${config.ring} ${config.shadow} shadow-[0_0_8px_-2px]` : ''}`}
     >
       {showIcon && <Icon size={iconSizes[size]} className={config.text} />}
       <span className={`${config.color} ${dotSizes[size]} rounded-full`} />
