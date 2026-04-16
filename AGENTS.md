@@ -52,7 +52,12 @@
 ├── components/           # 29 React components
 │   ├── AdminDashboard.tsx       # Main admin interface (10+ tabs)
 │   ├── ProductVisualizer.tsx    # Engraving design tool
-│   ├── ClientDashboard.tsx      # Customer self-service portal
+│   ├── ClientDashboard.tsx      # Customer self-service portal (premium mobile-first UX)
+│   ├── client/dashboard/        # Client dashboard sub-components
+│   │   ├── StatusBadge.tsx      # Order status badges with config
+│   │   ├── OrderTimeline.tsx    # Visual order progress timeline
+│   │   ├── EmptyState.tsx       # Branded empty state illustrations
+│   │   └── BottomNav.tsx        # Glassmorphism bottom navigation
 │   ├── CommandAssistant.tsx     # AI-powered assistant (Cmd+K)
 │   ├── LandingPage.tsx          # Marketing landing page
 │   ├── NavBar.tsx               # Main navigation
