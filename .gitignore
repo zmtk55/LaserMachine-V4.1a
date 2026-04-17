@@ -36,3 +36,6 @@ dist-ssr
  my-strapi-project/
  ui-ux-pro-max-skill/
 awesome-design-md/
+tsconfig.tsbuildinfo
+# Scripts de diagnóstico (opcional, descomenta si no quieres en repo)
+# /scripts/diagnostics/
