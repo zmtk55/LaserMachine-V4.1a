@@ -6,6 +6,7 @@ import {
 import { 
   isFirebaseConfigured, 
   loginWithGoogle, 
+  loginWithEmail,
   createGuestUser,
   checkRateLimit,
   recordAttempt
@@ -188,7 +189,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
     setIsLoading(true);
     
     try {
-      const { loginWithEmail } = await import('../services/auth');
       const user = await loginWithEmail(adminEmail, adminPassword);
       
       if (user.role !== UserRole.ADMIN) {

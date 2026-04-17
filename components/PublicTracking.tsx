@@ -9,6 +9,26 @@ interface PublicTrackingProps {
   preSelectedOrderId?: string | null;
 }
 
+/** Acepta LM-1234, lm1234, 1234 (solo dígitos = coincide con el número del pedido). */
+function findOrderByTrackingQuery(orders: Order[], raw: string): Order | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const lower = trimmed.toLowerCase();
+  const direct = orders.find((o) => o.id.toLowerCase() === lower);
+  if (direct) return direct;
+  const qNoLm = lower.replace(/^lm-?/, '');
+  const byStrip = orders.find((o) => o.id.toLowerCase().replace(/^lm-?/, '') === qNoLm);
+  if (byStrip) return byStrip;
+  if (/^\d+$/.test(trimmed)) {
+    const digits = trimmed;
+    return orders.find((o) => {
+      const idNum = o.id.replace(/^lm-?/i, '').replace(/\D/g, '');
+      return idNum === digits;
+    });
+  }
+  return undefined;
+}
+
 export const PublicTracking: React.FC<PublicTrackingProps> = ({ orders, onBack, preSelectedOrderId }) => {
   const [searchId, setSearchId] = useState('');
   const [foundOrder, setFoundOrder] = useState<Order | null>(null);
@@ -17,10 +37,10 @@ export const PublicTracking: React.FC<PublicTrackingProps> = ({ orders, onBack, 
   // Auto-search when preSelectedOrderId is provided
   useEffect(() => {
     if (preSelectedOrderId) {
-      const order = orders.find(o => o.id.toLowerCase() === preSelectedOrderId.toLowerCase());
+      const order = findOrderByTrackingQuery(orders, preSelectedOrderId);
       if (order) {
         setFoundOrder(order);
-        setSearchId(preSelectedOrderId);
+        setSearchId(order.id);
         setError('');
       } else {
         setError('No encontramos una orden con ese ID.');
@@ -31,8 +51,8 @@ export const PublicTracking: React.FC<PublicTrackingProps> = ({ orders, onBack, 
   const handleTrack = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchId.trim()) return;
-    
-    const order = orders.find(o => o.id.toLowerCase() === searchId.toLowerCase().trim());
+
+    const order = findOrderByTrackingQuery(orders, searchId);
     if (order) {
       setFoundOrder(order);
       setError('');
@@ -71,7 +91,8 @@ export const PublicTracking: React.FC<PublicTrackingProps> = ({ orders, onBack, 
           <input 
             value={searchId}
             onChange={(e) => setSearchId(e.target.value)}
-            placeholder="INGRESA TU ID DE ORDEN (EJ. LM-9392)"
+            placeholder="ID (LM-1234 o solo números)"
+            aria-label="Identificador de pedido"
             className="w-full bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl text-center text-lg font-black uppercase text-zinc-900 dark:text-white outline-none focus:border-yellow-400 transition-colors shadow-lg"
           />
           <button type="submit" className="absolute right-2 top-2 bottom-2 bg-yellow-400 text-black px-6 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-300 transition-colors">

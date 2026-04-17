@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Order, OrderStatus, Product, FontOption, ProductBrand, 
   PricingConfig, StoreConfig, OrderItem, Coupon, BrandingAsset,
-  FontCategory, DeliveryMethod, CustomTemplate, PaymentMethod, User
+  FontCategory, DeliveryMethod, CustomTemplate, PaymentMethod, User, PaymentStatus,
+  BusinessAccount
 } from '../types';
+import { exportOrdersToCsv } from '../utils/orderExport';
 import { notificationService } from '../services/notificationService';
 import { AdvancedStats } from './AdvancedStats';
 import { 
@@ -20,13 +22,14 @@ import {
   Flame, Ban, CheckCheck, Timer, CheckCircle, Play, MoreHorizontal, ChevronLeft, StickyNote,
   Layers, Forward, CheckSquare, Square, FileJson, EyeOff, ChevronUp, ImagePlus, Pencil, Crop,
   Paperclip, Lock, PhoneCall, Bell, CalendarClock, ShoppingBag, TrendingDown, PanelRight,
-  History, Banknote, QrCode, Grid3X3, AlignLeft, Target, CheckCircle2
+  History, Banknote, QrCode, Grid3X3, AlignLeft, Target, CheckCircle2, Printer, Building2
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui';
 import { ImageCropper } from './ImageCropper';
 import { BackgroundSettings } from './BackgroundSettings';
 import InventoryManager from './InventoryManager';
+import { BusinessManager } from './BusinessManager';
 import { AlertsWidget } from './AlertsWidget';
 import { migrateProductsToCloud, migrateFontsToCloud, migrateConfigToCloud, migrateOrdersToCloud } from '../services/firebaseService';
 import { ClientDashboard } from './ClientDashboard';
@@ -66,8 +69,8 @@ interface AdminDashboardProps {
   onAddFonts?: (fonts: FontOption[]) => void;
   onOpenAssistant?: (query?: string) => void;
   // Navigation Control for Assistant
-  activeTab?: 'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT';
-  onTabChange?: (tab: 'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT') => void;
+  activeTab?: 'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT' | 'EMPRESAS';
+  onTabChange?: (tab: 'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT' | 'EMPRESAS') => void;
   settingsTab?: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM';
   onSettingsTabChange?: (tab: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM') => void;
 }
@@ -333,7 +336,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    <UploadCloud size={48} className={`mx-auto mb-4 ${isDragOver ? 'text-yellow-400' : 'text-zinc-400'}`} />
+                    <UploadCloud size={48} className={`mx-auto mb-4 ${isDragOver ? 'text-amber-500' : 'text-zinc-400'}`} />
                     <p className="text-zinc-300 font-medium mb-2">Arrastra archivos aquí o haz clic para seleccionar</p>
                     <p className="text-zinc-500 text-sm">Formatos aceptados: .ttf, .otf (máx 5MB)</p>
                 </div>
@@ -362,7 +365,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                             {selectedFiles.map((file, index) => (
                                 <div key={index} className="flex items-center justify-between bg-zinc-800/50 rounded-lg p-2 text-sm">
                                     <div className="flex items-center gap-2">
-                                        <FileType size={16} className="text-yellow-400" />
+                                        <FileType size={16} className="text-amber-500" />
                                         <span className="text-zinc-300 truncate max-w-[200px]">{file.name}</span>
                                         <span className="text-zinc-500 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
                                     </div>
@@ -866,8 +869,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   activeTab: propActiveTab, onTabChange,
   settingsTab: propSettingsTab, onSettingsTabChange
 }) => {
-  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT'>('DASHBOARD');
+  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT' | 'EMPRESAS'>('DASHBOARD');
   const [internalSettingsTab, setInternalSettingsTab] = useState<'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM'>('BRANDING');
+  
+  // Business accounts state
+  const [businessAccounts, setBusinessAccounts] = useState<BusinessAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem('lm_business_accounts_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  
+  useEffect(() => {
+    try {
+      localStorage.setItem('lm_business_accounts_v1', JSON.stringify(businessAccounts));
+    } catch {}
+  }, [businessAccounts]);
   
   // Gallery state
   const [gallerySearch, setGallerySearch] = useState('');
@@ -956,6 +973,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [orderNoteInput, setOrderNoteInput] = useState('');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'ALL' | PaymentStatus>('ALL');
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showWhatsAppMenu, setShowWhatsAppMenu] = useState(false);
 
@@ -1197,12 +1215,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const digits = searchQuery.replace(/\D/g, '');
     let filtered = orders.filter(o => {
-      const matchesTerm = o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         o.customerPhone.includes(searchQuery);
+      const matchesTerm =
+        !q ||
+        o.id.toLowerCase().includes(q) ||
+        o.customerName.toLowerCase().includes(q) ||
+        (o.customerPhone && o.customerPhone.includes(searchQuery.trim())) ||
+        (digits.length >= 4 && o.customerPhone && o.customerPhone.replace(/\D/g, '').includes(digits)) ||
+        (o.customerEmail && o.customerEmail.toLowerCase().includes(q));
       const matchesStatus = statusFilter === 'TODOS' || o.status === statusFilter;
-      return matchesTerm && matchesStatus;
+      const matchesPayment =
+        paymentStatusFilter === 'ALL' || o.paymentStatus === paymentStatusFilter;
+      return matchesTerm && matchesStatus && matchesPayment;
     });
     
     // Apply date filter
@@ -1231,7 +1257,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (!a.isPriority && b.isPriority) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [orders, searchQuery, statusFilter, dateFilter]);
+  }, [orders, searchQuery, statusFilter, dateFilter, paymentStatusFilter]);
 
   const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())), [products, searchQuery]);
   const filteredFonts = useMemo(() => { 
@@ -1619,7 +1645,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="flex flex-col md:flex-row h-full bg-zinc-100 dark:bg-black font-sans overflow-hidden">
             {/* Sidebar glassmorphism - Desktop only */}
             <aside className="hidden md:flex w-24 flex-col shrink-0 h-full items-center py-6 gap-4 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 rounded-3xl m-4 shadow-xl">
-                <div className="flex flex-col items-center gap-8 w-full">
+                <div className="flex flex-col items-center gap-3 w-full">
                     {/* Menu Items */}
                     {[ 
                         { id: 'DASHBOARD', label: 'Dashboard', icon: BarChart3 },
@@ -1631,26 +1657,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         { id: 'FONTS', label: 'Fonts', icon: Type },
                         { id: 'GALERIA', label: 'Galería', icon: Images },
                         { id: 'CONTENT', label: 'Contenido', icon: LayoutGrid },
+                        { id: 'EMPRESAS', label: 'Empresas', icon: Building2 },
                         { id: 'SETTINGS', label: 'Ajustes', icon: Settings },
                     ].map(item => (
                         <button key={item.id} onClick={() => setActiveTab(item.id as any)}
-                            className={`w-14 h-14 flex items-center justify-center rounded-2xl mb-2 transition-all ${activeTab === item.id ? 'bg-amber-500 text-white shadow-lg shadow-black/20 scale-110' : 'text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-white'}`}
+                            className={`w-14 h-14 flex items-center justify-center rounded-2xl transition-all ${activeTab === item.id ? 'bg-amber-500 text-white shadow-lg shadow-black/20 scale-110' : 'text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-white'}`}
                             title={item.label}
                         >
-                            <item.icon size={28} />
+                            <item.icon size={22} />
                         </button>
                     ))}
                 </div>
                 <div className="flex-1"></div>
                 
-                {/* RAB Button in Sidebar - Improved */}
+                {/* RAB Button in Sidebar */}
                 {onOpenAssistant && (
                     <button 
                         onClick={() => onOpenAssistant()}
-                        className="w-14 h-14 flex items-center justify-center rounded-2xl mb-2 transition-all bg-gradient-to-br from-amber-400 to-amber-500 text-zinc-900 shadow-lg shadow-amber-500/25 hover:scale-110 hover:shadow-amber-500/40 group relative"
+                        className="w-14 h-14 flex items-center justify-center rounded-2xl transition-all bg-gradient-to-br from-amber-400 to-amber-500 text-zinc-900 shadow-lg shadow-amber-500/25 hover:scale-110 hover:shadow-amber-500/40 group relative"
                         title="RAB (Cmd+K)"
                     >
-                        <img src="/assets/icons/2svgagenticon.svg" alt="RAB" className="w-8 h-8" />
+                        <img src="/assets/icons/2svgagenticon.svg" alt="RAB" className="w-7 h-7" />
                     </button>
                 )}
             </aside>
@@ -1662,18 +1689,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade">
                         <button 
                             onClick={() => setStatusFilter('TODOS')}
-                            className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold uppercase border transition-all flex items-center gap-2 ${statusFilter === 'TODOS' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-sm' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500 hover:border-zinc-300 dark:border-zinc-700'}`}
+                            className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold uppercase border transition-all active:scale-95 flex items-center gap-2 ${statusFilter === 'TODOS' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-sm' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500 hover:border-zinc-300 dark:border-zinc-700'}`}
                          >
-                            Todos <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white px-1.5 py-0.5 rounded text-[10px] font-bold">{orders.length}</span>
+                            Todos <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white px-1.5 py-0.5 rounded-lg text-[10px] font-bold">{orders.length}</span>
                          </button>
                         {Object.values(OrderStatus).map(status => (
                             <button 
                                 key={status}
                                 onClick={() => setStatusFilter(status)}
-                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold uppercase border transition-all flex items-center gap-2 ${statusFilter === status ? getStatusBadgeColor(status) + ' ring-2 ring-offset-1 dark:ring-offset-black' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500 hover:border-zinc-300 dark:border-zinc-700'}`}
+                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold uppercase border transition-all active:scale-95 flex items-center gap-2 ${statusFilter === status ? getStatusBadgeColor(status) + ' ring-2 ring-offset-1 dark:ring-offset-black' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500 hover:border-zinc-300 dark:border-zinc-700'}`}
                             >
                                 {status.replace('_', ' ')} 
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${statusFilter === status ? 'bg-white/20 dark:bg-zinc-900/20' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+                                <span className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold ${statusFilter === status ? 'bg-white/20 dark:bg-zinc-900/20' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
                                     {ordersByStatus[status] || 0}
                                 </span>
                             </button>
@@ -1819,7 +1846,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         className="flex-1 bg-transparent text-sm text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 outline-none"
                                     />
                                     {rabInputValue.trim() ? (
-                                        <button type="submit" className="text-xs bg-amber-500 hover:bg-amber-400 text-white font-bold px-3 py-1.5 rounded-md transition-colors shrink-0">
+                                        <button type="submit" className="text-xs bg-amber-500 hover:bg-amber-400 text-white font-bold px-3 py-1.5 rounded-lg transition-colors shrink-0">
                                             Enviar
                                         </button>
                                     ) : (
@@ -1898,7 +1925,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 setStatusFilter('TODOS');
                                                 setActiveTab('ORDERS');
                                             }}
-                                            className="w-full flex items-center gap-3 group"
+                                            className="w-full flex items-center gap-3 group transition-all active:scale-95"
                                         >
                                             <span className={`text-xs font-bold w-8 ${isToday ? 'text-amber-500' : 'text-zinc-500'}`}>{day.day}</span>
                                             <div className="flex-1 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-lg overflow-hidden relative">
@@ -1927,7 +1954,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <h4 className="text-sm font-bold text-zinc-900 dark:text-white uppercase">Órdenes Recientes</h4>
                                 <button 
                                     onClick={() => setActiveTab('ORDERS')}
-                                    className="text-xs font-bold text-amber-500 hover:text-amber-600 uppercase"
+                                    className="text-xs font-bold text-amber-500 hover:text-amber-400 uppercase transition-all active:scale-95"
                                 >
                                     Ver todas →
                                 </button>
@@ -1937,7 +1964,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     <button 
                                         key={order.id}
                                         onClick={() => { setSelectedOrder(order); setActiveTab('ORDERS'); }}
-                                        className="w-full flex items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left"
+                                        className="w-full flex items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-95 text-left rounded-xl"
                                     >
                                         <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
                                             <span className="text-xs font-black text-zinc-600 dark:text-zinc-400">
@@ -2007,7 +2034,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 </div>
                             </div>
                             
-                            <button className="bg-amber-500 text-white px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-black/20 hover:scale-105 transition-transform flex items-center gap-2">
+                            <button className="bg-amber-500 hover:bg-amber-400 text-white px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-black/20 hover:scale-105 transition-all active:scale-95 flex items-center gap-2">
                                 <CalendarClock size={16}/> Agenda Global
                             </button>
                         </div>
@@ -2097,7 +2124,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 {/* Widget 1: Pendientes Aprobación */}
                                 <button 
                                     onClick={() => { setStatusFilter(OrderStatus.WAITING_APPROVAL); setActiveTab('ORDERS'); }}
-                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl relative overflow-hidden shadow-sm group min-h-[200px] flex flex-col justify-between text-left hover:border-amber-500/50 transition-all"
+                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl relative overflow-hidden shadow-sm group min-h-[200px] flex flex-col justify-between text-left hover:border-amber-500/50 transition-all active:scale-95"
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
@@ -2117,7 +2144,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 {/* Widget 2: Pagos Parciales */}
                                 <button 
                                     onClick={() => { setStatusFilter('TODOS'); setActiveTab('ORDERS'); }}
-                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl relative overflow-hidden shadow-sm group min-h-[200px] flex flex-col justify-between text-left hover:border-amber-500/50 transition-all"
+                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl relative overflow-hidden shadow-sm group min-h-[200px] flex flex-col justify-between text-left hover:border-amber-500/50 transition-all active:scale-95"
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
@@ -2136,7 +2163,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 {/* Widget 3: Stock */}
                                 <button 
                                     onClick={() => setActiveTab('INVENTORY')}
-                                    className={`p-6 rounded-2xl flex flex-col justify-between relative group text-left transition-all ${lowStockProducts.length > 0 ? 'bg-amber-500' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50'}`}
+                                    className={`p-6 rounded-2xl flex flex-col justify-between relative group text-left transition-all active:scale-95 ${lowStockProducts.length > 0 ? 'bg-amber-500' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50'}`}
                                 >
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${lowStockProducts.length > 0 ? 'bg-white/20 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600'}`}>
                                         <Package size={24}/>
@@ -2154,7 +2181,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 {/* Widget 4: Producción */}
                                 <button 
                                     onClick={() => { setStatusFilter(OrderStatus.IN_PRODUCTION); setActiveTab('ORDERS'); }}
-                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl flex flex-col justify-between text-left hover:border-amber-500/50 transition-all group"
+                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl flex flex-col justify-between text-left hover:border-amber-500/50 transition-all active:scale-95 group"
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
@@ -2209,11 +2236,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     <button
                                                         key={status}
                                                         onClick={() => handleUpdateOrderField('paymentStatus', status)}
-                                                        className={`px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all ${
+                                                        className={`px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 ${
                                                             selectedOrder.paymentStatus === status
-                                                                ? status === 'PAGADO' ? 'bg-system-success text-white shadow-lg shadow-success'
-                                                                : status === 'PENDIENTE' ? 'bg-system-error text-white shadow-lg shadow-danger'
-                                                                : status === 'PARCIAL' ? 'bg-system-accent text-white shadow-lg shadow-accent-lg'
+                                                                ? status === 'PAGADO' ? 'bg-system-success text-white shadow-lg'
+                                                                : status === 'PENDIENTE' ? 'bg-system-error text-white shadow-lg'
+                                                                : status === 'PARCIAL' ? 'bg-system-accent text-white shadow-lg'
                                                                 : 'bg-zinc-600 text-white'
                                                                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                                                         }`}
@@ -2237,7 +2264,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     <button
                                                         key={method.id}
                                                         onClick={() => handleUpdateOrderField('paymentMethod', method.id)}
-                                                        className={`px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 ${
+                                                        className={`px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 flex items-center justify-center gap-2 ${
                                                             selectedOrder.paymentMethod === method.id 
                                                                 ? 'bg-amber-500 text-white shadow-lg'
                                                                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -2350,23 +2377,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
                         {/* Search & Filters Row */}
                         <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                <div className="relative flex-1 max-w-md w-full">
+                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col xl:flex-row xl:flex-wrap items-stretch xl:items-center gap-3">
+                                <div className="relative flex-1 max-w-md w-full min-w-[200px]">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
                                     <input 
                                         className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 pl-10 pr-4 text-sm font-medium outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
-                                        placeholder="Buscar por orden, cliente, teléfono..."
+                                        placeholder="ID (LM-…), nombre, teléfono o email…"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
+                                        aria-label="Buscar pedidos"
                                     />
                                 </div>
+                                <select
+                                  value={paymentStatusFilter}
+                                  onChange={(e) => setPaymentStatusFilter(e.target.value as 'ALL' | PaymentStatus)}
+                                  className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-200 shrink-0"
+                                  aria-label="Filtrar por estado de pago"
+                                >
+                                  <option value="ALL">Pago: todos</option>
+                                  {Object.values(PaymentStatus).map((ps) => (
+                                    <option key={ps} value={ps}>Pago: {ps}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => exportOrdersToCsv(filteredOrders, `pedidos-${new Date().toISOString().slice(0, 10)}.csv`)}
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-100 px-4 py-2 text-xs font-black uppercase text-zinc-800 transition-all hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 active:scale-95 shrink-0"
+                                >
+                                  <Download size={14} /> Exportar CSV
+                                </button>
                                 {/* Date Filter */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                     {(['ALL', 'TODAY', 'WEEK', 'MONTH'] as const).map((filter) => (
                                         <button
                                             key={filter}
+                                            type="button"
                                             onClick={() => setDateFilter(filter)}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase transition-all active:scale-95 ${
                                                 dateFilter === filter
                                                     ? 'bg-amber-500 text-white'
                                                     : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -2376,9 +2424,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         </button>
                                     ))}
                                 </div>
-                                <div className="text-sm text-zinc-500 shrink-0">
+                                <div className="text-sm text-zinc-500 shrink-0 xl:ml-auto">
                                     <span className="font-bold text-zinc-900 dark:text-white">{filteredOrders.length}</span> órdenes
                                 </div>
+                            </div>
                             </div>
                         </div>
                         
@@ -2405,12 +2454,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 order
                                             );
                                         }}
-                                        className={`shrink-0 w-[280px] rounded-xl border text-left transition-all duration-200 overflow-hidden relative ${
+                                        className={`shrink-0 w-[280px] rounded-xl border text-left transition-all duration-200 active:scale-95 overflow-hidden relative ${
                                             isSelected 
                                                 ? 'bg-amber-500 border-amber-500 shadow-lg shadow-amber-500/25 ring-2 ring-amber-500/20' 
                                                 : isPriority
                                                     ? 'bg-white dark:bg-zinc-800 border-red-400 dark:border-red-500 shadow-md'
-                                                    : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 hover:border-amber-400 hover:shadow-md'
+                                                    : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 hover:border-amber-500 hover:shadow-md'
                                         }`}
                                     >
                                         {/* Priority Indicator */}
@@ -2464,7 +2513,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         {selectedOrder ? (
                             <div className="h-full flex flex-col lg:flex-row">
                                 {/* LEFT: Order Details */}
-                                <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-zinc-50 dark:bg-zinc-950">
+                                <div className="print-area flex-1 h-full overflow-y-auto custom-scrollbar bg-zinc-50 dark:bg-zinc-950">
                                     {/* Sticky Header */}
                                     <div className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-6 py-4">
                                         <div className="flex items-center justify-between">
@@ -2499,8 +2548,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <div className="flex items-center gap-2">
                                                 {/* Priority Toggle */}
                                                 <button 
+                                                    type="button"
                                                     onClick={() => handleTogglePriority(selectedOrder)}
-                                                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${
+                                                    className={`no-print flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${
                                                         selectedOrder.isPriority
                                                             ? 'bg-system-error text-white border-system-error'
                                                             : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-system-error'
@@ -2508,6 +2558,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     title={selectedOrder.isPriority ? 'Quitar prioridad' : 'Marcar como prioridad'}
                                                 >
                                                     <AlertTriangle size={16}/>
+                                                </button>
+
+                                                <button
+                                                  type="button"
+                                                  className="no-print flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                                                  title="Imprimir ficha de pedido"
+                                                  onClick={() => window.print()}
+                                                >
+                                                  <Printer size={16} />
+                                                  <span className="hidden sm:inline">Imprimir</span>
                                                 </button>
                                                 
                                                 {/* WhatsApp Quick Actions */}
@@ -2525,6 +2585,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             <div className="fixed inset-0 z-20" onClick={() => setShowWhatsAppMenu(false)}/>
                                                             <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 z-30">
                                                                 <p className="text-[10px] font-bold text-zinc-400 uppercase px-3 py-2">Mensajes Rápidos</p>
+                                                                <p className="text-[10px] text-zinc-500 px-3 pb-2 leading-snug">
+                                                                  Sugerido según estado: {selectedOrder.status === OrderStatus.RECEIVED ? 'Confirmación' : selectedOrder.status === OrderStatus.IN_PRODUCTION || selectedOrder.status === OrderStatus.WAITING_APPROVAL ? 'Producción' : selectedOrder.status === OrderStatus.READY ? 'Listo' : 'Personalizado'}
+                                                                </p>
                                                                 <a 
                                                                     href={getWhatsAppLink(selectedOrder.customerPhone, storeConfig.messageTemplates.confirmation, selectedOrder)}
                                                                     target="_blank"
@@ -2657,6 +2720,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             )}
                                                         </div>
                                                     </div>
+
+                                                    {item.notes && (
+                                                      <div className="px-5 py-3 bg-amber-50 dark:bg-amber-950/25 border-b border-amber-200/80 dark:border-amber-900/50">
+                                                        <p className="text-[10px] font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">Notas (taller / cliente)</p>
+                                                        <p className="text-sm text-zinc-800 dark:text-zinc-200 mt-1 whitespace-pre-wrap">{item.notes}</p>
+                                                      </div>
+                                                    )}
                                                     
                                                     {/* Previews */}
                                                     <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
@@ -3469,7 +3539,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 value={gallerySearch}
                                 onChange={(e) => setGallerySearch(e.target.value)}
                                 placeholder="Buscar por nombre de imagen..."
-                                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg py-2.5 pl-9 pr-3 text-xs font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-yellow-500 transition-colors"
+                                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg py-2.5 pl-9 pr-3 text-xs font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
                             />
                         </div>
 
@@ -3499,7 +3569,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     : (storeConfig.galleryAssets || []).filter(a => a.type === galleryCategory).length + ` en ${galleryCategory}`}
                             </span>
                             {gallerySearch && (
-                                <button onClick={() => setGallerySearch('')} className="text-yellow-500 hover:text-yellow-600">
+                                <button onClick={() => setGallerySearch('')} className="text-amber-500 hover:text-yellow-600">
                                     Limpiar búsqueda
                                 </button>
                             )}
@@ -3520,7 +3590,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     .map(asset => (
                                         <div 
                                             key={asset.id} 
-                                            className="group relative bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:border-yellow-500 hover:shadow-md transition-all"
+                                            className="group relative bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:border-amber-500 hover:shadow-md transition-all"
                                         >
                                             <div className="aspect-square p-3 flex items-center justify-center">
                                                 <img src={asset.url} alt={asset.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
@@ -3588,10 +3658,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     config={contentConfig}
                     onSave={(config) => {
                         setContentConfig(config);
-                        // Save to localStorage or Firebase
                         localStorage.setItem('lm_content_config', JSON.stringify(config));
+                        window.dispatchEvent(new Event('lm-content-config-updated'));
                         alert('Contenido guardado correctamente');
                     }}
+                />
+            )}
+
+            {activeTab === 'EMPRESAS' && (
+                <BusinessManager
+                  accounts={businessAccounts}
+                  onUpdateAccounts={setBusinessAccounts}
                 />
             )}
 
@@ -3599,7 +3676,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div>
                     <div className="flex gap-4 mb-8 overflow-x-auto pb-2 border-b border-zinc-200 dark:border-zinc-800">
                         {['BRANDING', 'COLORS', 'MESSAGES', 'FINANCE', 'COUPONS', 'INVENTORY_CATS', 'SYSTEM', 'ASSISTANT'].map(t => (
-                            <button key={t} onClick={() => setSettingsTab(t as any)} className={`px-5 py-3 text-xs font-bold uppercase tracking-widest border-b-2 ${settingsTab === t ? 'border-yellow-400 text-zinc-900 dark:text-white' : 'border-transparent text-zinc-500'}`}>{t}</button>
+                            <button key={t} onClick={() => setSettingsTab(t as any)} className={`px-5 py-3 text-xs font-bold uppercase tracking-widest border-b-2 ${settingsTab === t ? 'border-amber-500 text-zinc-900 dark:text-white' : 'border-transparent text-zinc-500'}`}>{t}</button>
                         ))}
                     </div>
                     {settingsTab === 'ASSISTANT' && (
@@ -3818,7 +3895,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                         type="button"
                                                         onClick={() => logoInputRef.current?.click()}
                                                         disabled={uploadingAsset === 'LOGO'}
-                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-amber-500 text-white hover:bg-amber-600 transition-system-fast ${uploadingAsset === 'LOGO' ? 'opacity-60 cursor-wait' : ''}`}
+                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-amber-500 text-white hover:bg-amber-600 transition-all duration-200 ${uploadingAsset === 'LOGO' ? 'opacity-60 cursor-wait' : ''}`}
                                                     >
                                                         <Upload size={14} className="mr-2" />
                                                         {uploadingAsset === 'LOGO' ? 'Subiendo...' : 'Subir logo'}
@@ -3835,7 +3912,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                     )
                                                                 })
                                                             }
-                                                            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-system-fast"
+                                                            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all duration-200"
                                                         >
                                                             <Trash2 size={14} className="mr-2" />
                                                             Quitar
@@ -3876,7 +3953,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                         type="button"
                                                         onClick={() => faviconInputRef.current?.click()}
                                                         disabled={uploadingAsset === 'FAVICON'}
-                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-zinc-900 text-white hover:bg-zinc-800 transition-system-fast ${uploadingAsset === 'FAVICON' ? 'opacity-60 cursor-wait' : ''}`}
+                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-zinc-900 text-white hover:bg-zinc-800 transition-all duration-200 ${uploadingAsset === 'FAVICON' ? 'opacity-60 cursor-wait' : ''}`}
                                                     >
                                                         <Upload size={14} className="mr-2" />
                                                         {uploadingAsset === 'FAVICON' ? 'Subiendo...' : storeConfig.faviconUrl ? 'Reemplazar' : 'Subir favicon'}
@@ -3893,7 +3970,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                     )
                                                                 })
                                                             }
-                                                            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-system-fast"
+                                                            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all duration-200"
                                                         >
                                                             <Trash2 size={14} className="mr-2" />
                                                             Quitar
@@ -3934,7 +4011,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                         type="button"
                                                         onClick={() => bannerInputRef.current?.click()}
                                                         disabled={uploadingAsset === 'BANNER'}
-                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-zinc-900 text-white hover:bg-zinc-800 transition-system-fast ${uploadingAsset === 'BANNER' ? 'opacity-60 cursor-wait' : ''}`}
+                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-zinc-900 text-white hover:bg-zinc-800 transition-all duration-200 ${uploadingAsset === 'BANNER' ? 'opacity-60 cursor-wait' : ''}`}
                                                     >
                                                         <Upload size={14} className="mr-2" />
                                                         {uploadingAsset === 'BANNER'
@@ -3948,7 +4025,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => window.open(storeConfig.bannerUrl, '_blank')}
-                                                                className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300/80 dark:border-zinc-700 text-zinc-100 bg-white/5 hover:bg-white/10 dark:hover:bg-zinc-800/80 transition-system-fast"
+                                                                className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300/80 dark:border-zinc-700 text-zinc-100 bg-white/5 hover:bg-white/10 dark:hover:bg-zinc-800/80 transition-all duration-200"
                                                             >
                                                                 <Eye size={14} className="mr-2" />
                                                                 Ver grande
@@ -3964,7 +4041,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                         )
                                                                     })
                                                                 }
-                                                                className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-system-fast"
+                                                                className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all duration-200"
                                                             >
                                                                 <Trash2 size={14} className="mr-2" />
                                                                 Quitar
@@ -4138,7 +4215,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                 bgPattern: 'dots'
                                                             })
                                                         }
-                                                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest border border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-system-fast"
+                                                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest border border-amber-300/70 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-all duration-200"
                                                     >
                                                         Glass dorado
                                                     </button>
@@ -4152,7 +4229,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                 bgPattern: 'none'
                                                             })
                                                         }
-                                                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 transition-system-fast"
+                                                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 transition-all duration-200"
                                                     >
                                                         Claro neutro
                                                     </button>

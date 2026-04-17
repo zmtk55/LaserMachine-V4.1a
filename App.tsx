@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { BackgroundProvider } from './contexts/BackgroundContext';
 import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
 import { CartProvider, useCartPanel } from './contexts/CartContext';
@@ -8,24 +8,48 @@ import { OrderHistoryProvider } from './contexts/OrderHistoryContext';
 import { ContextMenuProvider } from './contexts/ContextMenuContext';
 import ContextMenu from './components/ContextMenu';
 import { NavBar } from './components/NavBar';
-import { AdminDashboard } from './components/AdminDashboard';
 import CommandAssistant from './components/CommandAssistant';
-import { ClientDashboard } from './components/ClientDashboard';
-import { ProductVisualizer } from './components/ProductVisualizer';
-import { FontShowcase } from './components/FontShowcase';
 import { TechnicalPreview } from './components/TechnicalPreview';
 import { AuthModal } from './components/AuthModal';
-import { PublicTracking } from './components/PublicTracking';
-import { LandingPage } from './components/LandingPage';
+import { BusinessRequestModal } from './components/BusinessRequestModal';
 import { NotificationPanel } from './components/NotificationPanel';
 import { NotificationManager } from './components/NotificationManager';
 import { CartPanel } from './components/CartPanel';
 // import { LottieAnimation } from './components/LottieAnimation';
-import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction } from './types';
+import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction, BusinessAccount } from './types';
 import { PRODUCTS as CONST_PRODUCTS, FONTS as CONST_FONTS, ADMIN_USER, MOCK_ORDERS } from './constants';
-import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, CreditCard, QrCode, Ticket, Eye, Banknote, CreditCard as CardIcon, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2 } from 'lucide-react';
+import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, CreditCard, QrCode, Ticket, Eye, Banknote, CreditCard as CardIcon, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2, Copy, Share2, Layers } from 'lucide-react';
+import { buildSharePayload, decodeSharePayload, encodeSharePayload, orderItemFromSharePayload } from './utils/shareDesign';
 import { onAuthChange, logoutUser, isFirebaseConfigured } from './services/auth';
 import { useStrapiProducts } from './hooks/useStrapi';
+
+const LandingPage = React.lazy(() =>
+  import('./components/LandingPage').then((m) => ({ default: m.LandingPage }))
+);
+const PublicTracking = React.lazy(() =>
+  import('./components/PublicTracking').then((m) => ({ default: m.PublicTracking }))
+);
+const FontShowcase = React.lazy(() =>
+  import('./components/FontShowcase').then((m) => ({ default: m.FontShowcase }))
+);
+const ProductVisualizer = React.lazy(() =>
+  import('./components/ProductVisualizer').then((m) => ({ default: m.ProductVisualizer }))
+);
+const AdminDashboard = React.lazy(() =>
+  import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
+const ClientDashboard = React.lazy(() =>
+  import('./components/ClientDashboard').then((m) => ({ default: m.ClientDashboard }))
+);
+const BusinessPortal = React.lazy(() =>
+  import('./components/BusinessPortal').then((m) => ({ default: m.BusinessPortal }))
+);
+
+const ViewLoader = () => (
+  <div className="w-full min-h-[40vh] flex items-center justify-center">
+    <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+  </div>
+);
 
 // Import Lottie animation
 // import playfulAnimation from './src/lotties/playful.json';
@@ -134,9 +158,49 @@ const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [preSelectedOrderId, setPreSelectedOrderId] = useState<string | null>(null);
+  const [isBusinessRequestOpen, setIsBusinessRequestOpen] = useState(false);
+  
+  // Business Portal State
+  const [businessAccount, setBusinessAccount] = useState<BusinessAccount | null>(() => {
+    try {
+      const saved = localStorage.getItem('lm_business_account_v1');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  
+  // TEMP: Mock business account for dev testing
+  const MOCK_BUSINESS_ACCOUNT: BusinessAccount = {
+    id: 'BUS-DEV-001',
+    companyName: 'Constructora del Norte',
+    taxId: 'CNR123456ABC',
+    industry: 'Construcción',
+    representativeName: 'Juan Pérez',
+    representativePhone: '8181234567',
+    representativeEmail: 'business@lasermachine.com',
+    discountTier: 'GOLD',
+    creditLimit: 50000,
+    creditUsed: 12500,
+    paymentTerms: '30_DIAS',
+    brandKit: {
+      logoUrl: '',
+      approvedFonts: [999, 101, 104],
+      approvedColors: ['#1a1a2e', '#f5f5f5', '#c8e6c9'],
+    },
+    assignedRepId: 'rep-1',
+    assignedRepName: 'Carlos Ruiz',
+    users: [
+      { id: 'u1', name: 'Juan Pérez', email: 'business@lasermachine.com', phone: '8181234567', role: 'ADMIN', isActive: true }
+    ],
+    status: 'APPROVED',
+    notes: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    totalOrders: 12,
+    totalSpent: 45000,
+  };
   
   // Admin Dashboard Tab State (for NavBar title)
-  const [adminActiveTab, setAdminActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT'>('DASHBOARD');
+  const [adminActiveTab, setAdminActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT' | 'EMPRESAS'>('DASHBOARD');
   
   // Command Assistant State
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
@@ -170,9 +234,9 @@ const App = () => {
   // Bumped to v13 to force image refresh with YETI product images
   const [products, setProducts] = useState<Product[]>(CONST_PRODUCTS);
   
-  // Update products when Strapi data loads
+  // Update products when Strapi data loads — only if valid structure with colors/stock
   useEffect(() => {
-    if (strapiProducts && strapiProducts.length > 0) {
+    if (strapiProducts && strapiProducts.length > 0 && strapiProducts.every((p: any) => p.colors && Array.isArray(p.colors) && p.colors.length > 0)) {
       setProducts(strapiProducts);
     }
   }, [strapiProducts]);
@@ -215,7 +279,18 @@ const App = () => {
       } catch (e) { return DEFAULT_PRICING; }
   });
   
-  const [cart, setCart] = useState<OrderItem[]>([]);
+  const [cart, setCart] = useState<OrderItem[]>(() => {
+    try {
+      const raw = localStorage.getItem('lm_cart_draft_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw) as OrderItem[];
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      /* ignore */
+    }
+    return [];
+  });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', notes: '' });
   const [customerSearch, setCustomerSearch] = useState('');
@@ -245,6 +320,44 @@ const App = () => {
     localStorage.setItem('lm_pricing_v10', JSON.stringify(pricing));
     localStorage.setItem('lm_fonts_v10', JSON.stringify(fonts));
   }, [products, orders, storeConfig, pricing, fonts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lm_cart_draft_v1', JSON.stringify(cart));
+    } catch {
+      /* quota */
+    }
+  }, [cart]);
+
+  useEffect(() => {
+    try {
+      if (view !== 'LANDING') localStorage.setItem('lm_last_view', view);
+    } catch {
+      /* ignore */
+    }
+  }, [view]);
+
+  useEffect(() => {
+    try {
+      if (selectedProduct?.id) localStorage.setItem('lm_last_product_id', selectedProduct.id);
+    } catch {
+      /* ignore */
+    }
+  }, [selectedProduct?.id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const share = params.get('share');
+    if (!share) return;
+    const p = decodeSharePayload(decodeURIComponent(share));
+    if (p) {
+      setCart((prev) => [...prev, orderItemFromSharePayload(p)]);
+      setView('CART');
+      params.delete('share');
+      const q = params.toString();
+      window.history.replaceState({}, '', `${window.location.pathname}${q ? `?${q}` : ''}${window.location.hash}`);
+    }
+  }, []);
 
   // Inject Fonts CSS & Theme Colors
   useEffect(() => {
@@ -361,9 +474,40 @@ const App = () => {
     if (view === 'LANDING') {
         if (loggedInUser.role === UserRole.ADMIN) {
             setView('ADMIN_DASHBOARD');
+        } else if (loggedInUser.role === UserRole.BUSINESS) {
+            setView('BUSINESS_PORTAL');
         } else {
             setView('CLIENT_DASHBOARD');
         }
+    }
+  };
+  
+  // DEV: Toggle mock business user for testing
+  const toggleMockBusinessUser = () => {
+    if (user?.role === UserRole.BUSINESS) {
+      setUser({
+        id: 'admin-temp',
+        name: 'Admin',
+        email: 'admin@lasermachine.com',
+        role: UserRole.ADMIN,
+        avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=facc15&color=000000',
+        laserPoints: 0,
+        pointsHistory: []
+      });
+      setBusinessAccount(null);
+      setView('ADMIN_DASHBOARD');
+    } else {
+      setUser({
+        id: 'business-temp',
+        name: 'Juan Pérez',
+        email: 'business@lasermachine.com',
+        role: UserRole.BUSINESS,
+        avatarUrl: 'https://ui-avatars.com/api/?name=Juan+Perez&background=f59e0b&color=0a0a0a',
+        laserPoints: 0,
+        pointsHistory: []
+      });
+      setBusinessAccount(MOCK_BUSINESS_ACCOUNT);
+      setView('BUSINESS_PORTAL');
     }
   };
 
@@ -599,6 +743,57 @@ const App = () => {
       }
   };
 
+  const handleDuplicateCartItem = (item: OrderItem) => {
+    try {
+      const raw = JSON.parse(JSON.stringify(item)) as OrderItem;
+      raw.id = `dup-${Date.now()}`;
+      raw.totalPrice = raw.unitPrice * raw.quantity;
+      setCart((prev) => [...prev, raw]);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const updateCartItemNotes = (id: string, notes: string) => {
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, notes } : i)));
+  };
+
+  const copyShareDesignLink = (item: OrderItem) => {
+    const payload = encodeSharePayload(buildSharePayload(item));
+    const url = `${window.location.origin}${window.location.pathname}?share=${encodeURIComponent(payload)}`;
+    void navigator.clipboard.writeText(url).then(() => {
+      alert('Enlace copiado. Al abrirlo se añade una copia al carrito.');
+    });
+  };
+
+  const resumeLastSession = () => {
+    const last = localStorage.getItem('lm_last_view') as ViewState | null;
+    if (!last || last === 'LANDING') return;
+    if (last === 'CUSTOMIZER') {
+      const pid = localStorage.getItem('lm_last_product_id');
+      const p = pid ? products.find((x) => x.id === pid) : null;
+      if (p) setSelectedProduct(p);
+    }
+    setView(last);
+  };
+
+  const lastViewResume = useMemo(() => {
+    if (view !== 'LANDING' || typeof window === 'undefined') return null;
+    const v = localStorage.getItem('lm_last_view') as ViewState | null;
+    if (!v || v === 'LANDING' || v === 'ADMIN_DASHBOARD' || v === 'CLIENT_DASHBOARD') return null;
+    const labels: Partial<Record<ViewState, string>> = {
+      SHOP: 'Catálogo',
+      CUSTOMIZER: 'Personalizar',
+      CART: 'Carrito',
+      FONTS_SHOWCASE: 'Fuentes',
+      TRACKING: 'Seguimiento',
+      PUBLIC_TRACKING: 'Rastreo'
+    };
+    const label = labels[v];
+    if (!label) return null;
+    return { v, label };
+  }, [view]);
+
   const updateClientDetails = (originalPhone: string, newName: string, newPhone: string, newEmail: string) => {
       setOrders(prevOrders => prevOrders.map(o => {
           if (o.customerPhone === originalPhone) {
@@ -683,19 +878,34 @@ const App = () => {
           adminActiveTab={adminActiveTab}
         />
       )}
+
+      {lastViewResume && (
+        <button
+          type="button"
+          onClick={resumeLastSession}
+          className="no-print fixed bottom-6 right-6 z-[90] rounded-full border border-amber-500/50 bg-amber-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black shadow-lg shadow-amber-500/30 transition hover:bg-amber-300 dark:text-black"
+        >
+          Continuar: {lastViewResume.label}
+        </button>
+      )}
       
     <main className={`flex-1 w-full overflow-y-auto no-scrollbar bg-transparent ${getPatternClass()}`}>
         {view === 'LANDING' && (
-          <LandingPage 
-            storeConfig={storeConfig}
-            products={products}
-            onNavigate={(view) => setView(view)}
-            onLogin={() => setIsLoginOpen(true)}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <LandingPage 
+              storeConfig={storeConfig}
+              products={products}
+              onNavigate={(view) => setView(view)}
+              onLogin={() => setIsLoginOpen(true)}
+              onBusinessRequest={() => setIsBusinessRequestOpen(true)}
+            />
+          </Suspense>
         )}
 
         {view === 'PUBLIC_TRACKING' && (
+          <Suspense fallback={<ViewLoader />}>
             <PublicTracking orders={orders} onBack={() => setView('LANDING')} preSelectedOrderId={preSelectedOrderId} />
+          </Suspense>
         )}
 
         {view === 'SHOP' && (
@@ -724,28 +934,31 @@ const App = () => {
         )}
 
         {view === 'FONTS_SHOWCASE' && (
-          <FontShowcase 
-            fonts={fonts} 
-            onSelectFont={(id, text) => {
-              setPreSelectedFontId(id);
-              setPreSelectedText(text || '');
-              setView('SHOP');
-            }}
-            onBack={() => setView('SHOP')}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <FontShowcase 
+              fonts={fonts} 
+              onSelectFont={(id, text) => {
+                setPreSelectedFontId(id);
+                setPreSelectedText(text || '');
+                setView('SHOP');
+              }}
+              onBack={() => setView('SHOP')}
+            />
+          </Suspense>
         )}
 
         {view === 'CUSTOMIZER' && selectedProduct && (
-          <ProductVisualizer 
-            product={selectedProduct} fonts={fonts} pricing={pricing}
-            availableColors={storeConfig.globalColors}
-            initialFontId={preSelectedFontId || undefined}
-            initialState={editingItem || (preSelectedText ? { frontText: preSelectedText, frontFontId: preSelectedFontId || undefined } as OrderItem : null)}
-            galleryAssets={storeConfig.galleryAssets || []}
-            storeConfig={storeConfig}
-            onBack={() => { setView('SHOP'); setPreSelectedText(''); }} 
-            onSwitchProduct={(p) => { setSelectedProduct(p); setEditingItem(null); }}
-            onSave={(config, goToCart) => { 
+          <Suspense fallback={<ViewLoader />}>
+            <ProductVisualizer 
+              product={selectedProduct} fonts={fonts} pricing={pricing}
+              availableColors={storeConfig.globalColors}
+              initialFontId={preSelectedFontId || undefined}
+              initialState={editingItem || (preSelectedText ? { frontText: preSelectedText, frontFontId: preSelectedFontId || undefined } as OrderItem : null)}
+              galleryAssets={storeConfig.galleryAssets || []}
+              storeConfig={storeConfig}
+              onBack={() => { setView('SHOP'); setPreSelectedText(''); }} 
+              onSwitchProduct={(p) => { setSelectedProduct(p); setEditingItem(null); }}
+              onSave={(config, goToCart) => { 
               const fontName = fonts.find(f => f.id === config.frontFontId)?.name || 'Default';
               const backFontName = fonts.find(f => f.id === config.backFontId)?.name || 'Default';
               
@@ -791,9 +1004,10 @@ const App = () => {
                   setView('SHOP'); 
               }
             }}
-            onGoToCart={() => setView('CART')}
-            isDarkMode={isDarkMode}
-          />
+              onGoToCart={() => setView('CART')}
+              isDarkMode={isDarkMode}
+            />
+          </Suspense>
         )}
 
         {/* Customizer without product selected - show product selector */}
@@ -886,15 +1100,35 @@ const App = () => {
                               </div>
                               
                               <div className="mt-3 flex flex-wrap gap-2">
-                                   <button onClick={() => setPreviewItem(item)} className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-500 hover:text-black border border-amber-500/50 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                   <button type="button" aria-label="Ver diseño final" onClick={() => setPreviewItem(item)} className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-500 hover:text-black border border-amber-500/50 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
                                        <Eye size={12}/> Ver Diseño Final
                                    </button>
-                                   <button onClick={() => handleEditCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                   <button type="button" aria-label="Editar línea" onClick={() => handleEditCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
                                        <Edit2 size={12}/> Editar
                                    </button>
-                                   <button onClick={() => setCart(cart.filter(c => c.id !== item.id))} className="px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                   <button type="button" aria-label="Duplicar línea" onClick={() => handleDuplicateCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Layers size={12}/> Duplicar
+                                   </button>
+                                   <button type="button" aria-label="Compartir enlace del diseño" onClick={() => copyShareDesignLink(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Share2 size={12}/> Compartir
+                                   </button>
+                                   <button type="button" aria-label="Eliminar línea" onClick={() => setCart(cart.filter(c => c.id !== item.id))} className="px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
                                        <Trash2 size={12}/> Borrar
                                    </button>
+                              </div>
+
+                              <div className="mt-4 w-full">
+                                <label htmlFor={`line-notes-${item.id}`} className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block mb-1.5">
+                                  Notas para taller (esta línea)
+                                </label>
+                                <textarea
+                                  id={`line-notes-${item.id}`}
+                                  value={item.notes || ''}
+                                  onChange={(e) => updateCartItemNotes(item.id, e.target.value)}
+                                  placeholder="Ej. logo más grande, alinear a la derecha, cuidar borde…"
+                                  rows={2}
+                                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-black/40 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 resize-y min-h-[52px]"
+                                />
                               </div>
 
                               {/* Price Breakdown Mini */}
@@ -1101,28 +1335,31 @@ const App = () => {
         )}
 
         {view === 'ADMIN_DASHBOARD' && user?.role === UserRole.ADMIN && (
-          <AdminDashboard 
-            orders={orders} products={products} fonts={fonts} pricing={pricing}
-            storeConfig={storeConfig}
-            user={user} setUser={setUser}
-            onUpdatePricing={setPricing} onUpdateStoreConfig={setStoreConfig}
-            onUpdateOrder={(updatedOrder) => setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
-            onAddOrder={(newOrder) => setOrders([newOrder, ...orders])}
-            onUpdateOrderPriority={(id, p) => setOrders(orders.map(o => o.id === id ? {...o, isPriority: p} : o))}
-            onAddProduct={p => setProducts([...products, p])}
-            onUpdateProduct={p => setProducts(products.map(x => x.id === p.id ? p : x))}
-            onDeleteProduct={id => setProducts(products.filter(p => p.id !== id))}
-            onAddFont={f => setFonts([...fonts, f])}
-            onUpdateFont={(oldId, f) => { console.log('onUpdateFont called:', oldId, f); setFonts(prev => prev.map(font => font.id === oldId ? f : font)); }}
-            onDeleteFont={id => setFonts(fonts.filter(f => f.id !== id))}
-            onUpdateClient={updateClientDetails}
-            onDeleteClient={deleteClientHistory}
-            onResetOrdersAndClients={handleResetOrdersAndClients}
-            onResetInventoryCounts={handleResetInventoryCounts}
-            onResetProducts={handleResetProducts}
-            onOpenAssistant={openAssistant}
-            onTabChange={setAdminActiveTab}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <AdminDashboard 
+              orders={orders} products={products} fonts={fonts} pricing={pricing}
+              storeConfig={storeConfig}
+              user={user} setUser={setUser}
+              onUpdatePricing={setPricing} onUpdateStoreConfig={setStoreConfig}
+              onUpdateOrder={(updatedOrder) => setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
+              onAddOrder={(newOrder) => setOrders([newOrder, ...orders])}
+              onUpdateOrderPriority={(id, p) => setOrders(orders.map(o => o.id === id ? {...o, isPriority: p} : o))}
+              onAddProduct={p => setProducts([...products, p])}
+              onUpdateProduct={p => setProducts(products.map(x => x.id === p.id ? p : x))}
+              onDeleteProduct={id => setProducts(products.filter(p => p.id !== id))}
+              onAddFont={f => setFonts([...fonts, f])}
+              onUpdateFont={(oldId, f) => { console.log('onUpdateFont called:', oldId, f); setFonts(prev => prev.map(font => font.id === oldId ? f : font)); }}
+              onDeleteFont={id => setFonts(fonts.filter(f => f.id !== id))}
+              onUpdateClient={updateClientDetails}
+              onDeleteClient={deleteClientHistory}
+              onResetOrdersAndClients={handleResetOrdersAndClients}
+              onResetInventoryCounts={handleResetInventoryCounts}
+              onResetProducts={handleResetProducts}
+              onOpenAssistant={openAssistant}
+              activeTab={adminActiveTab}
+              onTabChange={setAdminActiveTab}
+            />
+          </Suspense>
         )}
 
         {view === 'CLIENT_DASHBOARD' && (user?.role === UserRole.CLIENT || user?.role === UserRole.ADMIN) && (
@@ -1130,27 +1367,60 @@ const App = () => {
             className="fixed inset-0 z-[9999] overflow-auto"
             style={{ backgroundColor: isDarkMode ? '#09090b' : '#ffffff' }}
           >
-            <ClientDashboard 
-              user={user} 
-              orders={orders} 
-              coupons={storeConfig.coupons}
-              onCreateReferral={handleCreateReferral}
-              products={products}
-              fonts={fonts}
-              isDarkMode={isDarkMode}
-              toggleTheme={() => setIsDarkMode(!isDarkMode)}
-              onBackToAdmin={user?.role === UserRole.ADMIN ? () => setView('ADMIN_DASHBOARD') : undefined}
-              onProductSelect={(product) => {
-                setSelectedProduct(product);
-                setEditingItem(null);
-                setView('CUSTOMIZER');
-              }}
-              onSelectFontForCustomizer={(fontId, text) => {
-                setPreSelectedFontId(fontId);
-                setPreSelectedText(text);
-                setView('SHOP');
-              }}
-            />
+            <Suspense fallback={<ViewLoader />}>
+              <ClientDashboard 
+                user={user} 
+                orders={orders} 
+                coupons={storeConfig.coupons}
+                onCreateReferral={handleCreateReferral}
+                products={products}
+                fonts={fonts}
+                isDarkMode={isDarkMode}
+                toggleTheme={() => setIsDarkMode(!isDarkMode)}
+                onBackToAdmin={user?.role === UserRole.ADMIN ? () => setView('ADMIN_DASHBOARD') : undefined}
+                onProductSelect={(product) => {
+                  setSelectedProduct(product);
+                  setEditingItem(null);
+                  setView('CUSTOMIZER');
+                }}
+                onSelectFontForCustomizer={(fontId, text) => {
+                  setPreSelectedFontId(fontId);
+                  setPreSelectedText(text);
+                  setView('SHOP');
+                }}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        {view === 'BUSINESS_PORTAL' && user?.role === UserRole.BUSINESS && businessAccount && (
+          <div 
+            className="fixed inset-0 z-[9999] overflow-auto"
+            style={{ backgroundColor: isDarkMode ? '#09090b' : '#ffffff' }}
+          >
+            <Suspense fallback={<ViewLoader />}>
+              <BusinessPortal 
+                user={user}
+                businessAccount={businessAccount}
+                orders={orders}
+                products={products}
+                fonts={fonts}
+                storeConfig={storeConfig}
+                pricing={pricing}
+                isDarkMode={isDarkMode}
+                toggleTheme={() => setIsDarkMode(!isDarkMode)}
+                onProductSelect={(product) => {
+                  setSelectedProduct(product);
+                  setEditingItem(null);
+                  setView('CUSTOMIZER');
+                }}
+                onSelectFontForCustomizer={(fontId, text) => {
+                  setPreSelectedFontId(fontId);
+                  setPreSelectedText(text);
+                  setView('SHOP');
+                }}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -1160,6 +1430,24 @@ const App = () => {
             onClose={() => setIsLoginOpen(false)} 
             onLogin={handleAuth} 
         />
+        
+        {/* Business Request Modal */}
+        <BusinessRequestModal
+          isOpen={isBusinessRequestOpen}
+          onClose={() => setIsBusinessRequestOpen(false)}
+          onSubmit={(account) => {
+            // Could show a toast here
+            console.log('Business request submitted:', account);
+          }}
+        />
+        
+        {/* DEV: Mock business toggle */}
+        <button
+          onClick={toggleMockBusinessUser}
+          className="no-print fixed bottom-6 left-6 z-[90] rounded-full border border-violet-500/50 bg-violet-500/20 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-violet-300 shadow-lg hover:bg-violet-500/30 transition"
+        >
+          {user?.role === UserRole.BUSINESS ? '← Salir modo Business' : 'Modo Business DEV →'}
+        </button>
 
         {/* Command Assistant (RAB) */}
         <CommandAssistant
@@ -1168,11 +1456,25 @@ const App = () => {
           initialQuery={assistantQuery}
           orders={orders}
           products={products}
-          onNavigate={(tab, opts) => {
+          onNavigate={(tab) => {
             setIsAssistantOpen(false);
-            if (tab === 'ORDERS') setView('ADMIN_DASHBOARD');
-            if (tab === 'INVENTORY') setView('ADMIN_DASHBOARD');
-            if (tab === 'SETTINGS') setView('ADMIN_DASHBOARD');
+            setView('ADMIN_DASHBOARD');
+            const map: Record<string, typeof adminActiveTab> = {
+              ORDERS: 'ORDERS',
+              INVENTORY: 'INVENTORY',
+              SETTINGS: 'SETTINGS',
+              FINANCE: 'FINANCE',
+              CLIENTS: 'CLIENTS',
+              FONTS: 'FONTS',
+              DASHBOARD: 'DASHBOARD',
+              PRODUCTION: 'PRODUCTION',
+              GALERIA: 'GALERIA',
+              CALENDAR: 'CALENDAR',
+              CONTENT: 'CONTENT',
+              EMPRESAS: 'EMPRESAS'
+            };
+            const next = map[tab];
+            if (next) setAdminActiveTab(next);
           }}
         />
 
@@ -1201,24 +1503,28 @@ const App = () => {
           
           {/* Cart Panel */}
           <CartPanel
-            cartItems={cart.map(item => ({
-              id: item.id,
-              productName: item.productName,
-              colorName: item.colorName,
-              quantity: item.quantity,
-              price: item.price,
-              imageUrl: item.imageUrl
-            }))}
+            cartItems={cart.map((item) => {
+              const prod = products.find((p) => p.id === item.productId);
+              const color = prod?.colors.find((c) => c.name === item.colorName);
+              return {
+                id: item.id,
+                productName: prod?.name || item.productId,
+                colorName: item.colorName,
+                quantity: item.quantity,
+                price: item.unitPrice,
+                imageUrl: color?.imageUrl || prod?.imageUrl
+              };
+            })}
             onUpdateQuantity={(id, qty) => {
               if (qty === 0) {
-                setCart(cart.filter(i => i.id !== id));
+                setCart(cart.filter((i) => i.id !== id));
               } else {
-                setCart(cart.map(i => i.id === id ? { ...i, quantity: qty } : i));
+                setCart(cart.map((i) => (i.id === id ? { ...i, quantity: qty, totalPrice: i.unitPrice * qty } : i)));
               }
             }}
-            onRemoveItem={(id) => setCart(cart.filter(i => i.id !== id))}
-            onCheckout={() => setView('CHECKOUT')}
-            total={cart.reduce((sum, i) => sum + i.price * i.quantity, 0)}
+            onRemoveItem={(id) => setCart(cart.filter((i) => i.id !== id))}
+            onCheckout={() => setView('CART')}
+            total={cart.reduce((sum, i) => sum + i.totalPrice, 0)}
           />
           
         </div>

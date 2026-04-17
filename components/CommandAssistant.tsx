@@ -16,7 +16,18 @@ import {
   getTopSellingProducts
 } from '../services/neonService';
 
-type NavTab = 'ORDERS' | 'INVENTORY' | 'CLIENTS' | 'SETTINGS' | 'FINANCE';
+type NavTab =
+  | 'DASHBOARD'
+  | 'ORDERS'
+  | 'PRODUCTION'
+  | 'INVENTORY'
+  | 'CLIENTS'
+  | 'SETTINGS'
+  | 'FINANCE'
+  | 'FONTS'
+  | 'GALERIA'
+  | 'CALENDAR'
+  | 'CONTENT';
 interface NavAction { tab: NavTab; orderId?: string; settingsTab?: string; label: string; }
 
 interface CommandAssistantProps {

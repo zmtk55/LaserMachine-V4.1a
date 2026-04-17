@@ -29,6 +29,7 @@ interface LandingPageProps {
   products: Product[];
   onNavigate: (view: 'SHOP' | 'CUSTOMIZER' | 'LANDING') => void;
   onLogin: () => void;
+  onBusinessRequest?: () => void;
 }
 
 // Productos destacados para el hero (rotación automática)
@@ -56,7 +57,7 @@ const HERO_PRODUCTS = [
   }
 ];
 
-export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products, onNavigate, onLogin }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products, onNavigate, onLogin, onBusinessRequest }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -225,6 +226,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ storeConfig, products,
                     <Zap size={18} className="group-hover:scale-110 transition-transform" />
                     ¡Ya tengo mi termo!
                   </span>
+                </button>
+              </div>
+
+              {/* Business CTA */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={onBusinessRequest}
+                  className="group flex items-center gap-2 px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-violet-100 dark:hover:bg-violet-900/30 border border-zinc-200 dark:border-zinc-700 rounded-xl transition-all active:scale-95"
+                >
+                  <div className="w-7 h-7 bg-violet-500 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-xs font-black">B2B</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-zinc-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">¿Eres empresa?</p>
+                    <p className="text-[10px] text-zinc-500">Precios especiales y crédito</p>
+                  </div>
                 </button>
               </div>
 

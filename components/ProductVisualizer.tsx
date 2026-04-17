@@ -161,7 +161,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const currentColorObj = product.colors.find(c => c.name === selectedColor);
   const currentImage = userUploadedImage ? userUploadedImage : (currentColorObj?.imageUrl || product.imageUrl);
   const showColors = !userUploadedImage;
-  const currentStock = currentColorObj?.stock || 0;
+  const currentStock = currentColorObj?.stock ?? 999;
   const isOutOfStock = !isClientItem && currentStock <= 0;
 
   useEffect(() => {

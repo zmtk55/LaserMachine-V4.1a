@@ -13,7 +13,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -35,24 +35,24 @@ html.dark, html.dark body {
 
 /* New UI/UX Pro Max typography system */
 .font-heading {
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
 }
 
 .font-body {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 400;
 }
 
-/* Headings use Rubik */
+/* Headings use Plus Jakarta Sans */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
 }
 
 /* Buttons and important text */
 .btn-primary, .btn-secondary, .font-bold {
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* Clases de fuentes para el grabador (Visualizer) */
@@ -91,7 +91,7 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url(var(--app-bg));
+  background-image: var(--app-bg);
   background-size: cover;
   background-position: center;
   z-index: -9999;
@@ -243,4 +243,37 @@ body.debug-reveal .fixed.inset-0 > * {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Impresión: ficha de pedido (admin) u otras zonas con .print-area */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
 }

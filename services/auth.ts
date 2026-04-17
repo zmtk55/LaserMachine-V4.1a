@@ -12,7 +12,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebaseConfig';
-import { User, UserRole } from '../types';
+import { User, UserRole, BusinessAccount, BusinessStatus } from '../types';
 
 // Admin emails hardcoded (fallback)
 const ADMIN_EMAILS = [
@@ -57,6 +57,43 @@ export const checkIsAdmin = (email: string): boolean => {
     ...getDynamicAdminEmails()
   ].map(e => e.toLowerCase());
   return allAdminEmails.includes(lowerEmail);
+};
+
+// Check if user belongs to an approved business account
+export const getBusinessAccountForUser = async (email: string): Promise<BusinessAccount | null> => {
+  if (!db) return null;
+  try {
+    const businessesRef = collection(db, 'businessAccounts');
+    const q = query(
+      businessesRef,
+      where('users', 'array-contains-any', [{ email: email.toLowerCase() }]),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const data = snap.docs[0].data() as BusinessAccount;
+      if (data.status === BusinessStatus.APPROVED) return data;
+    }
+  } catch (e) {
+    // Fallback to localStorage
+    try {
+      const saved = localStorage.getItem('lm_business_accounts_v1');
+      if (saved) {
+        const accounts: BusinessAccount[] = JSON.parse(saved);
+        const found = accounts.find(a => 
+          a.status === BusinessStatus.APPROVED && 
+          a.users.some(u => u.email.toLowerCase() === email.toLowerCase())
+        );
+        return found || null;
+      }
+    } catch {}
+  }
+  return null;
+};
+
+export const isBusinessUser = async (email: string): Promise<boolean> => {
+  const account = await getBusinessAccountForUser(email);
+  return !!account;
 };
 
 // Rate limiting - Check if user can make another attempt
@@ -120,7 +157,8 @@ export const syncUserWithFirestore = async (firebaseUser: FirebaseUser, role?: U
   const userSnap = await getDoc(userRef);
   
   const isAdmin = checkIsAdmin(firebaseUser.email || '');
-  const userRole = role || (isAdmin ? UserRole.ADMIN : UserRole.CLIENT);
+  const isBusiness = await isBusinessUser(firebaseUser.email || '');
+  const userRole = role || (isAdmin ? UserRole.ADMIN : isBusiness ? UserRole.BUSINESS : UserRole.CLIENT);
   
   if (!userSnap.exists()) {
     // New user - create in Firestore
@@ -131,7 +169,7 @@ export const syncUserWithFirestore = async (firebaseUser: FirebaseUser, role?: U
       name: firebaseUser.displayName || additionalData?.name || firebaseUser.email?.split('@')[0] || 'Invitado',
       role: userRole,
       avatarUrl: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(additionalData?.name || 'Guest')}&background=facc15&color=000000`,
-      laserPoints: isAdmin ? 0 : 150, // Welcome points for clients
+      laserPoints: isAdmin || isBusiness ? 0 : 150, // Welcome points for clients
       pointsHistory: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -139,6 +177,7 @@ export const syncUserWithFirestore = async (firebaseUser: FirebaseUser, role?: U
       address: additionalData?.address || '',
       isActive: true,
       isGuest: userRole === UserRole.GUEST,
+      businessId: additionalData?.businessId || '',
       ...additionalData
     });
   } else {
@@ -170,7 +209,8 @@ export const getUserFromFirestore = async (uid: string): Promise<User | null> =>
         laserPoints: data.laserPoints || 0,
         pointsHistory: data.pointsHistory || [],
         phone: data.phone || '',
-        isGuest: data.isGuest || false
+        isGuest: data.isGuest || false,
+        businessId: data.businessId || ''
       } as User;
     }
   } catch (error) {
@@ -180,16 +220,17 @@ export const getUserFromFirestore = async (uid: string): Promise<User | null> =>
 };
 
 // Convert Firebase user to App User
-export const convertToAppUser = (firebaseUser: FirebaseUser, firestoreUser?: User | null): User => {
+export const convertToAppUser = async (firebaseUser: FirebaseUser, firestoreUser?: User | null): Promise<User> => {
   const isAdmin = checkIsAdmin(firebaseUser.email || '');
+  const isBusiness = await isBusinessUser(firebaseUser.email || '');
   
   return {
     id: firebaseUser.uid,
     email: firestoreUser?.email || firebaseUser.email?.toLowerCase() || '',
     name: firestoreUser?.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Invitado',
-    role: firestoreUser?.role || (isAdmin ? UserRole.ADMIN : UserRole.CLIENT),
+    role: firestoreUser?.role || (isAdmin ? UserRole.ADMIN : isBusiness ? UserRole.BUSINESS : UserRole.CLIENT),
     avatarUrl: firestoreUser?.avatarUrl || firebaseUser.photoURL || `https://ui-avatars.com/api/?name=Guest&background=facc15&color=000000`,
-    laserPoints: firestoreUser?.laserPoints || (isAdmin ? 0 : 150),
+    laserPoints: firestoreUser?.laserPoints || (isAdmin || isBusiness ? 0 : 150),
     pointsHistory: firestoreUser?.pointsHistory || [],
     phone: firestoreUser?.phone || '',
     isGuest: firestoreUser?.isGuest || false
@@ -296,7 +337,7 @@ export const registerWithEmail = async (
     // Get user from Firestore
     const firestoreUser = await getUserFromFirestore(firebaseUser.uid);
     
-    return convertToAppUser(firebaseUser, firestoreUser);
+    return await convertToAppUser(firebaseUser, firestoreUser);
   } catch (error: any) {
     console.error('Registration error:', error);
     throw new Error(getAuthErrorMessage(error.code));
@@ -317,7 +358,7 @@ export const loginWithEmail = async (email: string, password: string): Promise<U
     // Get user from Firestore
     const firestoreUser = await getUserFromFirestore(firebaseUser.uid);
     
-    return convertToAppUser(firebaseUser, firestoreUser);
+    return await convertToAppUser(firebaseUser, firestoreUser);
   } catch (error: any) {
     console.error('Login error:', error);
     throw new Error(getAuthErrorMessage(error.code));
@@ -338,7 +379,7 @@ export const loginWithGoogle = async (): Promise<User> => {
     // Get user from Firestore
     const firestoreUser = await getUserFromFirestore(firebaseUser.uid);
     
-    return convertToAppUser(firebaseUser, firestoreUser);
+    return await convertToAppUser(firebaseUser, firestoreUser);
   } catch (error: any) {
     console.error('Google login error:', error);
     throw new Error(getAuthErrorMessage(error.code));
@@ -373,7 +414,7 @@ export const onAuthChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
       const firestoreUser = await getUserFromFirestore(firebaseUser.uid);
-      callback(convertToAppUser(firebaseUser, firestoreUser));
+      callback(await convertToAppUser(firebaseUser, firestoreUser));
     } else {
       callback(null);
     }

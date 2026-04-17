@@ -28,10 +28,10 @@ export const BackgroundProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (bgUrl) {
         console.debug('BackgroundContext: applying bgUrl', (bgUrl || '').slice?.(0, 120));
-        // Store raw URL in CSS variable; CSS uses url(var(--app-bg))
-        document.documentElement.style.setProperty('--app-bg', bgUrl);
-        // Also apply inline body/background as a defensive fallback
+        // Store a full CSS image value in the variable (url("...")).
         const esc = (s: string) => s.replace(/"/g, '\\"');
+        document.documentElement.style.setProperty('--app-bg', `url("${esc(bgUrl)}")`);
+        // Also apply inline body/background as a defensive fallback
         (document.body as HTMLBodyElement).style.backgroundImage = `url("${esc(bgUrl)}")`;
         (document.body as HTMLBodyElement).style.backgroundSize = 'cover';
         (document.body as HTMLBodyElement).style.backgroundPosition = 'center';

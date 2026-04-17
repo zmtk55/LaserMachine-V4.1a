@@ -1,7 +1,8 @@
  export enum UserRole {
   ADMIN = 'ADMIN',
   CLIENT = 'CLIENT',
-  GUEST = 'GUEST'
+  GUEST = 'GUEST',
+  BUSINESS = 'BUSINESS'
 }
 
 export interface PointTransaction {
@@ -53,6 +54,8 @@ export interface Product {
   imageUrl: string;
   laserPresetId?: string;
   sku?: string;
+  isActive?: boolean;
+  approvedBusinessIds?: string[];
 }
 
 export interface PricingConfig {
@@ -296,7 +299,7 @@ export interface CustomerProfile {
   tags: string[];
 }
 
-export type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMIZER' | 'CART' | 'ADMIN_DASHBOARD' | 'CLIENT_DASHBOARD' | 'FONTS_SHOWCASE' | 'PUBLIC_TRACKING' | 'TRACKING';
+export type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMIZER' | 'CART' | 'ADMIN_DASHBOARD' | 'CLIENT_DASHBOARD' | 'BUSINESS_PORTAL' | 'FONTS_SHOWCASE' | 'PUBLIC_TRACKING' | 'TRACKING';
 
 // ========================================
 //   ORDER HISTORY TYPES
@@ -436,4 +439,156 @@ export interface Appointment {
 export interface AppointmentSlot {
   time: string;
   available: boolean;
+}
+// ========================================
+//   BUSINESS PORTAL TYPES
+// ========================================
+
+export enum BusinessStatus {
+  PENDING = 'PENDIENTE',
+  APPROVED = 'APROBADO',
+  REJECTED = 'RECHAZADO',
+  SUSPENDED = 'SUSPENDIDO'
+}
+
+export interface BusinessUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'ADMIN' | 'USER';
+  avatarUrl?: string;
+  isActive: boolean;
+}
+
+export interface BusinessBrandKit {
+  logoUrl: string;
+  approvedFonts: number[];
+  approvedColors: string[];
+}
+
+export interface BusinessAccount {
+  id: string;
+  companyName: string;
+  taxId: string;
+  industry?: string;
+  representativeName: string;
+  representativePhone: string;
+  representativeEmail: string;
+  discountTier: 'NONE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+  creditLimit: number;
+  creditUsed: number;
+  paymentTerms: 'CONTADO' | '15_DIAS' | '30_DIAS' | '60_DIAS';
+  brandKit: BusinessBrandKit;
+  assignedRepId: string;
+  assignedRepName?: string;
+  users: BusinessUser[];
+  status: BusinessStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  lastOrderAt?: string;
+  totalOrders: number;
+  totalSpent: number;
+}
+
+export interface BusinessOrder extends Order {
+  businessId: string;
+  businessName: string;
+  bulkItems?: BulkOrderLine[];
+  isBulkOrder: boolean;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+export interface BulkOrderLine {
+  id: string;
+  recipientName: string;
+  recipientDepartment?: string;
+  item: OrderItem;
+}
+
+export interface BusinessChatMessage {
+  id: string;
+  businessId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'BUSINESS' | 'REP' | 'ADMIN';
+  content: string;
+  timestamp: string;
+  read: boolean;
+  attachments?: string[];
+}
+
+export interface BusinessTemplate {
+  id: string;
+  businessId: string;
+  name: string;
+  productId: string;
+  colorName: string;
+  frontText: string;
+  frontFontId: number;
+  backText: string;
+  backFontId: number;
+  logoUrl?: string;
+  createdAt: string;
+}
+
+// ------------------------------------------------------------------
+// Business Portal Extended Types
+// ------------------------------------------------------------------
+
+export interface BulkOrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  colorName: string;
+  colorHex?: string;
+  quantity: number;
+  unitPrice: number;
+  discountPercent: number;
+  finalUnitPrice: number;
+  subtotal: number;
+  notes?: string;
+  poNumber?: string;
+}
+
+export interface DraftOrder {
+  id: string;
+  businessId: string;
+  createdById: string;
+  createdByName: string;
+  items: BulkOrderItem[];
+  poNumber?: string;
+  notes?: string;
+  total: number;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BusinessInvoice {
+  id: string;
+  businessId: string;
+  orderId: string;
+  invoiceNumber: string;
+  amount: number;
+  paidAmount: number;
+  status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+  dueDate: string;
+  issuedAt: string;
+  paidAt?: string;
+  pdfUrl?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  businessId: string;
+  userId: string;
+  userName: string;
+  action: 'LOGIN' | 'ORDER_CREATED' | 'ORDER_APPROVED' | 'ORDER_REJECTED' | 'DRAFT_SAVED' | 'USER_INVITED' | 'PROFILE_UPDATED' | 'CHAT_SENT';
+  targetId?: string;
+  targetType?: string;
+  metadata?: Record<string, any>;
+  timestamp: string;
 }
