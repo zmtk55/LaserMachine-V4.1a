@@ -1,0 +1,1540 @@
+
+
+import React, { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
+import { BackgroundProvider } from './contexts/BackgroundContext';
+import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
+import { CartProvider, useCartPanel } from './contexts/CartContext';
+import { OrderHistoryProvider } from './contexts/OrderHistoryContext';
+import { ContextMenuProvider } from './contexts/ContextMenuContext';
+import ContextMenu from './components/ContextMenu';
+import { NavBar } from './components/NavBar';
+import CommandAssistant from './components/CommandAssistant';
+import { TechnicalPreview } from './components/TechnicalPreview';
+import { AuthModal } from './components/AuthModal';
+import { BusinessRequestModal } from './components/BusinessRequestModal';
+import { NotificationPanel } from './components/NotificationPanel';
+import { NotificationManager } from './components/NotificationManager';
+import { CartPanel } from './components/CartPanel';
+// import { LottieAnimation } from './components/LottieAnimation';
+import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction, BusinessAccount } from './types';
+import { PRODUCTS as CONST_PRODUCTS, FONTS as CONST_FONTS, ADMIN_USER, MOCK_ORDERS } from './constants';
+import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, CreditCard, QrCode, Ticket, Eye, Banknote, CreditCard as CardIcon, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2, Copy, Share2, Layers } from 'lucide-react';
+import { buildSharePayload, decodeSharePayload, encodeSharePayload, orderItemFromSharePayload } from './utils/shareDesign';
+import { onAuthChange, logoutUser, isFirebaseConfigured } from './services/auth';
+import { useStrapiProducts } from './hooks/useStrapi';
+
+const LandingPage = React.lazy(() =>
+  import('./components/LandingPage').then((m) => ({ default: m.LandingPage }))
+);
+const PublicTracking = React.lazy(() =>
+  import('./components/PublicTracking').then((m) => ({ default: m.PublicTracking }))
+);
+const FontShowcase = React.lazy(() =>
+  import('./components/FontShowcase').then((m) => ({ default: m.FontShowcase }))
+);
+const ProductVisualizer = React.lazy(() =>
+  import('./components/ProductVisualizer').then((m) => ({ default: m.ProductVisualizer }))
+);
+const AdminDashboard = React.lazy(() =>
+  import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
+const ClientDashboard = React.lazy(() =>
+  import('./components/ClientDashboard').then((m) => ({ default: m.ClientDashboard }))
+);
+const BusinessPortal = React.lazy(() =>
+  import('./components/BusinessPortal').then((m) => ({ default: m.BusinessPortal }))
+);
+
+const ViewLoader = () => (
+  <div className="w-full min-h-[40vh] flex items-center justify-center">
+    <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+  </div>
+);
+
+// Import Lottie animation
+// import playfulAnimation from './src/lotties/playful.json';
+
+// --- FIXED PRICING ---
+const DEFAULT_PRICING: PricingConfig = {
+  baseEngravingPrice: 100, // Fixed to $100
+  extraSidePrice: 50,      // Fixed to $50
+  logoSurcharge: 50
+};
+
+// 17 Basic Colors
+const DEFAULT_COLORS = [
+    { name: 'NEGRO', hex: '#000000' },
+    { name: 'BLANCO', hex: '#FFFFFF' },
+    { name: 'ACERO', hex: '#C0C0C0' },
+    { name: 'AZUL MARINO', hex: '#000080' },
+    { name: 'AZUL REY', hex: '#4169E1' },
+    { name: 'CELESTE', hex: '#87CEEB' },
+    { name: 'ROJO', hex: '#FF0000' },
+    { name: 'VINO', hex: '#800000' },
+    { name: 'ROSA PASTEL', hex: '#FFD1DC' },
+    { name: 'FUCSIA', hex: '#FF00FF' },
+    { name: 'MORADO', hex: '#800080' },
+    { name: 'LILA', hex: '#C8A2C8' },
+    { name: 'AMARILLO', hex: '#FFFF00' },
+    { name: 'NARANJA', hex: '#FFA500' },
+    { name: 'VERDE MILITAR', hex: '#4B5320' },
+    { name: 'VERDE BOTELLA', hex: '#006A4E' },
+    { name: 'AQUA', hex: '#00FFFF' },
+];
+
+const DEFAULT_GALLERY_ASSETS = [
+    { id: 'ast-1', url: 'https://cdn-icons-png.flaticon.com/512/25/25231.png', name: 'GitHub', type: 'CLIPART' }, 
+    { id: 'ast-2', url: 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png', name: 'Star', type: 'CLIPART' },
+    { id: 'ast-3', url: 'https://cdn-icons-png.flaticon.com/512/833/833472.png', name: 'Heart', type: 'CLIPART' },
+    { id: 'ast-4', url: 'https://cdn-icons-png.flaticon.com/512/740/740845.png', name: 'Lightning', type: 'CLIPART' },
+];
+
+const DEFAULT_STORE: StoreConfig = {
+  businessName: 'LASERMACHINE',
+  logoUrl: '',
+  accentColor: '#f59e0b',
+  themeDarkModeBg: '#000000',
+  bgPattern: 'dots',
+  nextOrderId: 1000,
+  productCategories: ['Tumblers', 'Botellas', 'Tazas', 'Accesorios', 'Termos'],
+  adminEmails: [],
+  pointsPercentage: 5, // Default 5%
+  whatsapp: '526371247095',
+  instagramUrl: '',
+  facebookUrl: 'lasermachinemexico',
+  bankInfo: 'H.CABORCA SONORA MEXICO \nCALLE 9 AV, L N79\nCP 83600',
+  shippingInfo: '',
+  coupons: [],
+  globalColors: DEFAULT_COLORS,
+  brandingAssets: [],
+  galleryAssets: DEFAULT_GALLERY_ASSETS as any,
+  messageTemplates: {
+      confirmation: "Hola {NOMBRE}, tu orden #{ID} ha sido recibida. Total: {TOTAL}. Seguimiento: {LINK}",
+      production: "Hola {NOMBRE}, ¡Tu orden #{ID} está en producción! 🛠️. Sigue tu pedido aquí: {LINK}",
+      ready: "Hola {NOMBRE}, tu pedido #{ID} está LISTO ✅. Recógelo o consulta detalles: {LINK}"
+  }
+};
+
+const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () => void, key?: React.Key }) => {
+    const [loaded, setLoaded] = useState(false);
+    return (
+        <div onClick={onClick} className="group cursor-pointer rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1">
+            <div className="aspect-square bg-white dark:bg-zinc-950 relative overflow-hidden flex items-center justify-center p-4">
+                {!loaded && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 z-10 animate-pulse">
+                        <Loader2 className="animate-spin text-zinc-400 w-5 h-5"/>
+                    </div>
+                )}
+                <img 
+                    src={product.imageUrl} 
+                    onLoad={() => setLoaded(true)}
+                    className={`max-w-[85%] max-h-[85%] object-contain group-hover:scale-105 transition-transform duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`} 
+                />
+            </div>
+            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{product.brand}</span>
+                <h3 className="font-bold text-sm uppercase tracking-tight mt-1 text-zinc-900 dark:text-white truncate">{product.name}</h3>
+                <div className="flex items-center justify-between mt-3">
+                    <p className="font-black text-base text-zinc-900 dark:text-white">${product.price}</p>
+                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Diseñar</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const App = () => {
+  const [view, setView] = useState<ViewState>('LANDING');
+  // TEMPORAL: Auth desactivado para desarrollo - usar admin por defecto
+  const [user, setUser] = useState<User | null>({
+    id: 'admin-temp',
+    name: 'Admin',
+    email: 'admin@lasermachine.com',
+    role: UserRole.ADMIN,
+    avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=facc15&color=000000',
+    laserPoints: 0,
+    pointsHistory: []
+  });
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [preSelectedOrderId, setPreSelectedOrderId] = useState<string | null>(null);
+  const [isBusinessRequestOpen, setIsBusinessRequestOpen] = useState(false);
+  
+  // Business Portal State
+  const [businessAccount, setBusinessAccount] = useState<BusinessAccount | null>(() => {
+    try {
+      const saved = localStorage.getItem('lm_business_account_v1');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  
+  // TEMP: Mock business account for dev testing
+  const MOCK_BUSINESS_ACCOUNT: BusinessAccount = {
+    id: 'BUS-DEV-001',
+    companyName: 'Constructora del Norte',
+    taxId: 'CNR123456ABC',
+    industry: 'Construcción',
+    representativeName: 'Juan Pérez',
+    representativePhone: '8181234567',
+    representativeEmail: 'business@lasermachine.com',
+    discountTier: 'GOLD',
+    creditLimit: 50000,
+    creditUsed: 12500,
+    paymentTerms: '30_DIAS',
+    brandKit: {
+      logoUrl: '',
+      approvedFonts: [999, 101, 104],
+      approvedColors: ['#1a1a2e', '#f5f5f5', '#c8e6c9'],
+    },
+    assignedRepId: 'rep-1',
+    assignedRepName: 'Carlos Ruiz',
+    users: [
+      { id: 'u1', name: 'Juan Pérez', email: 'business@lasermachine.com', phone: '8181234567', role: 'ADMIN', isActive: true }
+    ],
+    status: 'APPROVED',
+    notes: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    totalOrders: 12,
+    totalSpent: 45000,
+  };
+  
+  // Admin Dashboard Tab State (for NavBar title)
+  const [adminActiveTab, setAdminActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'PRODUCTION' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT' | 'EMPRESAS'>('DASHBOARD');
+  
+  // Command Assistant State
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [assistantQuery, setAssistantQuery] = useState('');
+  
+  // Open assistant with optional query
+  const openAssistant = useCallback((query?: string) => {
+    if (query) setAssistantQuery(query);
+    setIsAssistantOpen(true);
+  }, []);
+  
+  // Cmd+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsAssistantOpen(prev => !prev);
+      }
+      if (e.key === 'Escape') {
+        setIsAssistantOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+  
+  // Strapi Integration - Load products from backend
+  const { products: strapiProducts, loading: productsLoading } = useStrapiProducts();
+  
+  // Persistent State Initialization
+  // Bumped to v13 to force image refresh with YETI product images
+  const [products, setProducts] = useState<Product[]>(CONST_PRODUCTS);
+  
+  // Update products when Strapi data loads — only if valid structure with colors/stock
+  useEffect(() => {
+    if (strapiProducts && strapiProducts.length > 0 && strapiProducts.every((p: any) => p.colors && Array.isArray(p.colors) && p.colors.length > 0)) {
+      setProducts(strapiProducts);
+    }
+  }, [strapiProducts]);
+  
+  const [orders, setOrders] = useState<Order[]>(() => {
+      try {
+          const saved = localStorage.getItem('lm_orders_v10');
+          return saved ? JSON.parse(saved) : MOCK_ORDERS;
+      } catch (e) { return MOCK_ORDERS; }
+  });
+
+  const [fonts, setFonts] = useState<FontOption[]>(() => {
+      try {
+          const saved = localStorage.getItem('lm_fonts_v10');
+          return saved ? JSON.parse(saved) : CONST_FONTS;
+      } catch (e) { return CONST_FONTS; }
+  });
+
+  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => {
+      try {
+          const saved = localStorage.getItem('lm_store_v10');
+          let parsed = saved ? JSON.parse(saved) : DEFAULT_STORE;
+          if (!parsed.messageTemplates) parsed.messageTemplates = DEFAULT_STORE.messageTemplates;
+          if (!parsed.globalColors || parsed.globalColors.length === 0) parsed.globalColors = DEFAULT_COLORS;
+          if (!parsed.brandingAssets) parsed.brandingAssets = [];
+          if (!parsed.galleryAssets) parsed.galleryAssets = DEFAULT_GALLERY_ASSETS;
+          if (parsed.pointsPercentage === undefined) parsed.pointsPercentage = 5;
+          if (!parsed.themeDarkModeBg) parsed.themeDarkModeBg = DEFAULT_STORE.themeDarkModeBg;
+          if (!parsed.nextOrderId) parsed.nextOrderId = 1000;
+          if (!parsed.productCategories) parsed.productCategories = DEFAULT_STORE.productCategories;
+          if (!parsed.adminEmails) parsed.adminEmails = [];
+          return parsed;
+      } catch (e) { return DEFAULT_STORE; }
+  });
+
+  const [pricing, setPricing] = useState<PricingConfig>(() => {
+      try {
+          const saved = localStorage.getItem('lm_pricing_v10');
+          return saved ? JSON.parse(saved) : DEFAULT_PRICING;
+      } catch (e) { return DEFAULT_PRICING; }
+  });
+  
+  const [cart, setCart] = useState<OrderItem[]>(() => {
+    try {
+      const raw = localStorage.getItem('lm_cart_draft_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw) as OrderItem[];
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      /* ignore */
+    }
+    return [];
+  });
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', notes: '' });
+  const [customerSearch, setCustomerSearch] = useState('');
+  
+  // CHECKOUT STATE
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CASH);
+  const [showMercadoPagoModal, setShowMercadoPagoModal] = useState(false);
+  const [usePoints, setUsePoints] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>(DeliveryMethod.PICKUP);
+  
+  // EDITING & PREVIEW STATE
+  const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
+  const [previewItem, setPreviewItem] = useState<OrderItem | null>(null); // For Modal Preview
+
+  // New state for font flow
+  const [preSelectedFontId, setPreSelectedFontId] = useState<number | null>(null);
+  const [preSelectedText, setPreSelectedText] = useState<string>('');
+
+  // Persistence Effect
+  useEffect(() => {
+    console.log('Fonts state changed, saving to localStorage:', fonts.map(f => ({id: f.id, name: f.name})));
+    localStorage.setItem('lm_products_strapi', JSON.stringify(products));
+    localStorage.setItem('lm_orders_v10', JSON.stringify(orders));
+    localStorage.setItem('lm_store_v10', JSON.stringify(storeConfig));
+    localStorage.setItem('lm_pricing_v10', JSON.stringify(pricing));
+    localStorage.setItem('lm_fonts_v10', JSON.stringify(fonts));
+  }, [products, orders, storeConfig, pricing, fonts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lm_cart_draft_v1', JSON.stringify(cart));
+    } catch {
+      /* quota */
+    }
+  }, [cart]);
+
+  useEffect(() => {
+    try {
+      if (view !== 'LANDING') localStorage.setItem('lm_last_view', view);
+    } catch {
+      /* ignore */
+    }
+  }, [view]);
+
+  useEffect(() => {
+    try {
+      if (selectedProduct?.id) localStorage.setItem('lm_last_product_id', selectedProduct.id);
+    } catch {
+      /* ignore */
+    }
+  }, [selectedProduct?.id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const share = params.get('share');
+    if (!share) return;
+    const p = decodeSharePayload(decodeURIComponent(share));
+    if (p) {
+      setCart((prev) => [...prev, orderItemFromSharePayload(p)]);
+      setView('CART');
+      params.delete('share');
+      const q = params.toString();
+      window.history.replaceState({}, '', `${window.location.pathname}${q ? `?${q}` : ''}${window.location.hash}`);
+    }
+  }, []);
+
+  // Inject Fonts CSS & Theme Colors
+  useEffect(() => {
+    // 1. Fonts Injection
+    const styleId = 'custom-fonts-injection';
+    let styleTag = document.getElementById(styleId) as HTMLStyleElement;
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = styleId;
+      document.head.appendChild(styleTag);
+    }
+
+    let cssRules = '';
+    // Product Fonts
+    fonts.forEach(font => {
+      if (font.isCustom && font.fileData) {
+        const familyName = font.cssFamily; 
+        cssRules += `
+          @font-face {
+            font-family: '${familyName}';
+            src: url('${font.fileData}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+          }
+          .${familyName} { font-family: '${familyName}', sans-serif !important; }
+        `;
+      }
+    });
+
+    // System Branding Font
+    if (storeConfig.customLogoFontData) {
+        cssRules += `
+          @font-face {
+            font-family: 'custom-sys-font';
+            src: url('${storeConfig.customLogoFontData}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+          }
+          .custom-sys-font { font-family: 'custom-sys-font', sans-serif !important; }
+        `;
+    }
+
+    // 2. Theme Injection (Global Colors Override)
+    if (storeConfig.themeDarkModeBg && storeConfig.themeDarkModeBg !== '#000000') {
+        cssRules += `
+            .dark, .dark body, .dark main { background-color: ${storeConfig.themeDarkModeBg} !important; }
+            .dark .bg-black { background-color: ${storeConfig.themeDarkModeBg} !important; }
+        `;
+    }
+
+    styleTag.textContent = cssRules;
+  }, [fonts, storeConfig.themeDarkModeBg, storeConfig.customLogoFontData]);
+
+  // Session Persistence Listener - DESACTIVADO para desarrollo
+  // TODO: Reactivar cuando se termine de probar
+  // useEffect(() => {
+  //   const unsubscribe = onAuthChange((userData) => {
+  //     setUser(userData);
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
+
+  // Handle URL Parameters for Tracking
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    const orderIdParam = urlParams.get('id');
+    
+    if (viewParam === 'TRACKING' && orderIdParam) {
+      setView('PUBLIC_TRACKING');
+      setPreSelectedOrderId(orderIdParam);
+    }
+  }, []);
+
+  // Notification Navigation Handler
+  useEffect(() => {
+    const handleNotificationNavigate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url: string; data?: any }>;
+      const { url, data } = customEvent.detail || {};
+      
+      if (url === '#inventory') {
+        setView('ADMIN_DASHBOARD');
+        // Small delay to ensure view is set first
+        setTimeout(() => {
+          // Trigger inventory tab via custom event
+          window.dispatchEvent(new CustomEvent('navigateToTab', { detail: 'INVENTORY' }));
+        }, 100);
+      } else if (url === '#orders') {
+        setView('ADMIN_DASHBOARD');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('navigateToTab', { detail: 'ORDERS' }));
+        }, 100);
+      }
+    };
+
+    window.addEventListener('notificationNavigate', handleNotificationNavigate);
+    return () => window.removeEventListener('notificationNavigate', handleNotificationNavigate);
+  }, []);
+
+  // Auth Guard - Redirect to login if accessing protected routes without user
+  useEffect(() => {
+    const protectedViews = ['SHOP', 'FONTS_SHOWCASE', 'CUSTOMIZER', 'CLIENT_DASHBOARD', 'ADMIN_DASHBOARD'];
+    if (protectedViews.includes(view) && !user) {
+      setView('LANDING');
+      setIsLoginOpen(true);
+    }
+  }, [view, user]);
+
+  // Handle login from LoginModal - now receives properly formatted User
+  const handleAuth = (loggedInUser: User) => {
+    setUser(loggedInUser);
+    setIsLoginOpen(false);
+    
+    if (view === 'LANDING') {
+        if (loggedInUser.role === UserRole.ADMIN) {
+            setView('ADMIN_DASHBOARD');
+        } else if (loggedInUser.role === UserRole.BUSINESS) {
+            setView('BUSINESS_PORTAL');
+        } else {
+            setView('CLIENT_DASHBOARD');
+        }
+    }
+  };
+  
+  // DEV: Toggle mock business user for testing
+  const toggleMockBusinessUser = () => {
+    if (user?.role === UserRole.BUSINESS) {
+      setUser({
+        id: 'admin-temp',
+        name: 'Admin',
+        email: 'admin@lasermachine.com',
+        role: UserRole.ADMIN,
+        avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=facc15&color=000000',
+        laserPoints: 0,
+        pointsHistory: []
+      });
+      setBusinessAccount(null);
+      setView('ADMIN_DASHBOARD');
+    } else {
+      setUser({
+        id: 'business-temp',
+        name: 'Juan Pérez',
+        email: 'business@lasermachine.com',
+        role: UserRole.BUSINESS,
+        avatarUrl: 'https://ui-avatars.com/api/?name=Juan+Perez&background=f59e0b&color=0a0a0a',
+        laserPoints: 0,
+        pointsHistory: []
+      });
+      setBusinessAccount(MOCK_BUSINESS_ACCOUNT);
+      setView('BUSINESS_PORTAL');
+    }
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setUser(null);
+    setView('LANDING');
+  };
+
+  const handleApplyCoupon = () => {
+      if (!couponCode.trim()) return;
+      const found = storeConfig.coupons?.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+      
+      if (!found) {
+          alert("Cupón no válido.");
+          setAppliedCoupon(null);
+          return;
+      }
+      
+      if (!found.active) {
+          alert("Este cupón ya no está activo.");
+          setAppliedCoupon(null);
+          return;
+      }
+
+      if (found.expiryDate && new Date(found.expiryDate) < new Date()) {
+          alert("Este cupón ha expirado.");
+          setAppliedCoupon(null);
+          return;
+      }
+
+      if (found.maxUses !== -1 && (found.usedCount || 0) >= (found.maxUses || 1)) {
+          alert("Este cupón ha alcanzado su límite de usos.");
+          setAppliedCoupon(null);
+          return;
+      }
+
+      if (found.assignedToPhone && customerInfo.phone && found.assignedToPhone !== customerInfo.phone) {
+          alert(`Este cupón es exclusivo para el usuario con teléfono: ${found.assignedToPhone}`);
+          if(!customerInfo.phone) {
+              alert("Por favor ingresa tu teléfono en la información del cliente para validar este cupón exclusivo.");
+              return;
+          }
+          setAppliedCoupon(null);
+          return;
+      }
+
+      setAppliedCoupon(found);
+      alert(`¡Cupón ${found.code} aplicado! ${found.discountPercent}% de descuento.`);
+  };
+
+  const handleCreateReferral = (code: string) => {
+      if (!user) return;
+      const cleanCode = code.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      
+      if (storeConfig.coupons.some(c => c.code === cleanCode)) {
+          alert("Este código ya existe. Por favor elige otro.");
+          return;
+      }
+
+      const newCoupon: Coupon = {
+          code: cleanCode,
+          discountPercent: 10, 
+          active: true,
+          referrerUserId: user.id,
+          maxUses: -1,
+          createdAt: new Date().toISOString()
+      };
+
+      setStoreConfig({ ...storeConfig, coupons: [...storeConfig.coupons, newCoupon] });
+      alert(`¡Código ${cleanCode} creado con éxito! Compártelo para ganar puntos.`);
+  };
+
+  const handleFinalCheckout = () => {
+    if (!customerInfo.name || !customerInfo.phone) {
+      alert("Error: Identificación incompleta. Por favor ingrese nombre y teléfono.");
+      return;
+    }
+
+    if (selectedPaymentMethod === PaymentMethod.MERCADOPAGO) {
+        setShowMercadoPagoModal(true);
+        setTimeout(() => {
+            processOrderCreation();
+            setShowMercadoPagoModal(false);
+        }, 3000);
+        return;
+    }
+
+    processOrderCreation();
+  };
+
+  const processOrderCreation = () => {
+    // Validate stock availability before creating order
+    const stockErrors: string[] = [];
+    cart.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) {
+        stockErrors.push(`Producto no encontrado: ${item.productId}`);
+        return;
+      }
+      const color = product.colors.find(c => c.name === item.colorName);
+      if (!color) {
+        stockErrors.push(`Color no encontrado: ${item.colorName} para ${product.name}`);
+        return;
+      }
+      if (color.stock < item.quantity) {
+        stockErrors.push(`Stock insuficiente para ${product.name} (${color.name}): disponible ${color.stock}, requerido ${item.quantity}`);
+      }
+    });
+    
+    if (stockErrors.length > 0) {
+      alert(`Error de inventario:\n${stockErrors.join('\n')}`);
+      return;
+    }
+
+    const subtotal = cart.reduce((a, b) => a + b.totalPrice, 0);
+    const pointsDiscount = (usePoints && user?.laserPoints) ? user.laserPoints : 0;
+    
+    let couponDiscountAmount = 0;
+    if (appliedCoupon) {
+        couponDiscountAmount = (subtotal * appliedCoupon.discountPercent) / 100;
+    }
+
+    const totalDiscount = pointsDiscount + couponDiscountAmount;
+    const finalTotal = Math.max(0, subtotal - totalDiscount);
+    
+    // Calculate new points earned based on CONFIG Percentage
+    const pointsPercentage = storeConfig.pointsPercentage || 5; 
+    const pointsEarned = Math.floor(finalTotal * (pointsPercentage / 100));
+
+    if (appliedCoupon) {
+        const updatedCoupons = storeConfig.coupons.map(c => {
+            if (c.code === appliedCoupon.code) {
+                return { ...c, usedCount: (c.usedCount || 0) + 1 };
+            }
+            return c;
+        });
+        setStoreConfig({ ...storeConfig, coupons: updatedCoupons });
+    }
+
+    const currentId = storeConfig.nextOrderId || 1000;
+    const newOrderId = `LM-${currentId}`;
+    
+    const newOrder: Order = {
+      id: newOrderId,
+      userId: user?.id || 'guest',
+      customerName: customerInfo.name,
+      customerPhone: customerInfo.phone,
+      customerEmail: customerInfo.email, 
+      shippingAddress: customerInfo.notes,
+      items: [...cart],
+      total: finalTotal,
+      pointsRedeemed: pointsDiscount,
+      pointsEarned: selectedPaymentMethod === PaymentMethod.MERCADOPAGO ? pointsEarned : 0, // Solo se ganarán si ya pagó (MercadoPago)
+      couponUsed: appliedCoupon?.code,
+      discountAmount: couponDiscountAmount,
+      status: OrderStatus.RECEIVED,
+      deliveryMethod: deliveryMethod, 
+      paymentMethod: selectedPaymentMethod, 
+      history: [{ timestamp: new Date().toISOString(), status: OrderStatus.RECEIVED, operator: 'SYSTEM' }],
+      createdAt: new Date().toISOString(),
+      paymentStatus: selectedPaymentMethod === PaymentMethod.MERCADOPAGO ? PaymentStatus.PAID : PaymentStatus.PENDING,
+      amountPaid: selectedPaymentMethod === PaymentMethod.MERCADOPAGO ? finalTotal : 0
+    };
+    
+    setStoreConfig({ ...storeConfig, nextOrderId: currentId + 1 });
+
+    // Update Inventory - Deduct stock for each item
+    const updatedProducts = products.map(product => {
+      const orderItemsForProduct = cart.filter(item => item.productId === product.id);
+      if (orderItemsForProduct.length === 0) return product;
+      
+      return {
+        ...product,
+        colors: product.colors.map(color => {
+          const itemWithColor = orderItemsForProduct.find(item => item.colorName === color.name);
+          if (itemWithColor) {
+            return {
+              ...color,
+              stock: Math.max(0, color.stock - itemWithColor.quantity)
+            };
+          }
+          return color;
+        })
+      };
+    });
+    setProducts(updatedProducts);
+
+    // Update User Points - Only redeem (debit) points used, DO NOT credit earned points yet
+    if (user) {
+        // Los puntos ganados se acreditan solo cuando se paga (ver AdminDashboard)
+        // Solo debitamos los puntos canjeados/usados como descuento
+        const remainingPoints = usePoints ? 0 : user.laserPoints || 0;
+        
+        let newHistory = user.pointsHistory || [];
+        
+        // Record Redemption (debit points used for discount)
+        if (usePoints && user.laserPoints && user.laserPoints > 0) {
+            newHistory = [...newHistory, {
+                id: Date.now().toString() + '-redeem',
+                type: 'REDEEMED',
+                amount: user.laserPoints,
+                date: new Date().toISOString(),
+                orderId: newOrderId,
+                description: 'Canje en Orden #' + newOrderId
+            }];
+        }
+
+        setUser({ ...user, laserPoints: remainingPoints, pointsHistory: newHistory }); 
+    }
+    
+    setOrders(prevOrders => [newOrder, ...prevOrders]);
+    setCart([]);
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setView('LANDING');
+    
+    let msg = `ORDEN REGISTRADA EXITOSAMENTE: #${newOrder.id}\n`;
+    if (user && pointsEarned > 0) msg += `¡Has ganado ${pointsEarned} LaserPoints!\n`;
+    if (selectedPaymentMethod !== PaymentMethod.MERCADOPAGO) {
+        msg += `\nNos pondremos en contacto vía WhatsApp.`;
+    }
+    alert(msg);
+  };
+
+  const handleEditCartItem = (item: OrderItem) => {
+      const product = products.find(p => p.id === item.productId);
+      if (product) {
+          setSelectedProduct(product);
+          setEditingItem(item); 
+          setCart(prev => prev.filter(i => i.id !== item.id)); 
+          setView('CUSTOMIZER');
+      }
+  };
+
+  const handleDuplicateCartItem = (item: OrderItem) => {
+    try {
+      const raw = JSON.parse(JSON.stringify(item)) as OrderItem;
+      raw.id = `dup-${Date.now()}`;
+      raw.totalPrice = raw.unitPrice * raw.quantity;
+      setCart((prev) => [...prev, raw]);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const updateCartItemNotes = (id: string, notes: string) => {
+    setCart((prev) => prev.map((i) => (i.id === id ? { ...i, notes } : i)));
+  };
+
+  const copyShareDesignLink = (item: OrderItem) => {
+    const payload = encodeSharePayload(buildSharePayload(item));
+    const url = `${window.location.origin}${window.location.pathname}?share=${encodeURIComponent(payload)}`;
+    void navigator.clipboard.writeText(url).then(() => {
+      alert('Enlace copiado. Al abrirlo se añade una copia al carrito.');
+    });
+  };
+
+  const resumeLastSession = () => {
+    const last = localStorage.getItem('lm_last_view') as ViewState | null;
+    if (!last || last === 'LANDING') return;
+    if (last === 'CUSTOMIZER') {
+      const pid = localStorage.getItem('lm_last_product_id');
+      const p = pid ? products.find((x) => x.id === pid) : null;
+      if (p) setSelectedProduct(p);
+    }
+    setView(last);
+  };
+
+  const lastViewResume = useMemo(() => {
+    if (view !== 'LANDING' || typeof window === 'undefined') return null;
+    const v = localStorage.getItem('lm_last_view') as ViewState | null;
+    if (!v || v === 'LANDING' || v === 'ADMIN_DASHBOARD' || v === 'CLIENT_DASHBOARD') return null;
+    const labels: Partial<Record<ViewState, string>> = {
+      SHOP: 'Catálogo',
+      CUSTOMIZER: 'Personalizar',
+      CART: 'Carrito',
+      FONTS_SHOWCASE: 'Fuentes',
+      TRACKING: 'Seguimiento',
+      PUBLIC_TRACKING: 'Rastreo'
+    };
+    const label = labels[v];
+    if (!label) return null;
+    return { v, label };
+  }, [view]);
+
+  const updateClientDetails = (originalPhone: string, newName: string, newPhone: string, newEmail: string) => {
+      setOrders(prevOrders => prevOrders.map(o => {
+          if (o.customerPhone === originalPhone) {
+              return { ...o, customerName: newName, customerPhone: newPhone, customerEmail: newEmail };
+          }
+          return o;
+      }));
+  };
+
+  const deleteClientHistory = (phone: string) => {
+      if(confirm('¿Estás seguro de borrar el historial de este cliente? Esto ocultará sus ordenes pasadas.')) {
+          setOrders(prev => prev.filter(o => o.customerPhone !== phone));
+      }
+  };
+
+  const handleResetOrdersAndClients = () => {
+    if(confirm("ESTA ACCIÓN BORRARÁ TODOS LOS PEDIDOS Y CLIENTES. ¿ESTÁS SEGURO?")) {
+        setOrders([]);
+    }
+  };
+
+  const handleResetInventoryCounts = () => {
+     if(confirm("¿RESETAR STOCK A CERO?")) {
+        setProducts(products.map(p => ({
+            ...p,
+            colors: p.colors.map(c => ({ ...c, stock: 0 }))
+        })));
+     }
+  };
+
+  const handleResetProducts = () => {
+    localStorage.removeItem('lm_products_v12');
+    localStorage.removeItem('lm_products_v11');
+    localStorage.removeItem('lm_products_v10');
+    setProducts(CONST_PRODUCTS);
+    alert("Productos reseteados a valores por defecto. Recarga la página para ver los cambios.");
+  };
+
+  const filteredCustomers = customerSearch 
+    ? Array.from(new Set(orders.map(o => JSON.stringify({name: o.customerName, phone: o.customerPhone, email: o.customerEmail || ''}))))
+        .map(s => JSON.parse(s as string))
+        .filter((c: any) => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch))
+    : [];
+
+  const getPatternClass = () => {
+      switch(storeConfig.bgPattern) {
+          case 'dots': return 'bg-[radial-gradient(#e4e4e7_1px,transparent_1px)] dark:bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:20px_20px]';
+          case 'grid': return 'bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] [background-size:20px_20px]';
+          case 'lines': return 'bg-[repeating-linear-gradient(45deg,#e4e4e7_0,#e4e4e7_1px,transparent_0,transparent_50%)] dark:bg-[repeating-linear-gradient(45deg,#27272a_0,#27272a_1px,transparent_0,transparent_50%)] [background-size:10px_10px]';
+          default: return '';
+      }
+  };
+
+    // Apply dark class to document for global theming
+    React.useEffect(() => {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }, [isDarkMode]);
+
+    return (
+      <NotificationProvider>
+        <CartProvider>
+        <BackgroundProvider>
+        <OrderHistoryProvider>
+        <ContextMenuProvider>
+          <div className={`min-h-screen flex flex-col font-mono-tech bg-zinc-50 dark:bg-zinc-950 ${isDarkMode ? 'dark' : ''}`}>
+      {/* Notification Manager - Solo cuando hay usuario logueado */}
+      {user && <NotificationManager products={products} orders={orders} user={user} />}
+      
+      {view !== 'CUSTOMIZER' && view !== 'PUBLIC_TRACKING' && view !== 'CLIENT_DASHBOARD' && (
+        <NavBar 
+          user={user} cartCount={cart.length} 
+          onNavigate={setView} 
+          onLogin={() => setIsLoginOpen(true)} 
+          onLogout={handleLogout}
+          isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} 
+          storeConfig={storeConfig}
+          currentView={view}
+          adminActiveTab={adminActiveTab}
+        />
+      )}
+
+      {lastViewResume && (
+        <button
+          type="button"
+          onClick={resumeLastSession}
+          className="no-print fixed bottom-6 right-6 z-[90] rounded-full border border-amber-500/50 bg-amber-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black shadow-lg shadow-amber-500/30 transition hover:bg-amber-300 dark:text-black"
+        >
+          Continuar: {lastViewResume.label}
+        </button>
+      )}
+      
+    <main className={`flex-1 w-full overflow-y-auto no-scrollbar bg-transparent ${getPatternClass()}`}>
+        {view === 'LANDING' && (
+          <Suspense fallback={<ViewLoader />}>
+            <LandingPage 
+              storeConfig={storeConfig}
+              products={products}
+              onNavigate={(view) => setView(view)}
+              onLogin={() => setIsLoginOpen(true)}
+              onBusinessRequest={() => setIsBusinessRequestOpen(true)}
+            />
+          </Suspense>
+        )}
+
+        {view === 'PUBLIC_TRACKING' && (
+          <Suspense fallback={<ViewLoader />}>
+            <PublicTracking orders={orders} onBack={() => setView('LANDING')} preSelectedOrderId={preSelectedOrderId} />
+          </Suspense>
+        )}
+
+        {view === 'SHOP' && (
+          <div className="max-w-[95%] mx-auto px-6 md:px-10 py-24 animate-in fade-in duration-700 bg-white/90 dark:bg-black/80 backdrop-blur-sm min-h-full">
+            {preSelectedFontId && (
+                <div className="mb-8 p-4 bg-amber-500/10 border border-amber-500 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                        <Zap size={14}/> Tipografía #{preSelectedFontId} seleccionada.
+                    </span>
+                    <button onClick={() => setPreSelectedFontId(null)} className="text-[10px] font-black uppercase underline hover:text-black dark:hover:text-white">Cancelar</button>
+                </div>
+            )}
+            {/* Título removido - ahora en NavBar */}
+            
+            {/* CATALOG GRID */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+              {products.map(p => (
+                <ShopProductCard 
+                    key={p.id}
+                    product={p} 
+                    onClick={() => { setSelectedProduct(p); setEditingItem(null); setView('CUSTOMIZER'); }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === 'FONTS_SHOWCASE' && (
+          <Suspense fallback={<ViewLoader />}>
+            <FontShowcase 
+              fonts={fonts} 
+              onSelectFont={(id, text) => {
+                setPreSelectedFontId(id);
+                setPreSelectedText(text || '');
+                setView('SHOP');
+              }}
+              onBack={() => setView('SHOP')}
+            />
+          </Suspense>
+        )}
+
+        {view === 'CUSTOMIZER' && selectedProduct && (
+          <Suspense fallback={<ViewLoader />}>
+            <ProductVisualizer 
+              product={selectedProduct} fonts={fonts} pricing={pricing}
+              availableColors={storeConfig.globalColors}
+              initialFontId={preSelectedFontId || undefined}
+              initialState={editingItem || (preSelectedText ? { frontText: preSelectedText, frontFontId: preSelectedFontId || undefined } as OrderItem : null)}
+              galleryAssets={storeConfig.galleryAssets || []}
+              storeConfig={storeConfig}
+              onBack={() => { setView('SHOP'); setPreSelectedText(''); }} 
+              onSwitchProduct={(p) => { setSelectedProduct(p); setEditingItem(null); }}
+              onSave={(config, goToCart) => { 
+              const fontName = fonts.find(f => f.id === config.frontFontId)?.name || 'Default';
+              const backFontName = fonts.find(f => f.id === config.backFontId)?.name || 'Default';
+              
+              const newItem: OrderItem = {
+                id: Date.now().toString(),
+                productId: selectedProduct.id,
+                colorName: config.color,
+                frontText: config.frontText,
+                frontText2: config.frontText2, 
+                frontFontId: config.frontFontId,
+                frontFontId2: config.frontFontId2,
+                frontFontName: fontName,
+                frontDesignState: config.frontDesign,
+                frontDesignState2: config.frontDesign2,
+                frontLogos: config.frontLogos,
+                backText: config.backText,
+                backText2: config.backText2,
+                backFontId: config.backFontId,
+                backFontId2: config.backFontId2,
+                backFontName: backFontName,
+                backDesignState: config.backDesign,
+                backDesignState2: config.backDesign2,
+                backLogos: config.backLogos,
+                quantity: config.quantity,
+                unitPrice: config.priceTotal,
+                totalPrice: config.priceTotal * config.quantity,
+                notes: '',
+                isClientItem: config.isClientItem,
+                clientItemBrand: config.clientItemBrand,
+                clientItemColor: config.clientItemColor,
+                customBackgroundImage: config.customBackgroundImage
+              };
+
+              setCart([...cart, newItem]); 
+              setPreSelectedFontId(null); 
+              setPreSelectedText('');
+              setEditingItem(null); 
+              
+              if (goToCart) {
+                  setView('CART');
+              } else {
+                  alert("Diseño agregado al carrito. Puedes continuar diseñando.");
+                  setView('SHOP'); 
+              }
+            }}
+              onGoToCart={() => setView('CART')}
+              isDarkMode={isDarkMode}
+            />
+          </Suspense>
+        )}
+
+        {/* Customizer without product selected - show product selector */}
+        {view === 'CUSTOMIZER' && !selectedProduct && (
+          <div className="min-h-screen bg-zinc-50 dark:bg-black pt-24 pb-12">
+            <div className="max-w-5xl mx-auto px-4">
+              <div className="text-center mb-8">
+                <h1 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">
+                  Personalizar Producto
+                </h1>
+                <p className="text-zinc-500">
+                  Selecciona un producto para comenzar a diseñar
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products.filter(p => p.isActive).map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => { setSelectedProduct(product); }}
+                    className="group bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 hover:border-yellow-400 dark:hover:border-yellow-600 transition-all text-left"
+                  >
+                    <div className="aspect-square bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-zinc-900 dark:text-white">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-zinc-500">
+                        Desde ${product.basePrice}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => setView('SHOP')}
+                  className="px-6 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold rounded-xl hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                >
+                  ← Volver al catálogo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === 'CART' && (
+          <div className="max-w-[95%] mx-auto px-4 md:px-10 py-12 md:py-24 min-h-screen bg-white/90 dark:bg-black/80 backdrop-blur-sm">
+            <h2 className="nike-title text-4xl md:text-5xl italic mb-10 text-zinc-900 dark:text-white uppercase tracking-tighter">Checkout Final</h2>
+            {cart.length === 0 ? (
+               <div className="py-40 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/10 rounded-3xl">
+                  <ShoppingBag size={64} className="mx-auto text-zinc-400 dark:text-zinc-800 mb-8" />
+                  <p className="text-[11px] font-black uppercase tracking-[0.6em] text-zinc-500 dark:text-zinc-600 mb-8">Cola de activos vacía</p>
+                  <button onClick={() => setView('SHOP')} className="text-amber-500 dark:text-amber-500 uppercase font-black text-[10px] tracking-[0.4em] border-b border-amber-500 dark:border-amber-500 pb-2">Regresar al catálogo</button>
+               </div>
+            ) : (
+               <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
+                  {/* Left Column: Items */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {cart.map(item => {
+                      const prod = products.find(p => p.id === item.productId);
+                      const color = prod?.colors.find(c => c.name === item.colorName);
+                      // Calculate individual breakdown
+                      const basePrice = item.isClientItem ? 0 : (prod?.price || 0);
+                      const unitCustomPrice = item.unitPrice - basePrice;
+                      
+                      return (
+                        <div key={item.id} className="bg-white/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col md:flex-row gap-6 items-center rounded-2xl hover:border-zinc-400 dark:hover:border-zinc-600 transition-all backdrop-blur-md relative overflow-hidden group">
+                           <div className="w-24 h-24 md:w-32 md:h-32 product-container rounded-xl shrink-0 overflow-hidden bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 relative">
+                              <img src={color?.imageUrl || prod?.imageUrl} className="w-full h-full object-cover" />
+                              <div className="absolute bottom-0 right-0 w-6 h-6 rounded-tl-xl" style={{backgroundColor: color?.hex}}></div>
+                           </div>
+                           <div className="flex-1 w-full text-left">
+                              <div className="flex justify-between items-start mb-1">
+                                <div>
+                                    <h4 className="font-black text-zinc-900 dark:text-white uppercase text-xl tracking-tight leading-none">{prod?.name}</h4>
+                                    <p className="text-sm font-bold text-zinc-500 uppercase mt-1">{item.isClientItem ? `PROPIO: ${item.clientItemBrand} ${item.clientItemColor}` : `${item.colorName}`}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block font-black text-xl text-zinc-900 dark:text-white">${item.totalPrice}</span>
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase">x{item.quantity} Unid.</span>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                   <button type="button" aria-label="Ver diseño final" onClick={() => setPreviewItem(item)} className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-500 hover:text-black border border-amber-500/50 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Eye size={12}/> Ver Diseño Final
+                                   </button>
+                                   <button type="button" aria-label="Editar línea" onClick={() => handleEditCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Edit2 size={12}/> Editar
+                                   </button>
+                                   <button type="button" aria-label="Duplicar línea" onClick={() => handleDuplicateCartItem(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Layers size={12}/> Duplicar
+                                   </button>
+                                   <button type="button" aria-label="Compartir enlace del diseño" onClick={() => copyShareDesignLink(item)} className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Share2 size={12}/> Compartir
+                                   </button>
+                                   <button type="button" aria-label="Eliminar línea" onClick={() => setCart(cart.filter(c => c.id !== item.id))} className="px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer">
+                                       <Trash2 size={12}/> Borrar
+                                   </button>
+                              </div>
+
+                              <div className="mt-4 w-full">
+                                <label htmlFor={`line-notes-${item.id}`} className="text-[10px] font-black uppercase text-zinc-500 tracking-widest block mb-1.5">
+                                  Notas para taller (esta línea)
+                                </label>
+                                <textarea
+                                  id={`line-notes-${item.id}`}
+                                  value={item.notes || ''}
+                                  onChange={(e) => updateCartItemNotes(item.id, e.target.value)}
+                                  placeholder="Ej. logo más grande, alinear a la derecha, cuidar borde…"
+                                  rows={2}
+                                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-black/40 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 resize-y min-h-[52px]"
+                                />
+                              </div>
+
+                              {/* Price Breakdown Mini */}
+                              <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-4 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase">
+                                  <span>Base Unit: <b className="text-zinc-900 dark:text-white">${basePrice}</b></span>
+                                  <span>+</span>
+                                  <span>Personalización: <b className="text-zinc-900 dark:text-white">${unitCustomPrice}</b></span>
+                              </div>
+                           </div>
+                        </div>
+                      );
+                    })}
+                    <button onClick={() => setView('SHOP')} className="w-full py-5 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl text-zinc-500 font-bold uppercase text-xs hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-all flex items-center justify-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                        <Plus size={16}/> Agregar otro producto
+                    </button>
+                  </div>
+                  
+                  {/* Right Column: Checkout Summary (Sticky) */}
+                  <div className="relative">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-3xl sticky top-24 shadow-2xl space-y-8 backdrop-blur-md">
+                        <div className="flex justify-between items-center border-b border-zinc-200 dark:border-zinc-800 pb-6">
+                            <h3 className="text-xl font-black uppercase text-zinc-900 dark:text-white">Datos del Pedido</h3>
+                            <span className="text-xs font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full">{cart.length} Items</span>
+                        </div>
+
+                        {/* Customer Form */}
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="customer-name" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Nombre Completo*</label>
+                                <input 
+                                    id="customer-name"
+                                    value={customerInfo.name} 
+                                    onChange={e => setCustomerInfo({...customerInfo, name: e.target.value.toUpperCase()})} 
+                                    className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-base outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
+                                    placeholder="NOMBRE Y APELLIDO"
+                                    aria-required="true"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="customer-phone" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">WhatsApp / Teléfono*</label>
+                                <input 
+                                    id="customer-phone"
+                                    value={customerInfo.phone} 
+                                    onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} 
+                                    className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-base outline-none focus:border-amber-500 transition-colors font-mono placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
+                                    type="tel" 
+                                    placeholder="10 DÍGITOS"
+                                    aria-required="true"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="customer-email" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Email (Opcional)</label>
+                                <input 
+                                    id="customer-email"
+                                    value={customerInfo.email} 
+                                    onChange={e => setCustomerInfo({...customerInfo, email: e.target.value})} 
+                                    className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold text-base outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
+                                    type="email" 
+                                    placeholder="PARA REGISTRO CLIENTE"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Payment & Coupons */}
+                        <div className="space-y-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                            <div>
+                                <label className="text-xs font-black text-zinc-500 uppercase block mb-3 tracking-widest">Método de Pago</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: PaymentMethod.CASH, label: 'Efectivo', icon: Banknote },
+                                        { id: PaymentMethod.TRANSFER, label: 'Transferencia', icon: ArrowRight },
+                                        { id: PaymentMethod.CARD, label: 'Tarjeta', icon: CardIcon },
+                                        { id: PaymentMethod.MERCADOPAGO, label: 'MercadoPago', icon: QrCode },
+                                    ].map(m => (
+                                        <button 
+                                            key={m.id}
+                                            onClick={() => setSelectedPaymentMethod(m.id)}
+                                            aria-label={`Seleccionar método de pago: ${m.label}`}
+                                            aria-pressed={selectedPaymentMethod === m.id}
+                                            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 text-xs font-black uppercase transition-all cursor-pointer ${selectedPaymentMethod === m.id ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent shadow-lg' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
+                                        >
+                                            <m.icon size={16}/> {m.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* LASER POINTS REDEMPTION UI */}
+                            {user && (
+                                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-800 flex justify-between items-center">
+                                    <div>
+                                        <span className="text-xs font-black uppercase text-amber-700 dark:text-amber-500 flex items-center gap-2">
+                                            <Wallet size={14}/> LaserPoints
+                                        </span>
+                                        <p className="text-[10px] text-zinc-500 font-bold mt-1">
+                                            Disponibles: {user.laserPoints} pts (${user.laserPoints})
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setUsePoints(!usePoints)}
+                                        disabled={user.laserPoints <= 0}
+                                        aria-label={usePoints ? `Canjeando ${user.laserPoints} puntos` : `Canjear ${user.laserPoints} puntos disponibles`}
+                                        className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all cursor-pointer ${usePoints ? 'bg-amber-500 text-black shadow-lg' : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}
+                                    >
+                                        {usePoints ? 'Canjeados' : 'Canjear'}
+                                    </button>
+                                </div>
+                            )}
+
+                            <div>
+                                <label htmlFor="coupon-code" className="text-xs font-black text-zinc-500 uppercase block mb-3 tracking-widest">Cupón de Descuento</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        id="coupon-code"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                        className="flex-1 bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl font-bold uppercase text-sm outline-none focus:border-amber-500"
+                                        placeholder="CÓDIGO"
+                                        aria-describedby="coupon-help"
+                                    />
+                                    <button onClick={handleApplyCoupon} aria-label="Aplicar cupón de descuento" className="bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-black dark:text-white px-4 rounded-xl font-bold text-xs uppercase cursor-pointer"><Ticket size={16}/></button>
+                                </div>
+                                {appliedCoupon && (
+                                    <div className="mt-2 text-xs font-bold text-green-500 flex items-center gap-2">
+                                        <Zap size={12}/> Cupón {appliedCoupon.code} aplicado ({appliedCoupon.discountPercent}%)
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Totals */}
+                        <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-zinc-500 font-bold uppercase">Subtotal</span>
+                                <span className="font-bold text-zinc-900 dark:text-white">${cart.reduce((a, b) => a + b.totalPrice, 0)}</span>
+                            </div>
+                            {appliedCoupon && (
+                                <div className="flex justify-between text-sm text-green-500">
+                                    <span className="font-bold uppercase">Descuento Cupón</span>
+                                    <span className="font-bold">-${(cart.reduce((a, b) => a + b.totalPrice, 0) * appliedCoupon.discountPercent / 100).toFixed(2)}</span>
+                                </div>
+                            )}
+                            {usePoints && user?.laserPoints && user.laserPoints > 0 && (
+                                <div className="flex justify-between text-sm text-amber-600 dark:text-amber-500">
+                                    <span className="font-bold uppercase">Canje Puntos</span>
+                                    <span className="font-bold">-${user.laserPoints.toFixed(2)}</span>
+                                </div>
+                            )}
+                            {/* Points to Earn Display */}
+                            <div className="flex justify-between text-xs text-blue-500 font-bold">
+                                <span className="uppercase flex items-center gap-1"><TrendingUp size={12}/> Puntos por ganar ({storeConfig.pointsPercentage}%)</span>
+                                <span>+{Math.floor((Math.max(0, cart.reduce((a, b) => a + b.totalPrice, 0) * (appliedCoupon ? (1 - appliedCoupon.discountPercent/100) : 1) - (usePoints && user?.laserPoints ? user.laserPoints : 0))) * (storeConfig.pointsPercentage ? storeConfig.pointsPercentage/100 : 0.05))} pts</span>
+                            </div>
+
+                            <div className="flex justify-between items-end pt-4">
+                                <span className="text-base font-black text-zinc-900 dark:text-white uppercase">Total Final</span>
+                                <span className="text-4xl font-black text-zinc-900 dark:text-white leading-none">
+                                    ${(Math.max(0, cart.reduce((a, b) => a + b.totalPrice, 0) * (appliedCoupon ? (1 - appliedCoupon.discountPercent/100) : 1) - (usePoints && user?.laserPoints ? user.laserPoints : 0))).toFixed(0)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <button onClick={handleFinalCheckout} className="w-full py-5 bg-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-xl hover:bg-yellow-300 shadow-lg dark:shadow-none flex items-center justify-center gap-3 transition-transform active:scale-95">
+                            Confirmar Pedido <ArrowRight size={18}/>
+                        </button>
+                    </div>
+                  </div>
+               </div>
+            )}
+          </div>
+        )}
+
+        {/* PREVIEW MODAL */}
+        {previewItem && (
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in zoom-in-95">
+                <div className="bg-white dark:bg-zinc-950 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 relative shadow-2xl">
+                    <button onClick={() => setPreviewItem(null)} className="absolute top-6 right-6 p-2 bg-zinc-100 dark:bg-zinc-900 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"><X size={20}/></button>
+                    <h3 className="text-2xl font-black text-zinc-900 dark:text-white uppercase mb-8">Ficha Técnica de Producción</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <TechnicalPreview 
+                            imageUrl={products.find(p => p.id === previewItem.productId)?.colors.find(c => c.name === previewItem.colorName)?.imageUrl || products.find(p => p.id === previewItem.productId)?.imageUrl} 
+                            text={previewItem.frontText} text2={previewItem.frontText2} 
+                            fontName={previewItem.frontFontName} fontCss={fonts.find(f => f.id === previewItem.frontFontId)?.cssFamily || ''} 
+                            logos={previewItem.frontLogos} 
+                            designState={previewItem.frontDesignState} designState2={previewItem.frontDesignState2} 
+                            sideLabel="LADO A (FRENTE)"
+                        />
+                        <TechnicalPreview 
+                            imageUrl={products.find(p => p.id === previewItem.productId)?.colors.find(c => c.name === previewItem.colorName)?.imageUrl || products.find(p => p.id === previewItem.productId)?.imageUrl} 
+                            text={previewItem.backText} text2={previewItem.backText2} 
+                            fontName={previewItem.backFontName} fontCss={fonts.find(f => f.id === previewItem.backFontId)?.cssFamily || ''} 
+                            logos={previewItem.backLogos} 
+                            designState={previewItem.backDesignState} designState2={previewItem.backDesignState2} 
+                            sideLabel="LADO B (POSTERIOR)"
+                        />
+                    </div>
+                    
+                    <div className="mt-8 text-center">
+                        <p className="text-xs text-zinc-500 font-mono">Este es el diseño que se enviará a producción.</p>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {view === 'ADMIN_DASHBOARD' && user?.role === UserRole.ADMIN && (
+          <Suspense fallback={<ViewLoader />}>
+            <AdminDashboard 
+              orders={orders} products={products} fonts={fonts} pricing={pricing}
+              storeConfig={storeConfig}
+              user={user} setUser={setUser}
+              onUpdatePricing={setPricing} onUpdateStoreConfig={setStoreConfig}
+              onUpdateOrder={(updatedOrder) => setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
+              onAddOrder={(newOrder) => setOrders([newOrder, ...orders])}
+              onUpdateOrderPriority={(id, p) => setOrders(orders.map(o => o.id === id ? {...o, isPriority: p} : o))}
+              onAddProduct={p => setProducts([...products, p])}
+              onUpdateProduct={p => setProducts(products.map(x => x.id === p.id ? p : x))}
+              onDeleteProduct={id => setProducts(products.filter(p => p.id !== id))}
+              onAddFont={f => setFonts([...fonts, f])}
+              onUpdateFont={(oldId, f) => { console.log('onUpdateFont called:', oldId, f); setFonts(prev => prev.map(font => font.id === oldId ? f : font)); }}
+              onDeleteFont={id => setFonts(fonts.filter(f => f.id !== id))}
+              onUpdateClient={updateClientDetails}
+              onDeleteClient={deleteClientHistory}
+              onResetOrdersAndClients={handleResetOrdersAndClients}
+              onResetInventoryCounts={handleResetInventoryCounts}
+              onResetProducts={handleResetProducts}
+              onOpenAssistant={openAssistant}
+              activeTab={adminActiveTab}
+              onTabChange={setAdminActiveTab}
+            />
+          </Suspense>
+        )}
+
+        {view === 'CLIENT_DASHBOARD' && (user?.role === UserRole.CLIENT || user?.role === UserRole.ADMIN) && (
+          <div 
+            className="fixed inset-0 z-[9999] overflow-auto"
+            style={{ backgroundColor: isDarkMode ? '#09090b' : '#ffffff' }}
+          >
+            <Suspense fallback={<ViewLoader />}>
+              <ClientDashboard 
+                user={user} 
+                orders={orders} 
+                coupons={storeConfig.coupons}
+                onCreateReferral={handleCreateReferral}
+                products={products}
+                fonts={fonts}
+                isDarkMode={isDarkMode}
+                toggleTheme={() => setIsDarkMode(!isDarkMode)}
+                onBackToAdmin={user?.role === UserRole.ADMIN ? () => setView('ADMIN_DASHBOARD') : undefined}
+                onProductSelect={(product) => {
+                  setSelectedProduct(product);
+                  setEditingItem(null);
+                  setView('CUSTOMIZER');
+                }}
+                onSelectFontForCustomizer={(fontId, text) => {
+                  setPreSelectedFontId(fontId);
+                  setPreSelectedText(text);
+                  setView('SHOP');
+                }}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        {view === 'BUSINESS_PORTAL' && user?.role === UserRole.BUSINESS && businessAccount && (
+          <div 
+            className="fixed inset-0 z-[9999] overflow-auto"
+            style={{ backgroundColor: isDarkMode ? '#09090b' : '#ffffff' }}
+          >
+            <Suspense fallback={<ViewLoader />}>
+              <BusinessPortal 
+                user={user}
+                businessAccount={businessAccount}
+                orders={orders}
+                products={products}
+                fonts={fonts}
+                storeConfig={storeConfig}
+                pricing={pricing}
+                isDarkMode={isDarkMode}
+                toggleTheme={() => setIsDarkMode(!isDarkMode)}
+                onProductSelect={(product) => {
+                  setSelectedProduct(product);
+                  setEditingItem(null);
+                  setView('CUSTOMIZER');
+                }}
+                onSelectFontForCustomizer={(fontId, text) => {
+                  setPreSelectedFontId(fontId);
+                  setPreSelectedText(text);
+                  setView('SHOP');
+                }}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        {/* Login Modal Integration */}
+        <AuthModal 
+            isOpen={isLoginOpen} 
+            onClose={() => setIsLoginOpen(false)} 
+            onLogin={handleAuth} 
+        />
+        
+        {/* Business Request Modal */}
+        <BusinessRequestModal
+          isOpen={isBusinessRequestOpen}
+          onClose={() => setIsBusinessRequestOpen(false)}
+          onSubmit={(account) => {
+            // Could show a toast here
+            console.log('Business request submitted:', account);
+          }}
+        />
+        
+        {/* DEV: Mock business toggle */}
+        <button
+          onClick={toggleMockBusinessUser}
+          className="no-print fixed bottom-6 left-6 z-[90] rounded-full border border-violet-500/50 bg-violet-500/20 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-violet-300 shadow-lg hover:bg-violet-500/30 transition"
+        >
+          {user?.role === UserRole.BUSINESS ? '← Salir modo Business' : 'Modo Business DEV →'}
+        </button>
+
+        {/* Command Assistant (RAB) */}
+        <CommandAssistant
+          isOpen={isAssistantOpen}
+          onClose={() => setIsAssistantOpen(false)}
+          initialQuery={assistantQuery}
+          orders={orders}
+          products={products}
+          onNavigate={(tab) => {
+            setIsAssistantOpen(false);
+            setView('ADMIN_DASHBOARD');
+            const map: Record<string, typeof adminActiveTab> = {
+              ORDERS: 'ORDERS',
+              INVENTORY: 'INVENTORY',
+              SETTINGS: 'SETTINGS',
+              FINANCE: 'FINANCE',
+              CLIENTS: 'CLIENTS',
+              FONTS: 'FONTS',
+              DASHBOARD: 'DASHBOARD',
+              PRODUCTION: 'PRODUCTION',
+              GALERIA: 'GALERIA',
+              CALENDAR: 'CALENDAR',
+              CONTENT: 'CONTENT',
+              EMPRESAS: 'EMPRESAS'
+            };
+            const next = map[tab];
+            if (next) setAdminActiveTab(next);
+          }}
+        />
+
+        {/* MercadoPago Mock Modal */}
+        {showMercadoPagoModal && (
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-sm w-full text-center border border-zinc-200 dark:border-zinc-800">
+                    <img src="https://logotipoz.com/wp-content/uploads/2021/10/versiones-del-logo-de-mercado-pago-1.png" className="h-8 mx-auto mb-6" alt="MercadoPago"/>
+                    <div className="w-48 h-48 bg-zinc-100 dark:bg-zinc-800 mx-auto rounded-xl flex items-center justify-center mb-6">
+                        <QrCode size={120} className="text-zinc-800 dark:text-zinc-200"/>
+                    </div>
+                    <p className="text-zinc-900 dark:text-white font-bold text-lg mb-2">Escanea para pagar</p>
+                    <p className="text-zinc-500 text-xs mb-6">Abre tu app de banco o MercadoPago y escanea este código.</p>
+                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-[10px] text-zinc-400 mt-4 uppercase tracking-widest">Esperando confirmación...</p>
+                </div>
+            </div>
+        )}
+      </main>
+          
+{/* Notification Panel */}
+          <NotificationPanel />
+          
+          {/* Context Menu */}
+          <ContextMenu />
+          
+          {/* Cart Panel */}
+          <CartPanel
+            cartItems={cart.map((item) => {
+              const prod = products.find((p) => p.id === item.productId);
+              const color = prod?.colors.find((c) => c.name === item.colorName);
+              return {
+                id: item.id,
+                productName: prod?.name || item.productId,
+                colorName: item.colorName,
+                quantity: item.quantity,
+                price: item.unitPrice,
+                imageUrl: color?.imageUrl || prod?.imageUrl
+              };
+            })}
+            onUpdateQuantity={(id, qty) => {
+              if (qty === 0) {
+                setCart(cart.filter((i) => i.id !== id));
+              } else {
+                setCart(cart.map((i) => (i.id === id ? { ...i, quantity: qty, totalPrice: i.unitPrice * qty } : i)));
+              }
+            }}
+            onRemoveItem={(id) => setCart(cart.filter((i) => i.id !== id))}
+            onCheckout={() => setView('CART')}
+            total={cart.reduce((sum, i) => sum + i.totalPrice, 0)}
+          />
+          
+        </div>
+      </ContextMenuProvider>
+      </OrderHistoryProvider>
+      </BackgroundProvider>
+      </CartProvider>
+      </NotificationProvider>
+
+  );
+};
+
+export default App;

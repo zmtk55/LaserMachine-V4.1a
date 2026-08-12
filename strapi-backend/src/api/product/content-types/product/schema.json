@@ -1,0 +1,55 @@
+{
+  "kind": "collectionType",
+  "collectionName": "products",
+  "info": {
+    "singularName": "product",
+    "pluralName": "products",
+    "displayName": "Product"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "enumeration",
+      "enum": [
+        "YETI",
+        "Stanley",
+        "HidroFlask",
+        "OWALA",
+        "Generico"
+      ]
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": [
+        "Tumblers",
+        "Travel",
+        "Bottles",
+        "Tazas",
+        "Accesorios ",
+        "Termos"
+      ]
+    },
+    "price": {
+      "type": "decimal"
+    },
+    "stockThreshold": {
+      "type": "integer"
+    },
+    "imageUrl": {
+      "type": "string"
+    },
+    "description": {
+      "type": "blocks"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

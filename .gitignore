@@ -1,0 +1,41 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local Netlify folder
+.netlify
+
+# AI assistant memory files
+ .loki
+
+ # Nested projects - exclude from this repository
+ LaserMachine-V4.1a/
+ my-strapi-project/
+ ui-ux-pro-max-skill/
+awesome-design-md/
+tsconfig.tsbuildinfo
+# Scripts de diagnóstico (opcional, descomenta si no quieres en repo)
+# /scripts/diagnostics/

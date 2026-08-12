@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>LaserMachine - Operaciones Industriales</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/svgagenticon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LaserMachine">
+    <meta name="theme-color" content="#f59e0b">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700&family=Permanent+Marker&family=Bebas+Neue&family=Anton&family=Rubik:wght@300;400;500;600;700&family=Nunito+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/design-tokens.css">
+    <link rel="stylesheet" href="/index.css">
+    <script>
+      // Polyfill crítico para evitar que process.env rompa la app en navegadores
+      window.process = window.process || { env: {} };
+      window.process.env = window.process.env || {};
+      if (!window.process.env.NODE_ENV) {
+        window.process.env.NODE_ENV = 'development';
+      }
+    </script>
+    <style>
+      html, body, #root {
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      
+      body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      
+      /* Dark mode applied to body when .dark class is present on html or body */
+      html.dark, html.dark body {
+        background: #030712;
+        color: #f3f4f6;
+      }
+      
+      .google-title {
+        font-family: 'Rubik', sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .font-mono-tech {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      
+      /* Clases de fuentes para el grabador (Visualizer) */
+      .font-google { font-family: 'Plus Jakarta Sans', sans-serif; }
+      .font-bold1 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; }
+      .font-industrial { font-family: 'Anton', sans-serif; letter-spacing: 0.05em; }
+      .font-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+      .font-script1 { font-family: 'Permanent Marker', cursive; }
+      .font-serif1 { font-family: 'Playfair Display', serif; }
+      .font-display1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; }
+      .font-script2 { font-family: 'Permanent Marker', cursive; font-style: italic; }
+
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      .product-container {
+        aspect-ratio: 5 / 6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        border: 1px solid var(--border-primary);
+      }
+      
+      .laser-engraved {
+        filter: brightness(0.7) contrast(1.2);
+        mix-blend-mode: overlay;
+        opacity: 0.7;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: #fff;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+      }
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+      }
+      .btn-primary:active {
+        transform: scale(0.98);
+      }
+
+      /* Background variables for dynamic system background */
+      :root { --app-bg: none; --bg-pattern-on: 1; }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: var(--app-bg);
+        background-size: cover;
+        background-position: center;
+        z-index: -9999; /* ensure it's behind everything but visible through transparent body */
+        filter: blur(2px) saturate(1.05) contrast(0.95);
+        transition: opacity .3s ease;
+        opacity: 1;
+        pointer-events: none;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 12px 12px;
+        pointer-events: none;
+        opacity: calc(var(--bg-pattern-on));
+      }
+
+      /* Glass effect ONLY for specific containers - not product cards */
+      .glass-panel {
+        background-color: rgba(255, 255, 255, 0.7);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+      }
+      .dark .glass-panel {
+        background-color: rgba(24, 24, 27, 0.8);
+      }
+
+      /* ========== UNIFIED VIEW CONTAINER ========== */
+      .view-container {
+        max-width: 95%;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 6rem 1.5rem 3rem;
+        min-height: 100%;
+        background: rgba(255, 255, 255, 0.6);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        animation: fadeIn 0.5s ease-out;
+      }
+      .dark .view-container {
+        background: rgba(9, 9, 11, 0.7);
+      }
+      @media (min-width: 768px) {
+        .view-container {
+          padding: 6rem 2.5rem 3rem;
+        }
+      }
+
+      /* ========== DARK MODE IMPROVEMENTS ========== */
+      /* Reduce border visibility in dark mode */
+      .dark [class*="border-zinc-200"],
+      .dark [class*="border-zinc-300"] {
+        border-color: rgba(63, 63, 70, 0.3) !important;
+      }
+      
+      /* Softer hover states for buttons */
+      .dark button:hover {
+        transition: all 0.2s ease;
+      }
+
+      /* Unified button styles */
+      .btn-primary {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: #fff;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+      }
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+      }
+      .btn-primary:active {
+        transform: scale(0.98);
+      }
+      
+      .btn-secondary {
+        background: rgba(63, 63, 70, 0.1);
+        color: var(--text-secondary);
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+      .dark .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .btn-secondary:hover {
+        background: rgba(63, 63, 70, 0.15);
+        color: var(--text-primary);
+      }
+      .dark .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+      
+      /* Ghost button */
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-tertiary);
+        transition: all 0.2s ease;
+      }
+      .btn-ghost:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: var(--text-primary);
+      }
+      .dark .btn-ghost:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+
+      /* Improved card styles */
+      .card {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+      }
+      .dark .card {
+        background: rgba(24, 24, 27, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .card:hover {
+        border-color: rgba(245, 158, 11, 0.4);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      }
+      .dark .card:hover {
+        border-color: rgba(245, 158, 11, 0.5);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Input focus states */
+      input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #f59e0b !important;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
+      }
+    </style>
+      <style>
+        /* Diagnostic helper: reveal background by dimming full-screen overlays when ?debugbg=1 is set */
+        body.debug-reveal .fixed.inset-0 {
+          background: transparent !important;
+          opacity: 0.12 !important;
+          pointer-events: none !important;
+        }
+        body.debug-reveal .fixed.inset-0 > * {
+          pointer-events: none !important;
+        }
+      </style>
+      <script>
+        try {
+          const params = new URLSearchParams(location.search);
+          if (params.get('debugbg') === '1') {
+            document.documentElement.classList.add('debug-reveal');
+            document.body.classList.add('debug-reveal');
+            console.info('Debug reveal enabled: full-screen overlays dimmed to reveal background');
+          }
+        } catch (e) {
+          // ignore
+        }
+      </script>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "@imgly/background-removal": "https://esm.sh/@imgly/background-removal@1.4.5",
+    "react-easy-crop": "https://esm.sh/react-easy-crop@5.0.4?external=react,react-dom",
+    "@google/genai": "https://esm.sh/@google/genai@0.2.1",
+    "firebase/": "https://esm.sh/firebase@^12.8.0/"
+  }
+}
+</script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
