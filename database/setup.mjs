@@ -1,7 +1,11 @@
 // Direct database setup for Neon
 import { neon } from '@neondatabase/serverless';
 
-const DATABASE_URL = 'postgresql://neondb_owner:npg_JZdbhAlO8qg2@ep-small-rice-ai4thzx0-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL env var required');
+  process.exit(1);
+}
 
 async function setupDatabase() {
   console.log('Connecting to Neon database...');
