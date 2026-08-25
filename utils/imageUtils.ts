@@ -1,6 +1,5 @@
-// Remove.bg API key - get one free at https://www.remove.bg/api
-// Use environment variable or fallback to hardcoded key
-const REMOVE_BG_API_KEY = import.meta.env.VITE_REMOVE_BG_API_KEY || 'zoJ1ti8EduCpRryGhMizuLfY';
+// Remove.bg API key - set VITE_REMOVE_BG_API_KEY in your environment
+const REMOVE_BG_API_KEY = import.meta.env.VITE_REMOVE_BG_API_KEY || '';
 
 // Log which API key is being used (masked for security)
 console.log('Remove.bg API Key loaded:', REMOVE_BG_API_KEY ? `${REMOVE_BG_API_KEY.substring(0, 4)}...${REMOVE_BG_API_KEY.substring(REMOVE_BG_API_KEY.length - 4)}` : 'NOT SET');
