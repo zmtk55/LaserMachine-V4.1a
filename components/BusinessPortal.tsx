@@ -1230,7 +1230,7 @@ export const BusinessPortal: React.FC<BusinessPortalProps> = ({
             <span className="hidden lg:block">{isDarkMode ? 'Modo claro' : 'Modo oscuro'}</span>
           </button>
           <div className="mt-3 flex items-center gap-3 px-3">
-            <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full border border-[var(--bp-border)] bg-[var(--bp-bg-elevated)]" />
+            <img src={user.avatarUrl} alt={`Avatar de ${user.name}`} className="w-8 h-8 rounded-full border border-[var(--bp-border)] bg-[var(--bp-bg-elevated)]" />
             <div className="hidden lg:block overflow-hidden">
               <p className="text-sm font-medium text-[var(--bp-text-primary)] truncate">{user.name}</p>
               <p className="text-[10px] text-[var(--bp-text-tertiary)] truncate">{businessAccount.companyName}</p>

@@ -239,7 +239,7 @@ const ImageAssetField: React.FC<{
         <div>
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Vista previa del recorte</p>
           <div className={`overflow-hidden rounded-2xl border-2 border-zinc-200 bg-zinc-100 dark:border-zinc-700 ${previewBox}`}>
-            <img src={value} alt="" className="h-full w-full object-cover" />
+            <img src={value} alt="Vista previa de imagen recortada" className="h-full w-full object-cover" />
           </div>
         </div>
       ) : (
@@ -292,7 +292,7 @@ function PortalHomePreview({ banners, promotions }: { banners: Banner[]; promoti
                   <div key={banner.id} className="w-[min(260px,85vw)] flex-shrink-0 snap-start">
                     <div className="relative h-[130px] overflow-hidden rounded-2xl">
                       {banner.image ? (
-                        <img src={banner.image} alt="" className="h-full w-full object-cover" />
+                        <img src={banner.image} alt={banner.title || 'Banner promocional'} className="h-full w-full object-cover" />
                       ) : (
                         <div className="flex h-full items-center justify-center bg-zinc-200 text-[10px] text-zinc-500">Sin imagen</div>
                       )}
@@ -326,9 +326,9 @@ function PortalHomePreview({ banners, promotions }: { banners: Banner[]; promoti
                   >
                     <div className="flex">
                       <div className="h-20 w-20 flex-shrink-0 bg-zinc-100 dark:bg-zinc-800">
-                        {promo.image ? (
-                          <img src={promo.image} alt="" className="h-full w-full object-cover" />
-                        ) : (
+                                              {promo.image ? (
+                                                <img src={promo.image} alt={promo.title || 'Imagen de promoción'} className="h-full w-full object-cover" />
+                                              ) : (
                           <div className="flex h-full items-center justify-center">
                             <Percent size={20} className="text-zinc-400" />
                           </div>
@@ -617,7 +617,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
                       <div className="flex flex-col sm:flex-row">
                         <div className="relative h-40 w-full shrink-0 bg-zinc-100 sm:h-auto sm:w-56 dark:bg-zinc-800">
                           {banner.image ? (
-                            <img src={banner.image} alt="" className="h-full w-full object-cover sm:aspect-[280/144]" />
+                            <img src={banner.image} alt={banner.title || 'Banner promocional'} className="h-full w-full object-cover sm:aspect-[280/144]" />
                           ) : (
                             <div className="flex h-full min-h-[144px] items-center justify-center">
                               <ImageIcon size={36} className="text-zinc-400" />
@@ -744,8 +744,8 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
                       <div className="flex flex-col sm:flex-row">
                         <div className="relative flex h-36 w-full shrink-0 items-center justify-center bg-zinc-100 sm:h-32 sm:w-32 dark:bg-zinc-800">
                           {promo.image ? (
-                            <img src={promo.image} alt="" className="h-full w-full object-cover" />
-                          ) : (
+                                                      <img src={promo.image} alt={promo.title || 'Imagen de promoción'} className="h-full w-full object-cover" />
+                                                    ) : (
                             <Percent size={36} className="text-zinc-400" />
                           )}
                           <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-mono text-white">

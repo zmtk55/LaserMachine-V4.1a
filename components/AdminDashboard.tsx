@@ -2758,7 +2758,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                 {item.customBackgroundImage && (
                                                                     <a href={item.customBackgroundImage} target="_blank" className="shrink-0 relative group">
                                                                         <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
-                                                                            <img src={item.customBackgroundImage} className="w-full h-full object-cover" alt=""/>
+                                                                            <img src={item.customBackgroundImage} className="w-full h-full object-cover" alt={`Imagen de fondo del pedido ${item.id}`}/>
                                                                         </div>
                                                                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-system-success rounded-full flex items-center justify-center">
                                                                             <Download size={8} className="text-white"/>
@@ -2768,7 +2768,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                 {[...item.frontLogos, ...item.backLogos].map((logo, i) => (
                                                                     <a key={i} href={logo.originalUrl || logo.url} target="_blank" className="shrink-0 relative group">
                                                                         <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white flex items-center justify-center p-1">
-                                                                            <img src={logo.url} className="w-full h-full object-contain" alt=""/>
+                                                                            <img src={logo.url} className="w-full h-full object-contain" alt={`Logo del pedido ${item.id}`}/>
                                                                         </div>
                                                                     </a>
                                                                 ))}
