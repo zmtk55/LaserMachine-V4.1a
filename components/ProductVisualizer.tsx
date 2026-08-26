@@ -509,69 +509,84 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                         <button onClick={() => scrollColors('down')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronDown size={18}/></button>
                     </div>
                 )}
-
-                {/* PROGRESSIVE TOOL BAR - STEP 2 UX/UI */}
-                <ProgressiveToolBar
-                  view={view}
-                  activeTool={activeTool}
-                  setActiveTool={setActiveTool}
-                  selectedElementId={selectedElementId}
-                  setSelectedElementId={setSelectedElementId}
-                  frontText={frontText}
-                  frontText2={frontText2}
-                  backText={backText}
-                  backText2={backText2}
-                  setFrontText={setFrontText}
-                  setFrontText2={setFrontText2}
-                  setBackText={setBackText}
-                  setBackText2={setBackText2}
-                  frontFontId={frontFontId}
-                  frontFontId2={frontFontId2}
-                  backFontId={backFontId}
-                  backFontId2={backFontId2}
-                  setFrontFontId={setFrontFontId}
-                  setFrontFontId2={setFrontFontId2}
-                  setBackFontId={setBackFontId}
-                  setBackFontId2={setBackFontId2}
-                  frontDesign={frontDesign}
-                  frontDesign2={frontDesign2}
-                  backDesign={backDesign}
-                  backDesign2={backDesign2}
-                  setFrontDesign={setFrontDesign}
-                  setFrontDesign2={setFrontDesign2}
-                  setBackDesign={setBackDesign}
-                  setBackDesign2={setBackDesign2}
-                  frontLogos={frontLogos}
-                  backLogos={backLogos}
-                  setFrontLogos={setFrontLogos}
-                  setBackLogos={setBackLogos}
-                  isProcessing={isProcessing}
-                  isRemovingBackground={isRemovingBackground}
-                  selectedLogoId={selectedLogoId}
-                  setIsProcessing={setIsProcessing}
-                  setIsRemovingBackground={setIsRemovingBackground}
-                  handleRemoveBackground={handleRemoveBackground}
-                  processImage={processImage}
-                  resetImage={resetImage}
-                  deleteLogo={deleteLogo}
-                  handleDeleteSelected={handleDeleteSelected}
-                  handleResetSelected={handleResetSelected}
-                  openFontModal={openFontModal}
-                  handleFontSelect={handleFontSelect}
-                  isClientItem={isClientItem}
-                  setIsClientItem={setIsClientItem}
-                  clientItemBrand={clientItemBrand}
-                  clientItemColor={clientItemColor}
-                  setClientItemBrand={setClientItemBrand}
-                  setClientItemColor={setClientItemColor}
-                  userUploadedImage={userUploadedImage}
-                  setUserUploadedImage={setUserUploadedImage}
-                  isDarkMode={isDarkMode}
-                  storeConfig={storeConfig}
-                />
-                {/* END PROGRESSIVE TOOL BAR */}
-
-                {/* --- SLIDE-UP PANELS --- */}
+{/* LEFT SIDE TOOLBARS - REORGANIZED */}
+                <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-4">
+                    {/* COLOR TOOLBAR */}
+                    {showColors && (
+                        <div className="bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl p-2 md:p-3 rounded-full border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl transition-all">
+                            <button onClick={() => scrollColors('up')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronUp size={18}/></button>
+                            <div ref={colorContainerRef} className="flex flex-col gap-2 md:gap-4 items-center max-h-[40vh] overflow-y-auto no-scrollbar px-1 py-1 w-full"> 
+                                {(colorOptions || []).map((c: any) => (
+                                    <button key={c.id || c.name} onClick={() => setSelectedColor(c.name)} className={`w-6 h-6 md:w-8 md:h-8 rounded-full shadow-lg transition-all duration-300 relative shrink-0 ${selectedColor === c.name ? 'ring-1 ring-offset-1 ring-yellow-400 scale-110 z-10 ring-offset-white dark:ring-offset-zinc-950' : 'hover:scale-110 hover:shadow-xl hover:z-10'}`} style={{backgroundColor: c.hex}} title={c.name}>
+                                        {selectedColor === c.name && <Check size={12} className="text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-md invert mix-blend-difference"/>}
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={() => scrollColors('down')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronDown size={18}/></button>
+                        </div>
+                    )}
+                    
+                    {/* PROGRESSIVE TOOL BAR */}
+                    <ProgressiveToolBar
+                      view={view}
+                      activeTool={activeTool}
+                      setActiveTool={setActiveTool}
+                      selectedElementId={selectedElementId}
+                      setSelectedElementId={setSelectedElementId}
+                      frontText={frontText}
+                      frontText2={frontText2}
+                      backText={backText}
+                      backText2={backText2}
+                      setFrontText={setFrontText}
+                      setFrontText2={setFrontText2}
+                      setBackText={setBackText}
+                      setBackText2={setBackText2}
+                      frontFontId={frontFontId}
+                      frontFontId2={frontFontId2}
+                      backFontId={backFontId}
+                      backFontId2={backFontId2}
+                      setFrontFontId={setFrontFontId}
+                      setFrontFontId2={setFrontFontId2}
+                      setBackFontId={setBackFontId}
+                      setBackFontId2={setBackFontId2}
+                      frontDesign={frontDesign}
+                      frontDesign2={frontDesign2}
+                      backDesign={backDesign}
+                      backDesign2={backDesign2}
+                      setFrontDesign={setFrontDesign}
+                      setFrontDesign2={setFrontDesign2}
+                      setBackDesign={setBackDesign}
+                      setBackDesign2={setBackDesign2}
+                      frontLogos={frontLogos}
+                      backLogos={backLogos}
+                      setFrontLogos={setFrontLogos}
+                      setBackLogos={setBackLogos}
+                      isProcessing={isProcessing}
+                      isRemovingBackground={isRemovingBackground}
+                      selectedLogoId={selectedLogoId}
+                      setIsProcessing={setIsProcessing}
+                      setIsRemovingBackground={setIsRemovingBackground}
+                      handleRemoveBackground={handleRemoveBackground}
+                      processImage={processImage}
+                      resetImage={resetImage}
+                      deleteLogo={deleteLogo}
+                      handleDeleteSelected={handleDeleteSelected}
+                      handleResetSelected={handleResetSelected}
+                      openFontModal={openFontModal}
+                      handleFontSelect={handleFontSelect}
+                      isClientItem={isClientItem}
+                      setIsClientItem={setIsClientItem}
+                      clientItemBrand={clientItemBrand}
+                      clientItemColor={clientItemColor}
+                      setClientItemBrand={setClientItemBrand}
+                      setClientItemColor={setClientItemColor}
+                      userUploadedImage={userUploadedImage}
+                      setUserUploadedImage={setUserUploadedImage}
+                      isDarkMode={isDarkMode}
+                      storeConfig={storeConfig}
+                    />
+                </div>
+                {/* END LEFT SIDE TOOLBARS */}                {/* --- SLIDE-UP PANELS --- */}
                 {activeTool && (
                     <>
                         <div className="absolute inset-0 bg-black/40 z-40 md:hidden" onClick={() => setActiveTool(null)}></div>
