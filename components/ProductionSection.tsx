@@ -120,7 +120,7 @@ const ProductionCard: React.FC<{
       {/* Header */}
       <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className={`w-2 h-2 rounded-full ${status.color}`} />
+          <span className={`w-3 h-3 rounded-full ${status.color}`} />
           <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
             #{item.sequenceNumber} · {item.orderId}
           </span>
@@ -301,19 +301,19 @@ const ProductionDetail: React.FC<{
                 Frente
               </h4>
               {item.frontText && (
-                <div className="mb-3">
-                  <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Texto</p>
-                  <p className="text-lg font-medium text-zinc-900 dark:text-white" style={{ fontFamily: item.frontFontCssFamily }}>
-                    "{item.frontText}"
-                  </p>
-                  {item.frontText2 && (
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1" style={{ fontFamily: item.frontFontCssFamily }}>
-                      "{item.frontText2}"
-                    </p>
-                  )}
-                  <p className="text-xs text-zinc-400 mt-1">Fuente: {item.frontFontName}</p>
-                </div>
-              )}
+                          <div className="mb-3">
+                            <p className="text-sm text-zinc-500 uppercase tracking-wider mb-1">Texto</p>
+                            <p className="text-2xl font-bold text-zinc-900 dark:text-white" style={{ fontFamily: item.frontFontCssFamily }}>
+                              "{item.frontText}"
+                            </p>
+                            {item.frontText2 && (
+                              <p className="text-base text-zinc-600 dark:text-zinc-400 mt-1" style={{ fontFamily: item.frontFontCssFamily }}>
+                                "{item.frontText2}"
+                              </p>
+                            )}
+                            <p className="text-sm text-zinc-400 mt-1">Fuente: {item.frontFontName}</p>
+                          </div>
+                        )}
               {item.frontLogos?.length > 0 && (
                 <div>
                   <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Logos</p>
@@ -331,19 +331,19 @@ const ProductionDetail: React.FC<{
                 Dorso
               </h4>
               {item.backText && (
-                <div className="mb-3">
-                  <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Texto</p>
-                  <p className="text-lg font-medium text-zinc-900 dark:text-white" style={{ fontFamily: item.backFontCssFamily }}>
-                    "{item.backText}"
-                  </p>
-                  {item.backText2 && (
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1" style={{ fontFamily: item.backFontCssFamily }}>
-                      "{item.backText2}"
-                    </p>
-                  )}
-                  <p className="text-xs text-zinc-400 mt-1">Fuente: {item.backFontName}</p>
-                </div>
-              )}
+                          <div className="mb-3">
+                            <p className="text-sm text-zinc-500 uppercase tracking-wider mb-1">Texto</p>
+                            <p className="text-2xl font-bold text-zinc-900 dark:text-white" style={{ fontFamily: item.backFontCssFamily }}>
+                              "{item.backText}"
+                            </p>
+                            {item.backText2 && (
+                              <p className="text-base text-zinc-600 dark:text-zinc-400 mt-1" style={{ fontFamily: item.backFontCssFamily }}>
+                                "{item.backText2}"
+                              </p>
+                            )}
+                            <p className="text-sm text-zinc-400 mt-1">Fuente: {item.backFontName}</p>
+                          </div>
+                        )}
               {item.backLogos?.length > 0 && (
                 <div>
                   <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Logos</p>
