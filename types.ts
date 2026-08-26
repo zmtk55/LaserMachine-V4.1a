@@ -276,6 +276,7 @@ export interface Order {
   shippingProvider?: string;
   shippingTracking?: string;
   shippingAddress?: string;
+  estimatedDeliveryDate?: string; // Fecha estimada de entrega
   // Sistema
   status: OrderStatus;
   isPriority?: boolean;

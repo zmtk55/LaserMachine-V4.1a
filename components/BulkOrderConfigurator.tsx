@@ -409,7 +409,7 @@ export const BulkOrderConfigurator: React.FC<BulkOrderConfiguratorProps> = ({
 // ------------------------------------------------------------------
 const ProductCard = ({
   product, discountPercent, onAdd,
-}: { product: Product; discountPercent: number; onAdd: (p: Product, color: string) => void }) => {
+}: { product: Product; discountPercent: number; onAdd: (p: Product, color: string) => void; key?: React.Key }) => {
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || '');
   const color = product.colors.find((c) => c.name === selectedColor);
   const finalPrice = product.price * (1 - discountPercent / 100);

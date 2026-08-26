@@ -85,7 +85,7 @@ class NotificationService {
     orderId: string,
     customerName: string,
     newStatus: string,
-    total: number
+    total: number | string
   ): Promise<boolean> {
     const statusMessages: Record<string, { title: string; body: string }> = {
       'RECIBIDO': {

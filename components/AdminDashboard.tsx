@@ -1489,12 +1489,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       order.id,
       order.customerName,
       newStatus,
-      order.customerPhone
+      order.total
     );
   };
 
   const handleWhatsAppClick = (order: Order) => {
-    const link = generateWhatsAppLink(order.customerPhone, 'confirmation', order.id, order.customerName);
+    const link = getWhatsAppLink(order.customerPhone, 'confirmation', order, order.customerName);
     window.open(link, '_blank');
   };
 
@@ -1571,7 +1571,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       id: 'edit',
       label: 'Editar orden',
       icon: <Edit size={16} />,
-      onClick: () => { setSelectedOrder(order); setIsOrderModalOpen(true); }
+      onClick: () => { setSelectedOrder(order); }
     },
     {
       id: 'duplicate',

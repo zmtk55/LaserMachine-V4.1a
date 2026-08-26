@@ -1324,7 +1324,7 @@ export const BusinessPortal: React.FC<BusinessPortalProps> = ({
                 />
               )}
               {activeTab === 'fonts' && <FontsTab fonts={fonts} businessAccount={businessAccount} onSelectFontForCustomizer={onSelectFontForCustomizer} />}
-              {activeTab === 'chat' && <ChatTab businessAccount={businessAccount} user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} lastOrder={myOrders[0]} stats={{ total: stats.total, spent: stats.spent }} />
+              {activeTab === 'chat' && <ChatTab businessAccount={businessAccount} user={user} chatMessages={chatMessages} setChatMessages={setChatMessages} lastOrder={myOrders[0]} stats={{ total: stats.total, spent: stats.spent }} />}
               {activeTab === 'account' && <AccountTab businessAccount={businessAccount} user={user} auditLogs={auditLogs} onInviteUser={onInviteUser} />}
             </div>
           </div>

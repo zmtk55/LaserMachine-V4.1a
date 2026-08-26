@@ -98,7 +98,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   );
 
   // Image card component
-  const ImageCard = ({ asset }: { asset: BrandingAsset }) => {
+  const ImageCard = ({ asset }: { asset: BrandingAsset; key?: React.Key }) => {
     const { showMenu } = useContextMenu();
 
     const handleContextMenu = (e: React.MouseEvent) => {
@@ -209,7 +209,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   };
 
   // Folder component - Clean, no emojis, system colors only
-  const FolderCard = ({ category, count }: { category: Exclude<AssetCategory, 'TODAS'>; count: number }) => {
+  const FolderCard = ({ category, count }: { category: Exclude<AssetCategory, 'TODAS'>; count: number; key?: React.Key }) => {
     if (count === 0) return null;
     
     return (

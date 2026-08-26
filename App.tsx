@@ -16,7 +16,7 @@ import { NotificationPanel } from './components/NotificationPanel';
 import { NotificationManager } from './components/NotificationManager';
 import { CartPanel } from './components/CartPanel';
 // import { LottieAnimation } from './components/LottieAnimation';
-import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction, BusinessAccount } from './types';
+import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction, BusinessAccount, BusinessStatus } from './types';
 import { PRODUCTS as CONST_PRODUCTS, FONTS as CONST_FONTS, ADMIN_USER, MOCK_ORDERS } from './constants';
 import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, CreditCard, QrCode, Ticket, Eye, Banknote, CreditCard as CardIcon, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2, Copy, Share2, Layers } from 'lucide-react';
 import { buildSharePayload, decodeSharePayload, encodeSharePayload, orderItemFromSharePayload } from './utils/shareDesign';
@@ -191,7 +191,7 @@ const App = () => {
     users: [
       { id: 'u1', name: 'Juan Pérez', email: 'business@lasermachine.com', phone: '8181234567', role: 'ADMIN', isActive: true }
     ],
-    status: 'APPROVED',
+    status: BusinessStatus.APPROVED,
     notes: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

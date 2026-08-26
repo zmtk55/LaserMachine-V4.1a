@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type FC } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { Product, Order } from '../types';
 
@@ -8,7 +8,7 @@ interface NotificationManagerProps {
   user: any;
 }
 
-export const NotificationManager: React.FC<NotificationManagerProps> = ({ products, orders, user }) => {
+export const NotificationManager: FC<NotificationManagerProps> = ({ products, orders, user }) => {
   const { addNotification, notifications } = useNotifications();
   const prevOrdersLength = useRef(orders.length);
   const prevProducts = useRef<Product[]>([]);
