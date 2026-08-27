@@ -10,7 +10,6 @@ import {
 import { Product, FontOption, PricingConfig, OrderItem, DesignState, LogoItem, ColorPreset, FontCategory, BrandingAsset, StoreConfig } from '../types';
 import { VintageRollInput } from './VintageRollInput';
 import { ImageGallery } from './ImageGallery';
-import ProgressiveToolBar from './ProgressiveToolBar';
 
 interface ProductVisualizerProps {
   product: Product;
@@ -509,84 +508,28 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                         <button onClick={() => scrollColors('down')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronDown size={18}/></button>
                     </div>
                 )}
-{/* LEFT SIDE TOOLBARS - REORGANIZED */}
-                <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-4">
-                    {/* COLOR TOOLBAR */}
-                    {showColors && (
-                        <div className="bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl p-2 md:p-3 rounded-full border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl transition-all">
-                            <button onClick={() => scrollColors('up')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronUp size={18}/></button>
-                            <div ref={colorContainerRef} className="flex flex-col gap-2 md:gap-4 items-center max-h-[40vh] overflow-y-auto no-scrollbar px-1 py-1 w-full"> 
-                                {(colorOptions || []).map((c: any) => (
-                                    <button key={c.id || c.name} onClick={() => setSelectedColor(c.name)} className={`w-6 h-6 md:w-8 md:h-8 rounded-full shadow-lg transition-all duration-300 relative shrink-0 ${selectedColor === c.name ? 'ring-1 ring-offset-1 ring-yellow-400 scale-110 z-10 ring-offset-white dark:ring-offset-zinc-950' : 'hover:scale-110 hover:shadow-xl hover:z-10'}`} style={{backgroundColor: c.hex}} title={c.name}>
-                                        {selectedColor === c.name && <Check size={12} className="text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-md invert mix-blend-difference"/>}
-                                    </button>
-                                ))}
-                            </div>
-                            <button onClick={() => scrollColors('down')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronDown size={18}/></button>
-                        </div>
-                    )}
-                    
-                    {/* PROGRESSIVE TOOL BAR */}
-                    <ProgressiveToolBar
-                      view={view}
-                      activeTool={activeTool}
-                      setActiveTool={setActiveTool}
-                      selectedElementId={selectedElementId}
-                      setSelectedElementId={setSelectedElementId}
-                      frontText={frontText}
-                      frontText2={frontText2}
-                      backText={backText}
-                      backText2={backText2}
-                      setFrontText={setFrontText}
-                      setFrontText2={setFrontText2}
-                      setBackText={setBackText}
-                      setBackText2={setBackText2}
-                      frontFontId={frontFontId}
-                      frontFontId2={frontFontId2}
-                      backFontId={backFontId}
-                      backFontId2={backFontId2}
-                      setFrontFontId={setFrontFontId}
-                      setFrontFontId2={setFrontFontId2}
-                      setBackFontId={setBackFontId}
-                      setBackFontId2={setBackFontId2}
-                      frontDesign={frontDesign}
-                      frontDesign2={frontDesign2}
-                      backDesign={backDesign}
-                      backDesign2={backDesign2}
-                      setFrontDesign={setFrontDesign}
-                      setFrontDesign2={setFrontDesign2}
-                      setBackDesign={setBackDesign}
-                      setBackDesign2={setBackDesign2}
-                      frontLogos={frontLogos}
-                      backLogos={backLogos}
-                      setFrontLogos={setFrontLogos}
-                      setBackLogos={setBackLogos}
-                      isProcessing={isProcessing}
-                      isRemovingBackground={isRemovingBackground}
-                      selectedLogoId={selectedLogoId}
-                      setIsProcessing={setIsProcessing}
-                      setIsRemovingBackground={setIsRemovingBackground}
-                      handleRemoveBackground={handleRemoveBackground}
-                      processImage={processImage}
-                      resetImage={resetImage}
-                      deleteLogo={deleteLogo}
-                      handleDeleteSelected={handleDeleteSelected}
-                      handleResetSelected={handleResetSelected}
-                      openFontModal={openFontModal}
-                      handleFontSelect={handleFontSelect}
-                      isClientItem={isClientItem}
-                      setIsClientItem={setIsClientItem}
-                      clientItemBrand={clientItemBrand}
-                      clientItemColor={clientItemColor}
-                      setClientItemBrand={setClientItemBrand}
-                      setClientItemColor={setClientItemColor}
-                      userUploadedImage={userUploadedImage}
-                      setUserUploadedImage={setUserUploadedImage}
-                      isDarkMode={isDarkMode}
-                      storeConfig={storeConfig}
-                    />
+
+                {/* RIGHT SIDE CONTROLS */}
+                <div className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-4 pointer-events-none">
+                    <div className="pointer-events-auto relative md:hidden">
+                        <button onClick={triggerCamera} disabled={!isClientItem && !userUploadedImage} className={`w-12 h-12 rounded-full flex items-center justify-center shadow-xl border-4 transition-all duration-300 ${userUploadedImage ? 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-red-500' : isClientItem ? 'bg-yellow-400 border-yellow-200 text-black hover:scale-110 animate-pulse ring-4 ring-yellow-400/30' : 'bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-400 cursor-not-allowed grayscale'}`}>
+                            {userUploadedImage ? <RefreshCw size={24}/> : <Aperture size={24}/>}
+                        </button>
+                        {showCameraHint && <div className="absolute right-16 top-1/2 -translate-y-1/2 bg-black/80 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg whitespace-nowrap animate-in slide-in-from-right-2 shadow-lg">¡Toma tu foto aquí! &rarr;</div>}
+                    </div>
+                    <div className="pointer-events-auto flex flex-col items-center gap-3 md:gap-5 bg-zinc-950/95 backdrop-blur-md text-white p-2 md:p-4 rounded-2xl md:rounded-3xl shadow-2xl border border-zinc-800">
+                        <button onClick={() => toggleTool('TEXT1')} className={`relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'TEXT1' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Type size={20} className="md:w-6 md:h-6" /><span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-zinc-700 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-zinc-900">1</span></button>
+                        <button onClick={() => toggleTool('TEXT2')} className={`relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'TEXT2' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Type size={16} className="md:w-5 md:h-5"/><span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-zinc-700 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-zinc-900">2</span></button>
+                        <button onClick={() => toggleTool('IMAGES')} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'IMAGES' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Images size={20} className="md:w-6 md:h-6" /></button>
+                        <button onClick={() => toggleTool('MAGIC')} disabled={!selectedLogoId} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'MAGIC' ? 'bg-yellow-400 text-black shadow-lg scale-110' : selectedLogoId ? 'hover:bg-zinc-800 text-white' : 'text-zinc-600 cursor-not-allowed opacity-50'}`}><Wand2 size={20} className="md:w-6 md:h-6" /></button>
+                        <div className="w-8 h-px bg-zinc-800 my-0.5"></div>
+                        <button onClick={handleDeleteSelected} disabled={!selectedElementId} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${selectedElementId ? 'text-red-500 hover:bg-red-500/20' : 'text-zinc-600 cursor-not-allowed'}`}><Trash2 size={18} className="md:w-5 md:h-5" /></button>
+                        <div className="w-8 h-px bg-zinc-800 my-0.5"></div>
+                        <button onClick={() => toggleTool('SETTINGS')} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'SETTINGS' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Settings size={18} className="md:w-6 md:h-6" /></button>
+                    </div>
                 </div>
-                {/* END LEFT SIDE TOOLBARS */}                {/* --- SLIDE-UP PANELS --- */}
+
+                {/* --- SLIDE-UP PANELS --- */}
                 {activeTool && (
                     <>
                         <div className="absolute inset-0 bg-black/40 z-40 md:hidden" onClick={() => setActiveTool(null)}></div>
