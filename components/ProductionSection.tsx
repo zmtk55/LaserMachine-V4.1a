@@ -83,6 +83,7 @@ function orderToProductionItems(
       productionStatus,
       startedAt: order.history?.find(h => h.status === OrderStatus.IN_PRODUCTION)?.timestamp,
       completedAt: order.history?.find(h => h.status === OrderStatus.READY)?.timestamp,
+      estimatedCompletionAt: order.estimatedDeliveryDate,
     };
   });
 }

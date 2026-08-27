@@ -206,6 +206,7 @@ export interface OrderItem {
   clientItemBrand?: string;
   clientItemColor?: string;
   customBackgroundImage?: string;
+  estimatedCompletionDate?: string;
 }
 
 export enum OrderStatus {
@@ -277,6 +278,7 @@ export interface Order {
   shippingTracking?: string;
   shippingAddress?: string;
   estimatedDeliveryDate?: string; // Fecha estimada de entrega
+  estimatedCompletionAt?: string;
   // Sistema
   status: OrderStatus;
   isPriority?: boolean;
