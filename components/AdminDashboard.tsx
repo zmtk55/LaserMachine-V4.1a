@@ -1084,7 +1084,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const weeklyRevenue = useMemo(() => dailySales.reduce((sum, d) => sum + d.amount, 0), [dailySales]);
   
-  const recentOrders = useMemo(() => 
+  // ===== PROFIT CALCULATIONS (assuming 40% margin) =====
+  const PROFIT_MARGIN = 0.4;
+  const todaysProfit = useMemo(() => todaysRevenue * PROFIT_MARGIN, [todaysRevenue]);
+  const weeklyProfit = useMemo(() => weeklyRevenue * PROFIT_MARGIN, [weeklyRevenue]);
+  
+  // Monthly calculations
+  const monthlyRevenue = useMemo(() => {
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return orders
+      .filter(o => new Date(o.createdAt) >= startOfMonth && o.status !== OrderStatus.CANCELLED)
+      .reduce((sum, o) => sum + o.total, 0);
+  }, [orders]);
+  const monthlyProfit = useMemo(() => monthlyRevenue * PROFIT_MARGIN, [monthlyRevenue]);
+  
+  const recentOrders = useMemo(() =>
       [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
   [orders]);
 
@@ -1786,6 +1801,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             subtitle={`${formatCurrency(todaysRevenue)} / ${formatCurrency(DAILY_GOAL)}`}
                             icon={<Target size={18} />}
                             accent={dailyGoalMet ? 'success' : 'amber'}
+                            onClick={() => {
+                                document.getElementById('advanced-stats-section')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                        />
+                        
+                        {/* Utilidad Hoy */}
+                        <KPICard
+                            title="Utilidad Hoy"
+                            value={formatCurrency(todaysProfit)}
+                            subtitle={yesterdayRevenue > 0 ? `vs ${formatCurrency(todaysProfit - (yesterdayRevenue * PROFIT_MARGIN))} ayer` : 'Sin datos ayer'}
+                            icon={<TrendingUp size={18} />}
+                            trend={{
+                                value: Math.abs(Math.round(((todaysProfit - (yesterdayRevenue * PROFIT_MARGIN)) / (yesterdayRevenue * PROFIT_MARGIN || 1)) * 100)),
+                                label: 'vs ayer',
+                                direction: todaysProfit >= (yesterdayRevenue * PROFIT_MARGIN) ? 'up' : 'down'
+                            }}
+                            accent="success"
+                            onClick={() => {
+                                document.getElementById('advanced-stats-section')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                        />
+                        
+                        {/* Utilidad Semana */}
+                        <KPICard
+                            title="Utilidad Semana"
+                            value={formatCurrency(weeklyProfit)}
+                            subtitle="Últimos 7 días"
+                            icon={<TrendingUp size={18} />}
+                            accent="success"
+                            onClick={() => {
+                                document.getElementById('advanced-stats-section')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                        />
+                        
+                        {/* Utilidad Mes */}
+                        <KPICard
+                            title="Utilidad Mes"
+                            value={formatCurrency(monthlyProfit)}
+                            subtitle="Este mes"
+                            icon={<TrendingUp size={18} />}
+                            accent="success"
                             onClick={() => {
                                 document.getElementById('advanced-stats-section')?.scrollIntoView({ behavior: 'smooth' });
                             }}
