@@ -6,6 +6,7 @@ import {
 } from '../types';
 import { notificationService } from '../services/notificationService';
 import { AdvancedStats } from './AdvancedStats';
+import { KPICard, Sparkline } from './dashboard';
 import { 
   Settings, Search, Trash2, Edit, X, Plus, Package, Minus,
   Type, LayoutDashboard, Users, Upload, Clock, 
@@ -1061,7 +1062,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [orders]);
 
   const weeklyRevenue = useMemo(() => dailySales.reduce((sum, d) => sum + d.amount, 0), [dailySales]);
-  
+
+  // Monthly revenue (last 30 days) + 40% margin profit estimate
+  const monthlyRevenue = useMemo(() => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return orders
+      .filter(o => new Date(o.createdAt).getTime() >= cutoff && o.status !== OrderStatus.CANCELLED)
+      .reduce((sum, o) => sum + o.total, 0);
+  }, [orders]);
+
+  const todaysOrders = useMemo(() => {
+    const today = new Date().toDateString();
+    return orders.filter(o => new Date(o.createdAt).toDateString() === today && o.status !== OrderStatus.CANCELLED).length;
+  }, [orders]);
+
+  // Estimated profit assuming 40% margin (industry standard for laser engraving)
+  const PROFIT_MARGIN = 0.4;
+  const todaysProfit = todaysRevenue * PROFIT_MARGIN;
+  const weeklyProfit = weeklyRevenue * PROFIT_MARGIN;
+  const monthlyProfit = monthlyRevenue * PROFIT_MARGIN;
+
   const recentOrders = useMemo(() => 
       [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
   [orders]);
@@ -1677,8 +1697,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
 
                     {/* Alerts Widget - Compact with Actions */}
-                    <AlertsWidget 
-                      products={products} 
+                    <AlertsWidget
+                      products={products}
                       orders={orders}
                       className="mb-4"
                       onNavigate={(view, filter) => {
@@ -1690,6 +1710,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         // Could add logic to scroll to product or open edit modal
                       }}
                     />
+
+                    {/* Financial KPIs - Today/Week/Month (40% margin) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                      <KPICard
+                        title="Utilidad Hoy"
+                        value={formatCurrency(todaysProfit)}
+                        subtitle={`${formatCurrency(todaysRevenue)} en ventas · ${todaysOrders} ${todaysOrders === 1 ? 'orden' : 'órdenes'}`}
+                        icon={<TrendingUp size={18} className="text-emerald-500" />}
+                        trend={todaysRevenue > 0 ? { value: 40, label: 'margen', direction: 'up' } : undefined}
+                        accent="success"
+                      />
+                      <KPICard
+                        title="Utilidad Semana"
+                        value={formatCurrency(weeklyProfit)}
+                        subtitle={`${formatCurrency(weeklyRevenue)} en ventas`}
+                        icon={<TrendingUp size={18} className="text-emerald-500" />}
+                        trend={weeklyRevenue > 0 ? { value: 40, label: 'margen', direction: 'up' } : undefined}
+                        accent="success"
+                      />
+                      <KPICard
+                        title="Utilidad Mes"
+                        value={formatCurrency(monthlyProfit)}
+                        subtitle={`${formatCurrency(monthlyRevenue)} en ventas`}
+                        icon={<TrendingUp size={18} className="text-emerald-500" />}
+                        trend={monthlyRevenue > 0 ? { value: 40, label: 'margen', direction: 'up' } : undefined}
+                        accent="success"
+                      />
+                    </div>
 
                     {/* Main Content - Orders List + Weekly Summary */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
