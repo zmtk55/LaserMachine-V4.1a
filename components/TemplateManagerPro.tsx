@@ -1,13 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DesignTemplate, StoreConfig, FontOption } from '../types';
 import { 
   Search, Grid3X3, List, Copy, Trash2, Edit3, Heart, Plus,
   LayoutTemplate, X, CheckSquare, Square, TrendingUp, 
-  Sparkles, Filter, MoreHorizontal, Eye, EyeOff, Database, Wifi
+  Sparkles, Filter, MoreHorizontal, Eye, EyeOff
 } from 'lucide-react';
 import { TumblerPreview } from './TumblerPreview';
 import { TemplateEditorSimple } from './TemplateEditorSimple';
-import { useStrapiTemplates } from '../src/hooks/useStrapi';
 
 interface TemplateManagerProProps {
   storeConfig: StoreConfig;
@@ -35,28 +34,7 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
   fonts,
   onUpdateStoreConfig
 }) => {
-  // Estado para modo: 'strapi' o 'local'
-  const [mode, setMode] = useState<'strapi' | 'local'>('local');
-  
-  // Cargar templates desde Strapi
-  const { templates: strapiTemplates, isLoading: strapiLoading } = useStrapiTemplates({
-    occasion: undefined
-  });
-  
-  // Templates locales
-  const localTemplates = storeConfig.designTemplates || [];
-  
-  // Detectar si Strapi está disponible
-  useEffect(() => {
-    if (strapiTemplates.length > 0) {
-      setMode('strapi');
-    }
-  }, [strapiTemplates]);
-  
-  // Usar templates según modo
-  const templates = mode === 'strapi' && strapiTemplates.length > 0 
-    ? strapiTemplates 
-    : localTemplates;
+  const templates = storeConfig.designTemplates || [];
   
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,21 +205,6 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
           </h2>
           <p className="text-zinc-500 text-sm mt-1">
             {stats.total} templates • {stats.active} activos • {stats.favorites} favoritos
-            {strapiTemplates.length > 0 && (
-              <span className="ml-3 inline-flex items-center gap-1 text-xs">
-                <button
-                  onClick={() => setMode(mode === 'strapi' ? 'local' : 'strapi')}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded ${
-                    mode === 'strapi' 
-                      ? 'bg-green-500/20 text-green-400' 
-                      : 'bg-zinc-800 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {mode === 'strapi' ? <Wifi size={12} /> : <Database size={12} />}
-                  {mode === 'strapi' ? 'Strapi' : 'Local'}
-                </button>
-              </span>
-            )}
           </p>
         </div>
         <button
