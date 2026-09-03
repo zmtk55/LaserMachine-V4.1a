@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LaserMachine — Grabado láser que se queda para siempre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Paleta LaserMachine post-migración: zinc + emerald. Cero amber/yellow/orange. */
+    --bg: #fafaf9;
+    --bg-soft: #f4f4f5;
+    --fg: #18181b;
+    --fg-soft: #3f3f46;
+    --fg-muted: #71717a;
+    --fg-faint: #a1a1aa;
+    --line: #e4e4e7;
+    --line-strong: #d4d4d8;
+    --accent: #047857;        /* emerald-700: marca seriedad + artesanía */
+    --accent-deep: #064e3b;
+    --accent-soft: #ecfdf5;
+    --accent-ink: #022c22;
+    --dark: #09090b;
+    --dark-soft: #18181b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+    font-size: 16px;
+  }
+  .serif { font-family: 'Playfair Display', Georgia, serif; }
+  .mono  { font-family: 'JetBrains Mono', monospace; }
+
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  img { display: block; max-width: 100%; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250, 250, 249, 0.85);
+    backdrop-filter: blur(14px) saturate(140%);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand-mark {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: var(--fg); color: var(--bg);
+    display: grid; place-items: center;
+    font-family: 'Playfair Display', serif; font-weight: 700; font-size: 16px;
+  }
+  .nav-links { display: flex; gap: 32px; font-size: 14px; color: var(--fg-soft); }
+  .nav-links a:hover { color: var(--fg); }
+  .nav-cta { display: flex; gap: 12px; align-items: center; }
+  .btn-ghost { font-size: 14px; color: var(--fg-soft); padding: 8px 14px; border-radius: 999px; }
+  .btn-ghost:hover { color: var(--fg); background: var(--bg-soft); }
+  .btn-primary {
+    font-size: 14px; font-weight: 600;
+    background: var(--fg); color: var(--bg);
+    padding: 10px 18px; border-radius: 999px;
+    display: inline-flex; gap: 8px; align-items: center;
+    transition: transform 200ms ease, background 200ms ease;
+  }
+  .btn-primary:hover { background: var(--accent-deep); transform: translateY(-1px); }
+  .btn-primary svg { transition: transform 200ms ease; }
+  .btn-primary:hover svg { transform: translateX(2px); }
+
+  /* HERO — editorial cálido */
+  .hero { padding: 88px 0 56px; position: relative; overflow: hidden; }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 64px; align-items: end;
+  }
+  .eyebrow {
+    display: inline-flex; gap: 8px; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 24px;
+  }
+  .eyebrow::before {
+    content: ""; width: 24px; height: 1px; background: var(--accent);
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700; font-style: italic;
+    font-size: clamp(48px, 7.5vw, 104px);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero-lede {
+    margin-top: 28px; max-width: 480px;
+    font-size: 19px; line-height: 1.55; color: var(--fg-soft);
+  }
+  .hero-meta {
+    margin-top: 36px;
+    display: flex; gap: 28px; align-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg-muted);
+  }
+  .hero-meta strong { color: var(--fg); font-weight: 600; }
+  .hero-cta { margin-top: 36px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn-accent {
+    background: var(--accent); color: white;
+    padding: 14px 22px; border-radius: 999px; font-weight: 600; font-size: 15px;
+    display: inline-flex; gap: 8px; align-items: center;
+    transition: transform 200ms ease, box-shadow 200ms ease;
+    box-shadow: 0 10px 24px -10px rgba(4, 120, 87, 0.5);
+  }
+  .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 14px 30px -10px rgba(4, 120, 87, 0.55); }
+  .btn-outline {
+    border: 1px solid var(--line-strong); color: var(--fg);
+    padding: 14px 22px; border-radius: 999px; font-weight: 500; font-size: 15px;
+    display: inline-flex; gap: 8px; align-items: center;
+    background: var(--bg);
+  }
+  .btn-outline:hover { border-color: var(--fg); }
+
+  /* HERO artefact: tipo catálogo, no foto de stock */
+  .hero-artifact {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    background: linear-gradient(170deg, #f4f4f5 0%, #e4e4e7 100%);
+    border-radius: 18px;
+    padding: 32px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border: 1px solid var(--line);
+  }
+  .artifact-tag {
+    display: inline-flex; gap: 6px; align-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    background: white; color: var(--fg); padding: 6px 10px; border-radius: 4px;
+    align-self: flex-start;
+  }
+  .artifact-specs {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 24px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--fg-muted);
+    border-top: 1px solid var(--line-strong);
+    padding-top: 20px;
+  }
+  .artifact-specs strong { color: var(--fg); display: block; font-weight: 600; margin-bottom: 4px; font-size: 12px; }
+  .artifact-shape {
+    flex: 1;
+    margin: 24px 0;
+    position: relative;
+    display: grid; place-items: center;
+  }
+  .bottle {
+    width: 70%; max-width: 280px; aspect-ratio: 2 / 5;
+    background: linear-gradient(180deg, #27272a 0%, #18181b 60%, #09090b 100%);
+    border-radius: 999px 999px 28px 28px;
+    position: relative;
+    box-shadow:
+      inset 0 -20px 60px rgba(0,0,0,0.5),
+      inset 0 20px 40px rgba(255,255,255,0.05),
+      0 30px 60px -20px rgba(0,0,0,0.4);
+  }
+  .bottle::before {
+    content: ""; position: absolute; left: 8%; width: 12%; top: 8%; bottom: 70%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent);
+    border-radius: 999px;
+  }
+  .bottle::after {
+    content: "LM"; position: absolute;
+    left: 50%; top: 40%; transform: translate(-50%, -50%);
+    font-family: 'Playfair Display', serif; font-style: italic;
+    color: rgba(255,255,255,0.85);
+    font-size: 28px; font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .bottle-cap {
+    position: absolute; top: -6%; left: 50%; transform: translateX(-50%);
+    width: 36%; height: 10%; background: #52525b;
+    border-radius: 6px 6px 0 0;
+  }
+
+  /* Tira de prensa */
+  .press-strip {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 28px 0;
+    margin-top: 80px;
+  }
+  .press-inner { display: flex; align-items: center; justify-content: space-between; gap: 48px; flex-wrap: wrap; }
+  .press-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--fg-muted); }
+  .press-logos { display: flex; gap: 44px; flex-wrap: wrap; font-family: 'Playfair Display', serif; font-weight: 600; font-style: italic; color: var(--fg-soft); font-size: 18px; }
+  .press-logos span { opacity: 0.65; }
+
+  /* Sección "Cómo lo hacemos" — 3 columnas con tono de cuaderno */
+  section { padding: 110px 0; }
+  .section-head { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 56px; flex-wrap: wrap; }
+  .section-head h2 {
+    font-family: 'Playfair Display', serif; font-weight: 700;
+    font-size: clamp(36px, 4.8vw, 60px); line-height: 1.05; letter-spacing: -0.02em;
+    max-width: 720px;
+  }
+  .section-head h2 em { font-style: italic; color: var(--accent); }
+  .section-head p { color: var(--fg-soft); max-width: 360px; font-size: 15px; }
+
+  .process { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line); }
+  .process-step { padding: 36px 28px 36px 0; border-right: 1px solid var(--line); }
+  .process-step:last-child { border-right: 0; padding-right: 0; }
+  .process-step:not(:first-child) { padding-left: 28px; }
+  .process-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--accent); margin-bottom: 28px; letter-spacing: 0.15em;
+  }
+  .process-step h3 {
+    font-family: 'Playfair Display', serif; font-style: italic; font-weight: 600;
+    font-size: 26px; margin-bottom: 14px; letter-spacing: -0.01em;
+  }
+  .process-step p { color: var(--fg-soft); font-size: 15px; }
+
+  /* Catálogo — grid asimétrico de "ficha técnica" */
+  .catalog { background: var(--bg-soft); }
+  .catalog-grid {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px;
+  }
+  .product {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px; position: relative; overflow: hidden;
+    transition: transform 250ms ease, box-shadow 250ms ease;
+  }
+  .product:hover { transform: translateY(-3px); box-shadow: 0 14px 40px -20px rgba(0,0,0,0.15); }
+  .product .label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-muted);
+    display: flex; justify-content: space-between; margin-bottom: 24px;
+  }
+  .product h4 {
+    font-family: 'Playfair Display', serif; font-weight: 700; font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .product .price { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--fg); font-weight: 600; }
+  .product .blurb { color: var(--fg-soft); font-size: 13px; line-height: 1.5; margin: 12px 0 18px; }
+  .product .preview {
+    aspect-ratio: 4/3; border-radius: 10px; margin-bottom: 20px;
+    display: grid; place-items: center; position: relative;
+  }
+  .p1 .preview { background: linear-gradient(135deg, #e4e4e7, #d4d4d8); }
+  .p2 .preview { background: linear-gradient(135deg, #18181b, #27272a); }
+  .p3 .preview { background: linear-gradient(135deg, #ecfdf5, #d1fae5); }
+  .p4 .preview { background: linear-gradient(135deg, #f4f4f5, #e4e4e7); }
+  .p1 { grid-column: span 7; }
+  .p2 { grid-column: span 5; }
+  .p3 { grid-column: span 5; }
+  .p4 { grid-column: span 7; }
+
+  .silhouette { width: 50%; max-width: 160px; aspect-ratio: 2/4; border-radius: 999px 999px 18px 18px; position: relative; }
+  .p1 .silhouette { background: linear-gradient(180deg, #3f3f46, #18181b); }
+  .p2 .silhouette { background: linear-gradient(180deg, #f4f4f5, #d4d4d8); }
+  .p3 .silhouette { background: linear-gradient(180deg, #047857, #064e3b); }
+  .p4 .silhouette { background: linear-gradient(180deg, #71717a, #3f3f46); }
+
+  .product .specs {
+    border-top: 1px solid var(--line); padding-top: 16px;
+    display: flex; gap: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--fg-muted);
+  }
+  .product .specs strong { color: var(--fg); display: block; font-size: 12px; margin-bottom: 2px; font-weight: 600; }
+
+  /* Manifiesto */
+  .manifesto { background: var(--dark); color: white; padding: 130px 0; }
+  .manifesto-inner { max-width: 880px; margin: 0 auto; text-align: center; }
+  .manifesto blockquote {
+    font-family: 'Playfair Display', serif; font-style: italic; font-weight: 400;
+    font-size: clamp(28px, 3.5vw, 44px); line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .manifesto blockquote::before, .manifesto blockquote::after {
+    content: ""; display: block; width: 40px; height: 1px; background: var(--accent);
+    margin: 36px auto;
+  }
+  .manifesto cite {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--fg-faint); font-style: normal;
+  }
+
+  /* FAQ editorial */
+  .faq-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 80px; align-items: start; }
+  .faq-list { border-top: 1px solid var(--line); }
+  .faq-item { border-bottom: 1px solid var(--line); padding: 24px 0; cursor: pointer; }
+  .faq-q {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Playfair Display', serif; font-weight: 600; font-size: 20px; letter-spacing: -0.01em;
+  }
+  .faq-q .pm {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent);
+    width: 24px; height: 24px; display: grid; place-items: center;
+    border: 1px solid var(--line); border-radius: 999px;
+    transition: transform 200ms ease;
+  }
+  .faq-item.open .pm { transform: rotate(45deg); }
+  .faq-a {
+    color: var(--fg-soft); font-size: 15px; line-height: 1.6;
+    max-height: 0; overflow: hidden; transition: max-height 300ms ease, padding 300ms ease, margin 300ms ease;
+  }
+  .faq-item.open .faq-a { max-height: 220px; padding-top: 14px; }
+
+  /* CTA final */
+  .cta-final { background: var(--bg-soft); }
+  .cta-card {
+    background: var(--dark); color: white;
+    border-radius: 24px; padding: 80px 64px;
+    display: grid; grid-template-columns: 1.4fr 1fr; gap: 48px; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .cta-card::after {
+    content: ""; position: absolute; right: -120px; top: -120px;
+    width: 400px; height: 400px; border-radius: 999px;
+    background: radial-gradient(circle, rgba(4,120,87,0.4) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-card h3 {
+    font-family: 'Playfair Display', serif; font-weight: 700;
+    font-size: clamp(32px, 4vw, 52px); line-height: 1.05; letter-spacing: -0.02em;
+  }
+  .cta-card h3 em { font-style: italic; color: #6ee7b7; }
+  .cta-card p { color: #a1a1aa; margin-top: 16px; max-width: 420px; }
+  .cta-card .cta-actions { display: flex; flex-direction: column; gap: 12px; }
+  .cta-card .btn-accent { justify-content: center; }
+  .cta-card .btn-outline {
+    background: transparent; color: white; border-color: #3f3f46; justify-content: center;
+  }
+  .cta-card .btn-outline:hover { border-color: white; }
+
+  /* Footer editorial */
+  footer { border-top: 1px solid var(--line); padding: 64px 0 32px; }
+  .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+  .foot-col h5 {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 18px;
+  }
+  .foot-col a, .foot-col p { display: block; font-size: 14px; color: var(--fg-soft); margin-bottom: 10px; }
+  .foot-col a:hover { color: var(--fg); }
+  .foot-brand { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 24px; margin-bottom: 16px; }
+  .foot-tag { color: var(--fg-soft); font-size: 14px; max-width: 320px; }
+  .foot-bottom {
+    display: flex; justify-content: space-between; padding-top: 24px; border-top: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--fg-muted);
+  }
+
+  /* Responsive */
+  @media (max-width: 920px) {
+    .hero { padding: 56px 0 32px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+    .process { grid-template-columns: 1fr; }
+    .process-step { border-right: 0; border-bottom: 1px solid var(--line); padding: 24px 0 !important; }
+    .process-step:last-child { border-bottom: 0; }
+    .catalog-grid { grid-template-columns: 1fr; }
+    .p1, .p2, .p3, .p4 { grid-column: span 1; }
+    .faq-grid { grid-template-columns: 1fr; gap: 40px; }
+    .cta-card { grid-template-columns: 1fr; padding: 48px 28px; }
+    .foot-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+    .nav-links { display: none; }
+    section { padding: 72px 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a href="#" class="brand">
+      <span class="brand-mark">LM</span>
+      <span>LaserMachine</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#catalogo">Catálogo</a>
+      <a href="#proceso">Cómo lo hacemos</a>
+      <a href="#faq">Preguntas</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn-ghost">Iniciar sesión</button>
+      <button class="btn-primary">
+        Personalizar
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">Estudio · Buenos Aires</span>
+        <h1>Lo que grabás<br>en un termo <em>queda</em>.</h1>
+        <p class="hero-lede">
+          Hacemos grabados láser en acero inoxidable, aluminio y madera. Cada pieza sale
+          calibrada a mano, pensada para que la uses todos los días durante años.
+        </p>
+        <div class="hero-meta">
+          <span><strong>+1.200</strong> piezas entregadas</span>
+          <span><strong>24-48 h</strong> de producción</span>
+          <span><strong>Garantía</strong> de por vida</span>
+        </div>
+        <div class="hero-cta">
+          <button class="btn-accent">
+            Empezar mi diseño
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+          <button class="btn-outline">Ver catálogo</button>
+        </div>
+      </div>
+
+      <aside class="hero-artifact" aria-label="Ficha técnica YETI Rambler 30oz">
+        <span class="artifact-tag">
+          <span style="width:6px;height:6px;background:#047857;border-radius:999px;display:inline-block;"></span>
+          En stock · listo en 24 h
+        </span>
+        <div class="artifact-shape">
+          <div class="bottle">
+            <div class="bottle-cap"></div>
+          </div>
+        </div>
+        <div class="artifact-specs">
+          <div><strong>YETI Rambler</strong>30 oz · 887 ml</div>
+          <div><strong>Material</strong>Acero 18/8</div>
+          <div><strong>Grabado</strong>Láser fibra · 60 W</div>
+          <div><strong>Desde</strong>$ 8.900 ARS</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- Press strip -->
+<div class="press-strip">
+  <div class="container press-inner">
+    <span class="press-label">Vistos en</span>
+    <div class="press-logos">
+      <span>La Nación</span>
+      <span>Olé</span>
+      <span>Forbes Argentina</span>
+      <span>Infobae</span>
+      <span>ámbito</span>
+    </div>
+  </div>
+</div>
+
+<!-- Proceso -->
+<section id="proceso" style="background:white;">
+  <div class="container">
+    <div class="section-head">
+      <h2>Tres pasos. <em>Sin vueltas.</em></h2>
+      <p>El proceso es directo: elegís, diseñás, retirás o te lo mandamos. Nada de formularios eternos.</p>
+    </div>
+    <div class="process">
+      <div class="process-step">
+        <div class="process-num">01 /</div>
+        <h3>Elegí la pieza</h3>
+        <p>Tenemos YETI, Stanley, Owala, Hydroflask y nuestras propias piezas en acero y madera. Cada una con sus pruebas de grabado.</p>
+      </div>
+      <div class="process-step">
+        <div class="process-num">02 /</div>
+        <h3>Diseñá en el editor</h3>
+        <p>Subís tu logo o escribís lo que quieras. Probás tipografías, posición y tamaño en tiempo real sobre la foto de la pieza.</p>
+      </div>
+      <div class="process-step">
+        <div class="process-num">03 /</div>
+        <h3>Te lo mandamos</h3>
+        <p>Producimos en menos de 48 h hábiles. Hacemos envíos a todo el país con seguimiento y embalaje anti-golpe.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Catálogo -->
+<section id="catalogo" class="catalog">
+  <div class="container">
+    <div class="section-head">
+      <h2>Las que más <em>se llevan.</em></h2>
+      <p>Cuatro modelos que cubren el 80% de los pedidos. Si querés algo distinto, tenemos más de 30 referencias en el catálogo completo.</p>
+    </div>
+    <div class="catalog-grid">
+      <article class="product p1">
+        <div class="label"><span>YETI · 30 oz</span><span>01</span></div>
+        <div class="preview"><div class="silhouette"></div></div>
+        <h4>Rambler 30 oz</h4>
+        <p class="blurb">La best seller. Aguanta hielo 24 h y café caliente 12 h. Grabado en fibra láser, queda inalterable.</p>
+        <span class="price">$ 8.900 ARS</span>
+        <div class="specs">
+          <div><strong>887 ml</strong>capacidad</div>
+          <div><strong>Acero 18/8</strong>material</div>
+          <div><strong>4 colores</strong>disponibles</div>
+        </div>
+      </article>
+
+      <article class="product p2">
+        <div class="label"><span>Stanley · 40 oz</span><span>02</span></div>
+        <div class="preview"><div class="silhouette"></div></div>
+        <h4>Quencher H2.0</h4>
+        <p class="blurb">Para los que necesitan hidratación seria. Mango ergonómico y straw integrada.</p>
+        <span class="price">$ 7.400 ARS</span>
+        <div class="specs">
+          <div><strong>1.18 L</strong>capacidad</div>
+          <div><strong>Acero reciclado</strong>material</div>
+          <div><strong>5 colores</strong>disponibles</div>
+        </div>
+      </article>
+
+      <article class="product p3">
+        <div class="label"><span>Owala · 24 oz</span><span>03</span></div>
+        <div class="preview"><div class="silhouette"></div></div>
+        <h4>FreeSip</h4>
+        <p class="blurb">La preferida para la oficina. Boquilla dual: sorbete o vertido directo.</p>
+        <span class="price">$ 6.200 ARS</span>
+        <div class="specs">
+          <div><strong>710 ml</strong>capacidad</div>
+          <div><strong>BPA-free</strong>material</div>
+          <div><strong>3 colores</strong>disponibles</div>
+        </div>
+      </article>
+
+      <article class="product p4">
+        <div class="label"><span>Madera · Taller propio</span><span>04</span></div>
+        <div class="preview"><div class="silhouette"></div></div>
+        <h4>Tabla personalizable</h4>
+        <p class="blurb">Para picar o servir. Algarrobo o paraíso, terminación con aceite de lino. Grabado perimetral o central.</p>
+        <span class="price">$ 5.800 ARS</span>
+        <div class="specs">
+          <div><strong>35 × 25 cm</strong>medidas</div>
+          <div><strong>Algarrobo</strong>madera</div>
+          <div><strong>Hecha a mano</strong>taller</div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Manifiesto -->
+<section class="manifesto">
+  <div class="container manifesto-inner">
+    <blockquote>
+      No hacemos merchandising. Hacemos piezas que la gente quiere usar
+      todos los días durante el resto de su vida.
+    </blockquote>
+    <cite>— Equipo LaserMachine</cite>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="container">
+    <div class="faq-grid">
+      <div>
+        <span class="eyebrow">Preguntas</span>
+        <h2 style="font-family:'Playfair Display',serif;font-weight:700;font-size:clamp(36px,4.8vw,60px);line-height:1.05;letter-spacing:-0.02em;margin-top:18px;">
+          Lo que nos <em style="font-style:italic;color:var(--accent);">preguntan</em> siempre.
+        </h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item open">
+          <div class="faq-q">¿Cuánto tarda un pedido? <span class="pm">+</span></div>
+          <div class="faq-a">Producción en 24-48 h hábiles. Envío a CABA en 24 h, al resto del país entre 3 y 5 días.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿El grabado se borra con el uso? <span class="pm">+</span></div>
+          <div class="faq-a">No. El láser marca el acero en profundidad, no es tinta. Soporta lavavajillas, freezer y uso intensivo.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿Puedo mandar mi propio diseño? <span class="pm">+</span></div>
+          <div class="faq-a">Sí. Subís PNG, SVG o PDF desde el editor. Si el archivo no se puede vectorizar te avisamos antes de cobrar.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿Qué pasa si no me gusta? <span class="pm">+</span></div>
+          <div class="faq-a">Rehacemos sin costo o te devolvemos el dinero. La garantía es de por vida en el agarre del grabado.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA final -->
+<section class="cta-final">
+  <div class="container">
+    <div class="cta-card">
+      <div>
+        <h3>Tu próximo termo <em>empieza</em><br>con un texto y una foto.</h3>
+        <p>Probalo en el editor antes de pagar. Si no te convence, no seguimos.</p>
+      </div>
+      <div class="cta-actions">
+        <button class="btn-accent">
+          Probar el editor
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+        <button class="btn-outline">Hablar por WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer id="contacto">
+  <div class="container">
+    <div class="foot-grid">
+      <div class="foot-col">
+        <div class="foot-brand">LaserMachine</div>
+        <p class="foot-tag">Estudio de grabado láser en Buenos Aires. Hacemos envíos a todo el país desde 2019.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Catálogo</h5>
+        <a href="#">YETI</a>
+        <a href="#">Stanley</a>
+        <a href="#">Owala</a>
+        <a href="#">Madera</a>
+      </div>
+      <div class="foot-col">
+        <h5>Estudio</h5>
+        <a href="#">Cómo trabajamos</a>
+        <a href="#">Garantía</a>
+        <a href="#">Mayoristas</a>
+        <a href="#">Preguntas</a>
+      </div>
+      <div class="foot-col">
+        <h5>Contacto</h5>
+        <p>WhatsApp · +54 9 11 5555 0000</p>
+        <p>Instagram · @laser.machine</p>
+        <p>hola@lasermachine.ar</p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 LaserMachine · Buenos Aires</span>
+      <span>Hecho con láser, no con plantilla.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // FAQ toggle
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LaserMachine — Personalización láser para termos y accesorios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #fafafa;
+    --bg-elev: #f4f4f5;
+    --fg: #09090b;
+    --fg-soft: #52525b;
+    --fg-muted: #71717a;
+    --fg-faint: #a1a1aa;
+    --line: #e4e4e7;
+    --line-strong: #d4d4d8;
+    --accent: #10b981;
+    --accent-deep: #047857;
+    --accent-soft: #ecfdf5;
+    --dark: #09090b;
+    --dark-soft: #18181b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--fg); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5; font-size: 15px;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  img, svg { display: block; max-width: 100%; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px) saturate(150%);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center; height: 64px; gap: 32px;
+  }
+  .nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+  .nav-brand .dot { width: 22px; height: 22px; background: var(--fg); border-radius: 6px; display: grid; place-items: center; color: white; font-size: 11px; font-weight: 700; }
+  .nav-mid { display: flex; gap: 28px; font-size: 13.5px; color: var(--fg-soft); }
+  .nav-mid a:hover { color: var(--fg); }
+  .nav-right { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 8px;
+    font-size: 13.5px; font-weight: 500;
+    transition: all 150ms ease;
+  }
+  .btn-ghost { color: var(--fg-soft); }
+  .btn-ghost:hover { background: var(--bg-elev); color: var(--fg); }
+  .btn-dark { background: var(--fg); color: white; }
+  .btn-dark:hover { background: #000; }
+  .btn-emerald { background: var(--accent); color: white; }
+  .btn-emerald:hover { background: var(--accent-deep); }
+
+  /* Banner superior fino */
+  .top-banner {
+    background: var(--dark); color: #d4d4d8; font-size: 13px;
+    padding: 8px 32px; text-align: center; border-bottom: 1px solid var(--dark-soft);
+  }
+  .top-banner strong { color: var(--accent); font-weight: 500; }
+  .top-banner .sep { margin: 0 16px; color: var(--fg-faint); }
+
+  /* HERO */
+  .hero { padding: 88px 0 64px; position: relative; }
+  .hero-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px; align-items: center; }
+
+  .eyebrow {
+    display: inline-flex; gap: 6px; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--accent-deep);
+    margin-bottom: 22px;
+    padding: 5px 10px;
+    background: var(--accent-soft); border-radius: 4px;
+  }
+  .eyebrow .pulse { width: 6px; height: 6px; background: var(--accent); border-radius: 999px; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
+
+  .hero h1 {
+    font-size: clamp(40px, 5.4vw, 72px);
+    font-weight: 700; letter-spacing: -0.035em; line-height: 1.02;
+  }
+  .hero h1 .accent { color: var(--accent-deep); }
+  .hero p.lede {
+    margin-top: 22px; max-width: 540px;
+    font-size: 17px; line-height: 1.6; color: var(--fg-soft);
+  }
+  .hero-actions { margin-top: 32px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .btn-lg { padding: 12px 20px; font-size: 14.5px; border-radius: 8px; font-weight: 600; }
+  .btn-lg.secondary { background: white; color: var(--fg); border: 1px solid var(--line-strong); }
+  .btn-lg.secondary:hover { border-color: var(--fg); }
+
+  /* Hero metrics strip */
+  .hero-stats {
+    margin-top: 56px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+    border-top: 1px solid var(--line); padding-top: 28px;
+  }
+  .stat .num { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .stat .lbl { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fg-muted); margin-top: 4px; }
+
+  /* Code-style preview box (Stripe-meets-Linear) */
+  .code-panel {
+    background: var(--dark); color: #e4e4e7;
+    border-radius: 14px;
+    border: 1px solid var(--dark-soft);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+    overflow: hidden;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    position: relative;
+  }
+  .code-panel::before {
+    content: ""; position: absolute; inset: -1px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(16,185,129,0.5), transparent 40%);
+    z-index: -1;
+  }
+  .code-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; border-bottom: 1px solid var(--dark-soft);
+    background: rgba(255,255,255,0.02);
+  }
+  .dots { display: flex; gap: 6px; }
+  .dots span { width: 10px; height: 10px; border-radius: 999px; background: #3f3f46; }
+  .dots span:nth-child(1) { background: #ef4444; }
+  .dots span:nth-child(2) { background: #eab308; }
+  .dots span:nth-child(3) { background: #22c55e; }
+  .code-file { color: var(--fg-faint); font-size: 11.5px; }
+  .code-body { padding: 18px; line-height: 1.75; }
+  .code-body .ln { display: inline-block; width: 22px; color: #52525b; text-align: right; margin-right: 12px; user-select: none; }
+  .code-body .kw { color: #c084fc; }
+  .code-body .str { color: #6ee7b7; }
+  .code-body .num { color: #fbbf24; }
+  .code-body .cmt { color: var(--fg-faint); }
+  .code-body .fn  { color: #93c5fd; }
+  .code-body .accent { color: #34d399; }
+
+  /* SECCIÓN "Cómo funciona" — 3 cards con bullets densos */
+  section { padding: 96px 0; }
+  .sect-head { display: flex; align-items: end; justify-content: space-between; gap: 40px; margin-bottom: 48px; flex-wrap: wrap; }
+  .sect-head .left h2 {
+    font-size: clamp(32px, 4vw, 48px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1;
+    max-width: 720px;
+  }
+  .sect-head .right { max-width: 360px; color: var(--fg-soft); font-size: 15px; }
+
+  .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .how-card {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+    padding: 28px; transition: border-color 200ms ease, transform 200ms ease;
+  }
+  .how-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .how-card .head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.14em; color: var(--fg-muted); margin-bottom: 20px;
+  }
+  .how-card .head .tag { background: var(--accent-soft); color: var(--accent-deep); padding: 3px 8px; border-radius: 4px; }
+  .how-card h3 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 10px; }
+  .how-card p { color: var(--fg-soft); font-size: 14px; line-height: 1.55; margin-bottom: 16px; }
+  .how-card ul { list-style: none; border-top: 1px solid var(--line); padding-top: 16px; }
+  .how-card li {
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 13px; color: var(--fg-soft); padding: 6px 0;
+  }
+  .how-card li::before { content: "→"; color: var(--accent); font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+
+  /* Sección catálogo — grid denso estilo Linear */
+  .catalog-section { background: var(--bg-soft); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .cat-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px; padding: 12px 16px; background: white; border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .cat-toolbar input {
+    flex: 1; padding: 6px 10px; border: 0; font-size: 13px; background: transparent; outline: none;
+  }
+  .cat-toolbar .filters { display: flex; gap: 6px; }
+  .filter-pill {
+    padding: 6px 12px; font-size: 12.5px; border-radius: 6px; color: var(--fg-soft);
+    background: var(--bg-elev); border: 1px solid transparent;
+  }
+  .filter-pill.active { background: var(--fg); color: white; }
+  .filter-pill:not(.active):hover { color: var(--fg); border-color: var(--line-strong); }
+
+  .cat-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .cat-card {
+    background: white; border: 1px solid var(--line); border-radius: 12px;
+    padding: 0; overflow: hidden; transition: border-color 150ms ease, transform 150ms ease;
+  }
+  .cat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .cat-card .top {
+    aspect-ratio: 5/4;
+    display: grid; place-items: center;
+    background: linear-gradient(180deg, var(--bg-soft), white);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .cat-card .badge {
+    position: absolute; top: 12px; left: 12px;
+    background: white; border: 1px solid var(--line); border-radius: 4px;
+    padding: 4px 8px; font-size: 11px; font-weight: 600;
+  }
+  .cat-card .badge.hot { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+  .cat-card .silhouette {
+    width: 40%; max-width: 130px; aspect-ratio: 2/3.5;
+    border-radius: 999px 999px 14px 14px;
+  }
+  .c1 .silhouette { background: linear-gradient(180deg, #27272a, #09090b); }
+  .c2 .silhouette { background: linear-gradient(180deg, #f4f4f5, #d4d4d8); }
+  .c3 .silhouette { background: linear-gradient(180deg, #10b981, #047857); }
+  .c4 .silhouette { background: linear-gradient(180deg, #52525b, #27272a); }
+  .c5 .silhouette { background: linear-gradient(180deg, #e4e4e7, #a1a1aa); }
+  .c6 .silhouette { background: linear-gradient(180deg, #18181b, #000); }
+  .cat-card .body { padding: 16px 18px 20px; }
+  .cat-card .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;
+  }
+  .cat-card .meta .price { color: var(--fg); font-weight: 600; }
+  .cat-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .cat-card .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .cat-card .tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    padding: 3px 7px; background: var(--bg-elev); border-radius: 4px; color: var(--fg-soft);
+  }
+
+  /* Sección "Integraciones / datos" estilo Stripe */
+  .trust {
+    background: var(--dark); color: white; padding: 80px 0;
+    border-top: 1px solid var(--dark-soft);
+  }
+  .trust-inner { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 56px; align-items: center; }
+  .trust h2 {
+    font-size: clamp(28px, 3.4vw, 42px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1;
+  }
+  .trust h2 em { font-style: normal; color: var(--accent); }
+  .trust p { color: #a1a1aa; margin-top: 18px; max-width: 420px; font-size: 15px; }
+
+  .stats-table {
+    background: var(--dark-soft); border: 1px solid #27272a; border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    overflow: hidden;
+  }
+  .stats-row {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 12px;
+    padding: 14px 18px; border-bottom: 1px solid #27272a;
+    align-items: center;
+  }
+  .stats-row:last-child { border-bottom: 0; }
+  .stats-row.head { background: #09090b; color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.12em; font-size: 10.5px; }
+  .stats-row .pos { color: #6ee7b7; }
+
+  /* Pricing section */
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .price-card {
+    background: white; border: 1px solid var(--line); border-radius: 12px;
+    padding: 28px;
+  }
+  .price-card.featured { border-color: var(--fg); box-shadow: 0 0 0 3px rgba(0,0,0,0.04); position: relative; }
+  .price-card.featured::before {
+    content: "Más elegido"; position: absolute; top: -10px; left: 24px;
+    background: var(--fg); color: white; font-size: 11px; padding: 4px 10px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em;
+  }
+  .price-card .name { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin-bottom: 14px; }
+  .price-card .num { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; }
+  .price-card .num small { font-size: 14px; font-weight: 500; color: var(--fg-muted); margin-left: 4px; }
+  .price-card .desc { color: var(--fg-soft); font-size: 14px; margin: 12px 0 20px; }
+  .price-card ul { list-style: none; border-top: 1px solid var(--line); padding-top: 18px; }
+  .price-card li {
+    display: flex; gap: 10px; padding: 6px 0; font-size: 14px; color: var(--fg-soft);
+  }
+  .price-card li::before {
+    content: ""; width: 16px; height: 16px; flex-shrink: 0;
+    background: var(--accent-soft); border-radius: 999px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23047857' stroke-width='3'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E");
+    background-size: 12px; background-repeat: no-repeat; background-position: center;
+    margin-top: 2px;
+  }
+  .price-card .cta { display: block; margin-top: 22px; text-align: center; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+  .price-card .cta.primary { background: var(--fg); color: white; }
+  .price-card .cta.primary:hover { background: #000; }
+  .price-card .cta.secondary { background: white; color: var(--fg); border: 1px solid var(--line-strong); }
+  .price-card .cta.secondary:hover { border-color: var(--fg); }
+
+  /* CTA final */
+  .cta-section { padding: 80px 0; }
+  .cta-card {
+    background: var(--fg); color: white; border-radius: 16px;
+    padding: 56px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .cta-card::before {
+    content: ""; position: absolute; right: -100px; top: -100px;
+    width: 400px; height: 400px; border-radius: 999px;
+    background: radial-gradient(circle, rgba(16,185,129,0.25), transparent 70%);
+    pointer-events: none;
+  }
+  .cta-card h3 { font-size: clamp(26px, 3.4vw, 40px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .cta-card p { color: #a1a1aa; margin-top: 14px; }
+  .cta-card .actions { display: flex; gap: 10px; flex-direction: column; }
+  .cta-card .btn-emerald { justify-content: center; padding: 12px 20px; border-radius: 8px; font-weight: 600; }
+  .cta-card .btn-ghost { color: white; border: 1px solid #3f3f46; padding: 12px 20px; border-radius: 8px; justify-content: center; }
+  .cta-card .btn-ghost:hover { background: var(--dark-soft); }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--line); padding: 56px 0 32px; }
+  .foot-grid { display: grid; grid-template-columns: 2fr repeat(4, 1fr); gap: 32px; }
+  .foot-col h5 { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-muted); margin-bottom: 14px; }
+  .foot-col a { display: block; font-size: 13.5px; color: var(--fg-soft); padding: 4px 0; }
+  .foot-col a:hover { color: var(--fg); }
+  .foot-brand { font-weight: 700; font-size: 16px; margin-bottom: 14px; }
+  .foot-tag { color: var(--fg-soft); font-size: 14px; max-width: 320px; }
+
+  @media (max-width: 980px) {
+    .hero-grid, .trust-inner, .cta-card, .foot-grid { grid-template-columns: 1fr; }
+    .how-grid, .cat-grid, .pricing-grid { grid-template-columns: 1fr 1fr; }
+    .hero-stats { grid-template-columns: 1fr 1fr; }
+    .nav-mid { display: none; }
+    .nav-inner { grid-template-columns: 1fr 1fr; }
+    section { padding: 64px 0; }
+  }
+  @media (max-width: 600px) {
+    .how-grid, .cat-grid, .pricing-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-banner mono">
+  <strong>v3.2</strong> Editor con vista previa 3D
+  <span class="sep">·</span>
+  Envíos a todo el país
+  <span class="sep">·</span>
+  Garantía de por vida
+</div>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="#" class="nav-brand">
+      <span class="dot">LM</span>
+      LaserMachine
+    </a>
+    <nav class="nav-mid">
+      <a href="#productos">Productos</a>
+      <a href="#proceso">Proceso</a>
+      <a href="#precios">Precios</a>
+      <a href="#datos">Datos</a>
+      <a href="#docs">Docs</a>
+    </nav>
+    <div class="nav-right">
+      <button class="btn btn-ghost">Iniciar sesión</button>
+      <button class="btn btn-emerald">Empezar →</button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" style="padding-top:72px;">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow"><span class="pulse"></span>API & editor listos</span>
+        <h1>Personalización láser<br>para <span class="accent">termos y accesorios</span></h1>
+        <p class="lede">
+          Subís tu diseño, lo ves en 3D sobre la pieza, y te llega grabado en menos de 48 h.
+          Integramos con tu tienda, WooCommerce o Mercado Shops en una línea.
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-lg btn-dark">Probar el editor →</button>
+          <button class="btn btn-lg secondary">Ver la API</button>
+        </div>
+      </div>
+
+      <!-- Code panel -->
+      <div class="code-panel">
+        <div class="code-head">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <span class="code-file">~/lasermachine/order.js</span>
+          <span class="code-file" style="color:#6ee7b7;">● live</span>
+        </div>
+        <div class="code-body">
+<div><span class="ln">1</span><span class="cmt">// Crear pedido con diseño personalizado</span></div>
+<div><span class="ln">2</span><span class="kw">const</span> order = <span class="kw">await</span> <span class="fn">lm</span>.<span class="fn">orders</span>.<span class="fn">create</span>({</div>
+<div><span class="ln">3</span>  product: <span class="str">"yeti-rambler-30oz"</span>,</div>
+<div><span class="ln">4</span>  color: <span class="str">"navy"</span>,</div>
+<div><span class="ln">5</span>  design: {</div>
+<div><span class="ln">6</span>    text: <span class="str">"María — Buenos Aires"</span>,</div>
+<div><span class="ln">7</span>    font: <span class="str">"playfair-italic"</span>,</div>
+<div><span class="ln">8</span>    position: [<span class="num">120</span>, <span class="num">340</span>],</div>
+<div><span class="ln">9</span>    logoUrl: <span class="str">"https://..."</span>,</div>
+<div><span class="ln">10</span>  },</div>
+<div><span class="ln">11</span>  <span class="fn">shipping</span>: <span class="str">"andreani"</span>,</div>
+<div><span class="ln">12</span>});</div>
+<div><span class="ln">13</span></div>
+<div><span class="ln">14</span>console.<span class="fn">log</span>(order.<span class="accent">tracking</span>);</div>
+<div><span class="ln">15</span><span class="cmt">// → AND-2026-0123-789</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat"><div class="num">1.247</div><div class="lbl">Pedidos entregados</div></div>
+      <div class="stat"><div class="num">24–48h</div><div class="lbl">Tiempo de producción</div></div>
+      <div class="stat"><div class="num">99,4%</div><div class="lbl">Aceptación en QA</div></div>
+      <div class="stat"><div class="num">$0</div><div class="lbl">Costo de setup</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Proceso -->
+<section id="proceso" style="padding-top:48px;">
+  <div class="wrap">
+    <div class="sect-head">
+      <div class="left">
+        <h2>Cómo funciona.</h2>
+      </div>
+      <div class="right">
+        Tres pasos que ya probamos miles de veces. Si tu pedido necesita algo distinto
+        (cajas, packs, mayoreo), tenemos un flujo dedicado.
+      </div>
+    </div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="head"><span>01 · Diseño</span><span class="tag">Web editor</span></div>
+        <h3>Cargá tu diseño</h3>
+        <p>Editor visual con preview 3D de la pieza. Soporta texto, logos SVG/PNG y composición.</p>
+        <ul>
+          <li>Vista previa en tiempo real</li>
+          <li>12 tipografías + tipografías custom</li>
+          <li>Exportá el diseño como JSON para automatizar</li>
+        </ul>
+      </div>
+      <div class="how-card">
+        <div class="head"><span>02 · Producción</span><span class="tag">Láser fibra</span></div>
+        <h3>Lo grabamos</h3>
+        <p>Calibramos eláser por material (acero, aluminio, madera) y enviamos fotos de QA antes de despachar.</p>
+        <ul>
+          <li>Resolución 0,05 mm</li>
+          <li>Foto de aprobación previa al envío</li>
+          <li>Trazabilidad por unidad serializada</li>
+        </ul>
+      </div>
+      <div class="how-card">
+        <div class="head"><span>03 · Envío</span><span class="tag">24–48 h</span></div>
+        <h3>Te llega a tu casa</h3>
+        <p>Andreani para todo el país, motomensajería en CABA. Embalaje anti-golpe con cardboard reciclable.</p>
+        <ul>
+          <li>Tracking en tiempo real</li>
+          <li>Notificación automática por WhatsApp</li>
+          <li>Devolución gratis si rechazás en entrega</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Catálogo -->
+<section id="productos" class="catalog-section">
+  <div class="wrap">
+    <div class="sect-head">
+      <div class="left">
+        <h2>Catálogo de piezas.</h2>
+      </div>
+      <div class="right">
+        32 referencias. Filtros por marca, capacidad y tipo de grabado.
+      </div>
+    </div>
+
+    <div class="cat-toolbar">
+      <input placeholder="Buscar pieza, marca o material…" />
+      <div class="filters">
+        <span class="filter-pill active">Todos</span>
+        <span class="filter-pill">YETI</span>
+        <span class="filter-pill">Stanley</span>
+        <span class="filter-pill">Owala</span>
+        <span class="filter-pill">Madera</span>
+      </div>
+    </div>
+
+    <div class="cat-grid">
+      <article class="cat-card c1">
+        <div class="top">
+          <span class="badge">YETI · 30 oz</span>
+          <div class="silhouette"></div>
+        </div>
+        <div class="body">
+          <div class="meta"><span>Rambler</span><span class="price">$8.900</span></div>
+          <h4>YETI Rambler 30 oz</h4>
+          <div class="tags"><span class="tag">acero 18/8</span><span class="tag">887 ml</span></div>
+        </div>
+      </article>
+
+      <article class="cat-card c2">
+        <div class="top">
+          <span class="badge hot">BEST</span>
+          <div class="silhouette"></div>
+        </div>
+        <div class="body">
+          <div class="meta"><span>Quencher</span><span class="price">$7.400</span></div>
+          <h4>Stanley Quencher 40 oz</h4>
+          <div class="tags"><span class="tag">acero reciclado</span><span class="tag">1.18 L</span></div>
+        </div>
+      </article>
+
+      <article class="cat-card c3">
+        <div class="top">
+          <span class="badge">Owala · 24 oz</span>
+          <div class="silhouette"></div>
+        </div>
+        <div class="body">
+          <div class="meta"><span>FreeSip</span><span class="price">$6.200</span></div>
+          <h4>Owala FreeSip 24 oz</h4>
+          <div class="tags"><span class="tag">bpa-free</span><span class="tag">710 ml</span></div>
+        </div>
+      </article>
+
+      <article class="cat-card c4">
+        <div class="top">
+          <span class="badge">YETI · 20 oz</span>
+          <div class="silhouette"></div>
+        </div>
+        <div class="body">
+          <div class="meta"><span>Tumbler</span><span class="price">$7.100</span></div>
+          <h4>YETI Tumbler 20 oz</h4>
+          <div class="tags"><span class="tag">acero 18/8</span><span class="tag">591 ml</span></div>
+        </div>
+      </article>
+
+      <article class="cat-card c5">
+        <div class="top">
+          <span class="badge">Madera · Taller</span>
+          <div class="silhouette"></div>
+        </div>
+        <div class="body">
+          <div class="meta"><span>Tabla</span><span class="price">$5.800</span></div>
+          <h4>Tabla de algarrobo 35 × 25</h4>
+          <div class="tags"><span class="tag">hecha a mano</span><span class="tag">aceite de lino</span></div>
+        </div>
+      </article>
+
+      <article class="cat-card c6">
+        <div class="top">
+          <span class="badge">Stanley · 17 oz</span>
+          <div class="silhouette"></div>
+        </div>
+        <div class="body">
+          <div class="meta"><span>Flip Straw</span><span class="price">$5.400</span></div>
+          <h4>Stanley Flip Straw 17 oz</h4>
+          <div class="tags"><span class="tag">acero reciclado</span><span class="tag">503 ml</span></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Trust / datos -->
+<section id="datos" class="trust">
+  <div class="wrap trust-inner">
+    <div>
+      <span class="eyebrow" style="background:rgba(16,185,129,0.15); color:#6ee7b7;">Datos · 2025</span>
+      <h2 style="margin-top:18px;">Lo que midió<br>nuestro taller este año.</h2>
+      <p>Cada pedido queda serializado y medido. Estos son los promedios del último año, sin contar outliers.</p>
+    </div>
+    <div class="stats-table">
+      <div class="stats-row head">
+        <span>Indicador</span><span>Q1</span><span>Q2</span><span>Q3</span>
+      </div>
+      <div class="stats-row">
+        <span>Pedidos / mes</span><span>218</span><span>287</span><span class="pos">341 ↑</span>
+      </div>
+      <div class="stats-row">
+        <span>Tiempo prod. (h)</span><span>52</span><span class="pos">38 ↓</span><span class="pos">31 ↓</span>
+      </div>
+      <div class="stats-row">
+        <span>Tasa de QA pass</span><span>97,2%</span><span>98,6%</span><span class="pos">99,4% ↑</span>
+      </div>
+      <div class="stats-row">
+        <span>NPS cliente</span><span>72</span><span>78</span><span class="pos">84 ↑</span>
+      </div>
+      <div class="stats-row">
+        <span>Devoluciones</span><span>2,1%</span><span class="pos">1,4% ↓</span><span class="pos">0,6% ↓</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="precios">
+  <div class="wrap">
+    <div class="sect-head">
+      <div class="left">
+        <h2>Precios.</h2>
+      </div>
+      <div class="right">
+        Sin setup, sin sorpresas. Lo que ves es lo que pagás.
+        Envío aparte según destino.
+      </div>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="name">Por unidad</div>
+        <div class="num">$5.400<small>/ desde</small></div>
+        <p class="desc">Para pedidos de 1 a 5 unidades. Listo en 48 h.</p>
+        <ul>
+          <li>Una pieza por diseño</li>
+          <li>Edición ilimitada</li>
+          <li>Garantía de por vida</li>
+          <li>Soporte por WhatsApp</li>
+        </ul>
+        <button class="cta secondary">Probar</button>
+      </div>
+
+      <div class="price-card featured">
+        <div class="name">Pack empresa</div>
+        <div class="num">20% off<small>· desde 10 unidades</small></div>
+        <p class="desc">Para eventos, equipos y regalos corporativos. Asignamos un coordinador.</p>
+        <ul>
+          <li>Diseño único o por persona</li>
+          <li>Embalaje individual disponible</li>
+          <li>Factura A / B</li>
+          <li>30 días para pagar</li>
+        </ul>
+        <button class="cta primary">Pedir cotización</button>
+      </div>
+
+      <div class="price-card">
+        <div class="name">API & mayorista</div>
+        <div class="num">Custom</div>
+        <p class="desc">IntegLaserMachine en tu e-commerce o plataforma. Webhooks + dashboard.</p>
+        <ul>
+          <li>REST + Webhooks</li>
+          <li>Sandbox incluido</li>
+          <li>SLA 99,9%</li>
+          <li>Onboarding dedicado</li>
+        </ul>
+        <button class="cta secondary">Hablar con ventas</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA final -->
+<section class="cta-section">
+  <div class="wrap">
+    <div class="cta-card">
+      <div>
+        <h3>Empezá con un diseño,<br>no con un pago.</h3>
+        <p>Probá el editor sin registrarte. Si te convence, recién ahí seguimos.</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-emerald">Abrir el editor →</button>
+        <button class="btn btn-ghost">Hablar por WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-col">
+        <div class="foot-brand">LaserMachine</div>
+        <p class="foot-tag">Estudio de grabado láser en Buenos Aires. Envíos a todo el país desde 2019.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Catálogo</h5>
+        <a>YETI</a><a>Stanley</a><a>Owala</a><a>Madera</a>
+      </div>
+      <div class="foot-col">
+        <h5>Plataforma</h5>
+        <a>API docs</a><a>Webhooks</a><a>Estado</a><a>SDK JS</a>
+      </div>
+      <div class="foot-col">
+        <h5>Empresa</h5>
+        <a>Equipo</a><a>Garantía</a><a>Mayoristas</a><a>Contacto</a>
+      </div>
+      <div class="foot-col">
+        <h5>Legal</h5>
+        <a>Términos</a><a>Privacidad</a><a>Envíos</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

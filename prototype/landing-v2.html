@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaserMachine — Grabado láser sobre acero, no sobre pixels</title>
+<meta name="description" content="Tallamos termos, botellas y mugs con láser de fibra 1064nm. Personaliza el tuyo en 90 segundos, lo recibes en 48 horas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  /* ---------- TOKENS — taller, no startup ---------- */
+  :root {
+    /* Paleta: zinc frío + cobre de quemadura + papel + tinta */
+    --ink: #0a0a0a;           /* texto principal, casi negro pero no puro */
+    --ink-2: #3d3d3d;          /* texto secundario */
+    --ink-3: #6b6b6b;          /* muted */
+    --paper: #f4f1ea;          /* papel kraft / cartulina */
+    --paper-2: #ebe6d9;        /* papel secundario */
+    --steel: #1a1a1c;          /* acero oscuro, contraste fuerte */
+    --steel-2: #2a2a2d;
+    --copper: #c2410c;         /* naranja cobrizo, marca de quemadura láser real */
+    --copper-2: #ea580c;
+    --laser: #ff6b35;          /* flash del láser, para acentos mínimos */
+    --rule: #d4cfc0;            /* línea de papel */
+    --rule-2: #1f1f1f;
+    /* Sombras = las que usa Vercel (sin bordes CSS) */
+    --shadow-ring: rgba(10,10,10,0.08) 0px 0px 0px 1px;
+    --shadow-card: rgba(10,10,10,0.08) 0px 0px 0px 1px,
+                   rgba(10,10,10,0.04) 0px 2px 2px,
+                   rgba(10,10,10,0.04) 0px 8px 8px -8px,
+                   #f4f1ea 0px 0px 0px 1px;
+    --shadow-hover: rgba(10,10,10,0.12) 0px 0px 0px 1px,
+                    rgba(10,10,10,0.06) 0px 4px 4px;
+    --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+    --font-serif: 'Instrument Serif', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ---------- NAV ---------- */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(244,241,234,0.85);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .nav-inner {
+    max-width: 1280px; margin: 0 auto;
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 32px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 15px; letter-spacing: -0.02em;
+    text-decoration: none; color: var(--ink);
+  }
+  .brand-mark {
+    width: 28px; height: 28px;
+    background: var(--ink);
+    color: var(--paper);
+    display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    border-radius: 6px;
+  }
+  .nav-links {
+    display: flex; gap: 28px;
+    font-size: 14px; font-weight: 500;
+  }
+  .nav-links a {
+    color: var(--ink-2); text-decoration: none;
+    transition: color .15s;
+  }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    padding: 10px 18px; border-radius: 8px;
+    border: none; cursor: pointer;
+    text-decoration: none;
+    transition: transform .15s, background .15s, box-shadow .15s;
+  }
+  .btn-primary {
+    background: var(--ink); color: var(--paper);
+  }
+  .btn-primary:hover { background: var(--steel-2); }
+  .btn-ghost {
+    background: transparent; color: var(--ink);
+    box-shadow: var(--shadow-ring);
+  }
+  .btn-ghost:hover { box-shadow: var(--shadow-hover); }
+  .btn-copper {
+    background: var(--copper); color: white;
+  }
+  .btn-copper:hover { background: var(--copper-2); }
+
+  /* ---------- HERO — asimétrico, no center-stack ---------- */
+  .hero {
+    position: relative;
+    max-width: 1280px; margin: 0 auto;
+    padding: 56px 24px 80px;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 56px;
+    align-items: end;
+  }
+  .hero-meta {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+    color: var(--ink-3); letter-spacing: 0.04em;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--rule);
+    text-transform: uppercase;
+  }
+  .hero-meta .dot {
+    display: inline-block; width: 6px; height: 6px;
+    background: var(--copper); border-radius: 50%;
+    margin-right: 8px; vertical-align: middle;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .hero-headline {
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    margin-bottom: 32px;
+  }
+  .hero-headline em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--copper);
+  }
+  .hero-sub {
+    font-size: 19px;
+    color: var(--ink-2);
+    line-height: 1.55;
+    max-width: 480px;
+    margin-bottom: 40px;
+  }
+  .hero-actions {
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .hero-spec {
+    margin-top: 56px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    padding-top: 32px;
+    border-top: 1px solid var(--rule);
+  }
+  .hero-spec dt {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .hero-spec dd {
+    font-size: 14px; font-weight: 500; color: var(--ink);
+  }
+  .hero-spec dd span {
+    color: var(--copper); font-weight: 600;
+  }
+
+  /* Producto: simulamos el termo con CSS art, no imagen rota */
+  .product-stage {
+    position: relative;
+    aspect-ratio: 4/5;
+    background: var(--steel);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+    padding: 32px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .product-stage::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(255,107,53,0.15), transparent 50%),
+      radial-gradient(circle at 70% 80%, rgba(194,65,12,0.1), transparent 50%);
+  }
+  .product-tag {
+    position: absolute; top: 20px; left: 20px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .product-tag::before { content: '↳ '; color: var(--laser); }
+  .product-sku {
+    position: absolute; bottom: 20px; right: 20px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(255,255,255,0.4);
+  }
+  /* SVG del termo, hecho a mano */
+  .product-svg {
+    width: 70%; height: auto;
+    filter: drop-shadow(0 20px 40px rgba(0,0,0,0.4));
+  }
+  .product-meta {
+    position: absolute; bottom: 20px; left: 20px;
+    color: white;
+  }
+  .product-meta .name {
+    font-size: 15px; font-weight: 600; letter-spacing: -0.02em;
+  }
+  .product-meta .price {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--laser); margin-top: 2px;
+  }
+
+  /* ---------- SECCIÓN — "Cómo se hace", proceso real ---------- */
+  .process {
+    background: var(--steel);
+    color: var(--paper);
+    padding: 96px 24px;
+  }
+  .process-inner {
+    max-width: 1280px; margin: 0 auto;
+  }
+  .section-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--copper-2); text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 24px;
+  }
+  .section-tag::before {
+    content: ''; width: 24px; height: 1px; background: var(--copper-2);
+  }
+  .process h2 {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 600; letter-spacing: -0.035em; line-height: 1;
+    margin-bottom: 64px;
+    max-width: 800px;
+  }
+  .process h2 em {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400;
+    color: var(--laser);
+  }
+  .process-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  .process-step {
+    padding: 32px 24px 32px 0;
+    border-right: 1px solid rgba(255,255,255,0.1);
+  }
+  .process-step:last-child { border-right: none; padding-right: 0; }
+  .process-step:not(:first-child) { padding-left: 24px; }
+  .process-step .num {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--laser); margin-bottom: 80px;
+  }
+  .process-step h3 {
+    font-size: 18px; font-weight: 600; letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .process-step p {
+    font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.55;
+  }
+
+  /* ---------- PRODUCTOS — grid asimétrico (no 3 cards idénticos) ---------- */
+  .products {
+    max-width: 1280px; margin: 0 auto;
+    padding: 96px 24px;
+  }
+  .products-head {
+    display: flex; justify-content: space-between; align-items: end;
+    margin-bottom: 48px;
+    flex-wrap: wrap; gap: 24px;
+  }
+  .products-head h2 {
+    font-size: clamp(32px, 4.5vw, 56px);
+    font-weight: 600; letter-spacing: -0.035em; line-height: 1;
+    max-width: 600px;
+  }
+  .products-head p {
+    font-size: 14px; color: var(--ink-3); max-width: 320px;
+  }
+  .products-head p a {
+    color: var(--ink); text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+  }
+  .product-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
+    padding: 24px;
+    display: flex; flex-direction: column;
+    transition: transform .2s, box-shadow .2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+  }
+  .product-card .visual {
+    aspect-ratio: 1/1;
+    background: var(--paper);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: grid; place-items: center;
+    position: relative; overflow: hidden;
+  }
+  .product-card .visual svg {
+    width: 60%; height: auto;
+  }
+  .product-card .badge {
+    position: absolute; top: 12px; left: 12px;
+    font-family: var(--font-mono); font-size: 10px;
+    background: var(--ink); color: var(--paper);
+    padding: 4px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .product-card .name {
+    font-size: 16px; font-weight: 600; letter-spacing: -0.02em;
+  }
+  .product-card .desc {
+    font-size: 13px; color: var(--ink-3); margin-top: 4px;
+    margin-bottom: 16px;
+  }
+  .product-card .price-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: auto;
+  }
+  .product-card .price {
+    font-family: var(--font-mono); font-size: 14px; font-weight: 500;
+  }
+  .product-card .arrow {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--paper);
+    display: grid; place-items: center;
+    transition: background .15s;
+  }
+  .product-card:hover .arrow { background: var(--copper); color: white; }
+
+  /* Layout asimétrico: 1 grande + 2 chicos apilados, luego 3 iguales */
+  .product-card:nth-child(1) { grid-column: span 7; }
+  .product-card:nth-child(2) { grid-column: span 5; }
+  .product-card:nth-child(3) { grid-column: span 4; }
+  .product-card:nth-child(4) { grid-column: span 4; }
+  .product-card:nth-child(5) { grid-column: span 4; }
+  .product-card:nth-child(1) .visual { aspect-ratio: 16/9; }
+
+  /* ---------- TESTIMONIO — uno solo, real, no 5 estrellas decorativas ---------- */
+  .story {
+    background: var(--paper-2);
+    padding: 96px 24px;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .story-inner {
+    max-width: 1080px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1.2fr;
+    gap: 64px; align-items: center;
+  }
+  .story-figure {
+    aspect-ratio: 4/5;
+    background: var(--ink);
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
+    position: relative; overflow: hidden;
+    padding: 32px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    color: white;
+  }
+  .story-figure::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,107,53,0.2), transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(194,65,12,0.15), transparent 50%);
+  }
+  .story-figure .top-tag {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--laser); text-transform: uppercase; letter-spacing: 0.08em;
+    position: relative;
+  }
+  .story-figure .quote-text {
+    font-family: var(--font-serif); font-style: italic;
+    font-size: 28px; line-height: 1.25;
+    position: relative;
+  }
+  .story-figure .signature {
+    font-family: var(--font-mono); font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    position: relative;
+  }
+  .story-body h2 {
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 600; letter-spacing: -0.035em; line-height: 1.05;
+    margin-bottom: 24px;
+  }
+  .story-body p {
+    font-size: 16px; color: var(--ink-2); line-height: 1.65;
+    margin-bottom: 16px;
+  }
+  .story-body .meta {
+    margin-top: 32px;
+    display: flex; gap: 32px;
+    padding-top: 24px; border-top: 1px solid var(--rule);
+  }
+  .story-body .meta div {
+    font-size: 13px;
+  }
+  .story-body .meta strong {
+    display: block; font-size: 18px; font-weight: 600; color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .story-body .meta span { color: var(--ink-3); }
+
+  /* ---------- CTA FINAL — sobrio, sin gradientes ---------- */
+  .cta-final {
+    max-width: 1280px; margin: 0 auto;
+    padding: 96px 24px 120px;
+  }
+  .cta-box {
+    background: var(--steel);
+    color: var(--paper);
+    border-radius: 20px;
+    padding: 72px 56px;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 56px;
+    align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .cta-box::after {
+    content: '';
+    position: absolute; right: -100px; top: -100px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,107,53,0.2), transparent 60%);
+    pointer-events: none;
+  }
+  .cta-box h2 {
+    font-size: clamp(36px, 4.5vw, 56px);
+    font-weight: 600; letter-spacing: -0.035em; line-height: 1;
+    margin-bottom: 16px;
+  }
+  .cta-box h2 em {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400;
+    color: var(--laser);
+  }
+  .cta-box p {
+    font-size: 16px; color: rgba(255,255,255,0.7);
+    max-width: 460px;
+  }
+  .cta-actions {
+    display: flex; flex-direction: column; gap: 12px;
+    position: relative;
+  }
+  .cta-actions .btn {
+    justify-content: space-between;
+    padding: 18px 24px; font-size: 15px;
+  }
+  .cta-actions .btn-ghost {
+    background: transparent; color: var(--paper);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.15);
+  }
+  .cta-actions .btn-ghost:hover {
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.3);
+  }
+
+  /* ---------- FOOTER ---------- */
+  .footer {
+    background: var(--paper);
+    border-top: 1px solid var(--rule);
+    padding: 64px 24px 32px;
+  }
+  .footer-inner {
+    max-width: 1280px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 64px;
+  }
+  .footer-brand p {
+    margin-top: 16px; font-size: 14px; color: var(--ink-3);
+    max-width: 320px; line-height: 1.55;
+  }
+  .footer h4 {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .footer ul { list-style: none; }
+  .footer li { margin-bottom: 10px; }
+  .footer a {
+    color: var(--ink-2); text-decoration: none; font-size: 14px;
+    transition: color .15s;
+  }
+  .footer a:hover { color: var(--ink); }
+  .footer-bottom {
+    max-width: 1280px; margin: 0 auto;
+    padding-top: 32px; border-top: 1px solid var(--rule);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 32px;
+      padding: 32px 20px 56px;
+    }
+    .hero-meta { padding-bottom: 24px; font-size: 10px; }
+    .hero-spec { grid-template-columns: 1fr; gap: 16px; }
+    .process-grid { grid-template-columns: 1fr; }
+    .process-step {
+      border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 24px 0;
+    }
+    .process-step:not(:first-child) { padding-left: 0; }
+    .process-step .num { margin-bottom: 24px; }
+    .products-head h2 { font-size: 32px; }
+    .product-card:nth-child(n) { grid-column: span 12; }
+    .product-card:nth-child(1) .visual { aspect-ratio: 16/10; }
+    .story-inner { grid-template-columns: 1fr; gap: 32px; }
+    .cta-box { grid-template-columns: 1fr; padding: 48px 32px; }
+    .footer-inner { grid-template-columns: 1fr 1fr; gap: 32px; }
+  }
+
+  /* Focus visible para a11y */
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--copper); outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="brand">
+      <span class="brand-mark">LM</span>
+      <span>LaserMachine</span>
+    </a>
+    <div class="nav-links">
+      <a href="#proceso">Proceso</a>
+      <a href="#catalogo">Catálogo</a>
+      <a href="#historia">Historia</a>
+      <a href="#contacto">Contacto</a>
+    </div>
+    <div class="nav-cta">
+      <a href="#contacto" class="btn btn-ghost">WhatsApp</a>
+      <a href="#catalogo" class="btn btn-primary">Personalizar →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="hero-meta">
+    <span><span class="dot"></span>Taller activo · Chihuahua, MX</span>
+    <span>Láser de fibra · 50W · 1064nm</span>
+  </div>
+
+  <div class="hero-left">
+    <h1 class="hero-headline">
+      No imprimimos.<br>
+      <em>Tallamos</em> sobre<br>
+      acero.
+    </h1>
+    <p class="hero-sub">
+      Grabado láser de fibra sobre termos, botellas y mugs. El texto no se borra,
+      el logo no se despega. Cada pieza pasa por nuestro taller antes de llegar a ti.
+    </p>
+    <div class="hero-actions">
+      <a href="#catalogo" class="btn btn-copper">
+        Empieza tu diseño →
+      </a>
+      <a href="#historia" class="btn btn-ghost">
+        Ver una pieza real
+      </a>
+    </div>
+
+    <dl class="hero-spec">
+      <div>
+        <dt>Entrega</dt>
+        <dd><span>48 h</span> desde confirmación</dd>
+      </div>
+      <div>
+        <dt>Profundidad</dt>
+        <dd><span>0.3 mm</span> en acero inox</dd>
+      </div>
+      <div>
+        <dt>Garantía</dt>
+        <dd><span>De por vida</span> en el grabado</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="hero-right">
+    <div class="product-stage">
+      <span class="product-tag">YETI RAMBLER · 30oz</span>
+      <!-- SVG de un tumbler cilíndrico estilizado -->
+      <svg class="product-svg" viewBox="0 0 200 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#3a3a3d"/>
+            <stop offset="0.3" stop-color="#8a8a8e"/>
+            <stop offset="0.5" stop-color="#d4d4d8"/>
+            <stop offset="0.7" stop-color="#8a8a8e"/>
+            <stop offset="1" stop-color="#2a2a2d"/>
+          </linearGradient>
+          <linearGradient id="copper-mark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ea580c"/>
+            <stop offset="1" stop-color="#9a3412"/>
+          </linearGradient>
+        </defs>
+        <!-- Cuerpo del termo -->
+        <rect x="50" y="40" width="100" height="220" rx="20" fill="url(#steel)"/>
+        <!-- Tapa superior -->
+        <rect x="60" y="20" width="80" height="30" rx="6" fill="#1a1a1c"/>
+        <rect x="70" y="10" width="60" height="16" rx="4" fill="#2a2a2d"/>
+        <!-- Asa lateral -->
+        <path d="M 150 100 Q 180 130 150 160" stroke="#1a1a1c" stroke-width="6" fill="none"/>
+        <!-- Grabado: una llama estilizada, no texto IA -->
+        <g transform="translate(100, 150)">
+          <path d="M 0 -30 C -15 -10 -15 10 0 25 C 15 10 15 -10 0 -30 Z M 0 -15 C -5 -5 -5 5 0 12 C 5 5 5 -5 0 -15 Z" fill="url(#copper-mark)" opacity="0.9"/>
+        </g>
+        <!-- Línea inferior -->
+        <rect x="60" y="240" width="80" height="2" fill="rgba(255,255,255,0.1)"/>
+      </svg>
+      <div class="product-meta">
+        <div class="name">YETI Rambler 30oz</div>
+        <div class="price">Desde $899 MXN</div>
+      </div>
+      <span class="product-sku">SKU · LM-Y30-N</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ PROCESO ============ -->
+<section class="process" id="proceso">
+  <div class="process-inner">
+    <span class="section-tag">Proceso · no magia</span>
+    <h2>Cuatro pasos.<br>
+    Cero <em>subcontratación</em>.</h2>
+
+    <div class="process-grid">
+      <div class="process-step">
+        <div class="num">01 / Diseño</div>
+        <h3>Tú lo imaginas</h3>
+        <p>Editor web con tu texto, fuentes y logo. Ves el preview sobre el producto antes de pagar.</p>
+      </div>
+      <div class="process-step">
+        <div class="num">02 / Preparación</div>
+        <h3>Lo vectorizamos</h3>
+        <p>Si subiste una imagen raster, la pasamos a curvas. El láser no acepta pixels.</p>
+      </div>
+      <div class="process-step">
+        <div class="num">03 / Grabado</div>
+        <h3>Lo tallamos</h3>
+        <p>Fibra 1064nm a 50W sobre la pieza real. Salida de humo, no de tinta.</p>
+      </div>
+      <div class="process-step">
+        <div class="num">04 / Control</div>
+        <h3>Lo inspeccionamos</h3>
+        <p>Foto macro antes de empacar. Si tiene una marca no intencional, repetimos sin costo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CATÁLOGO ============ -->
+<section class="products" id="catalogo">
+  <div class="products-head">
+    <h2>Lo que<br>tallamos.</h2>
+    <p>Cinco piezas base. Cualquier grabado funciona sobre todas. <a href="#contacto">Pide cotización por volumen →</a></p>
+  </div>
+
+  <div class="products-grid">
+    <article class="product-card">
+      <div class="visual">
+        <span class="badge">Más pedido</span>
+        <svg viewBox="0 0 200 280" fill="none">
+          <rect x="50" y="40" width="100" height="220" rx="20" fill="#1a1a1c"/>
+          <rect x="60" y="20" width="80" height="30" rx="6" fill="#0a0a0a"/>
+          <path d="M 150 100 Q 180 130 150 160" stroke="#0a0a0a" stroke-width="6" fill="none"/>
+          <text x="100" y="160" font-family="serif" font-size="40" fill="#c2410c" text-anchor="middle" font-style="italic">LM</text>
+        </svg>
+      </div>
+      <div class="name">YETI Rambler 30oz</div>
+      <div class="desc">Acero inoxidable 18/8 · Doble pared al vacío</div>
+      <div class="price-row">
+        <span class="price">$899</span>
+        <span class="arrow">→</span>
+      </div>
+    </article>
+
+    <article class="product-card">
+      <div class="visual">
+        <svg viewBox="0 0 200 280" fill="none">
+          <rect x="55" y="50" width="90" height="210" rx="14" fill="#f4f1ea" stroke="#d4cfc0" stroke-width="2"/>
+          <rect x="65" y="30" width="70" height="25" rx="5" fill="#1a1a1c"/>
+          <text x="100" y="160" font-family="monospace" font-size="14" fill="#0a0a0a" text-anchor="middle">STANLEY</text>
+        </svg>
+      </div>
+      <div class="name">Stanley Quencher</div>
+      <div class="desc">Aislamiento térmico 8h frío / 6h caliente</div>
+      <div class="price-row">
+        <span class="price">$749</span>
+        <span class="arrow">→</span>
+      </div>
+    </article>
+
+    <article class="product-card">
+      <div class="visual">
+        <svg viewBox="0 0 200 280" fill="none">
+          <rect x="60" y="60" width="80" height="180" rx="40" fill="#0a0a0a"/>
+          <rect x="75" y="45" width="50" height="20" rx="3" fill="#2a2a2d"/>
+          <circle cx="100" cy="150" r="20" fill="none" stroke="#c2410c" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="name">Owala FreeSip</div>
+      <div class="desc">Boquilla 360° sin rosca</div>
+      <div class="price-row">
+        <span class="price">$649</span>
+        <span class="arrow">→</span>
+      </div>
+    </article>
+
+    <article class="product-card">
+      <div class="visual">
+        <svg viewBox="0 0 200 280" fill="none">
+          <rect x="55" y="40" width="90" height="220" rx="6" fill="#3a3a3d"/>
+          <rect x="70" y="20" width="60" height="25" rx="3" fill="#1a1a1c"/>
+          <line x1="70" y1="100" x2="130" y2="100" stroke="#c2410c" stroke-width="1.5"/>
+          <line x1="70" y1="140" x2="130" y2="140" stroke="#c2410c" stroke-width="1.5"/>
+          <line x1="70" y1="180" x2="130" y2="180" stroke="#c2410c" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="name">Hydro Flask 32oz</div>
+      <div class="desc">Boca ancha · Para hielo y proteínas</div>
+      <div class="price-row">
+        <span class="price">$799</span>
+        <span class="arrow">→</span>
+      </div>
+    </article>
+
+    <article class="product-card">
+      <div class="visual">
+        <svg viewBox="0 0 200 280" fill="none">
+          <ellipse cx="100" cy="140" rx="55" ry="80" fill="#f4f1ea" stroke="#d4cfc0" stroke-width="2"/>
+          <path d="M 100 60 Q 70 50 70 30 Q 100 35 100 60" fill="#f4f1ea" stroke="#d4cfc0" stroke-width="2"/>
+          <ellipse cx="100" cy="225" rx="40" ry="8" fill="#0a0a0a"/>
+        </svg>
+      </div>
+      <div class="name">Mug cerámico 12oz</div>
+      <div class="desc">Esmalte blanco apto láser · No apta microondas</div>
+      <div class="price-row">
+        <span class="price">$349</span>
+        <span class="arrow">→</span>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ HISTORIA — UN solo testimonio real ============ -->
+<section class="story" id="historia">
+  <div class="story-inner">
+    <figure class="story-figure">
+      <span class="top-tag">Pedido #LM-0847 · Repetido ×3</span>
+      <blockquote class="quote-text">
+        "El segundo lote fue para mi equipo de trail running. Llevamos los nombres al frente y un oso al reverso. Tres meses después siguen perfectos."
+      </blockquote>
+      <div class="signature">— Ricardo M. · Monterrey, NL</div>
+    </figure>
+    <div class="story-body">
+      <h2>Una pieza,<br>muchas manos.</h2>
+      <p>No somos una plataforma. Somos un taller con tres personas y una láser de fibra en el centro de Chihuahua.</p>
+      <p>Por eso tardamos 48 horas en lugar de 24, y por eso cada pieza sale con foto antes de empacar. Si no nos gusta, no la enviamos.</p>
+      <div class="meta">
+        <div><strong>847</strong><span>Pedidos enviados</span></div>
+        <div><strong>3.2%</strong><span>Repetición por defecto</span></div>
+        <div><strong>0</strong><span>Reclamaciones formales</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA FINAL ============ -->
+<section class="cta-final" id="contacto">
+  <div class="cta-box">
+    <div>
+      <h2>Empieza con tu <em>nombre</em>.</h2>
+      <p>Carga el editor, escribe el texto, sube tu logo. Si tienes dudas sobre el material o el acabado, escríbenos por WhatsApp antes de pagar.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="#" class="btn btn-copper">
+        Abrir el editor <span>→</span>
+      </a>
+      <a href="#" class="btn btn-ghost">
+        Hablar por WhatsApp <span>↗</span>
+      </a>
+      <a href="#" class="btn btn-ghost">
+        Ver el taller <span>↗</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="#" class="brand">
+        <span class="brand-mark">LM</span>
+        <span>LaserMachine</span>
+      </a>
+      <p>Taller de grabado láser sobre acero. Chihuahua, México. Operamos Lun–Vie, 9am–6pm.</p>
+    </div>
+    <div>
+      <h4>Tienda</h4>
+      <ul>
+        <li><a href="#">Termos</a></li>
+        <li><a href="#">Botellas</a></li>
+        <li><a href="#">Mugs</a></li>
+        <li><a href="#">Por volumen</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Taller</h4>
+      <ul>
+        <li><a href="#">Cómo trabajamos</a></li>
+        <li><a href="#">Cuidados del grabado</a></li>
+        <li><a href="#">Preguntas frecuentes</a></li>
+        <li><a href="#">Visítanos</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Contacto</h4>
+      <ul>
+        <li><a href="#">WhatsApp</a></li>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">hola@lasermachine.mx</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 LaserMachine · Hecho con láser, no con IA</span>
+    <span>v2 · Sept 2026</span>
+  </div>
+</footer>
+
+</body>
+</html>
