@@ -29,4 +29,9 @@ dist-ssr
 .netlify
 
 # AI assistant memory files
-.loki
+ .loki
+
+ # Nested projects - exclude from this repository
+ LaserMachine-V4.1a/
+ my-strapi-project/
+ ui-ux-pro-max-skill/

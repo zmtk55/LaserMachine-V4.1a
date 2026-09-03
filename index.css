@@ -13,7 +13,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Nunito Sans', sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -31,6 +31,28 @@ html.dark, html.dark body {
 
 .font-mono-tech {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* New UI/UX Pro Max typography system */
+.font-heading {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+}
+
+.font-body {
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 400;
+}
+
+/* Headings use Rubik */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+}
+
+/* Buttons and important text */
+.btn-primary, .btn-secondary, .font-bold {
+  font-family: 'Rubik', sans-serif;
 }
 
 /* Clases de fuentes para el grabador (Visualizer) */

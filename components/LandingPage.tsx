@@ -474,7 +474,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
             </div>
             <button 
               onClick={() => onNavigate('SHOP')}
-              className="hidden md:flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-yellow-500 transition-colors uppercase tracking-wider group"
+              className="hidden md:flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-accent-500 transition-colors uppercase tracking-wider group"
             >
               Ver Todo 
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -529,7 +529,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
       <section className="py-20 lg:py-24 px-6 lg:px-12 bg-zinc-50 dark:bg-black relative">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <span className="inline-block px-4 py-2 bg-yellow-400/10 rounded-full text-xs font-bold text-yellow-500 uppercase tracking-widest mb-4">
+            <span className="inline-block px-4 py-2 bg-accent-400/10 rounded-full text-xs font-bold text-accent-500 uppercase tracking-widest mb-4">
               Proceso
             </span>
             <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase">
@@ -751,10 +751,10 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               © {new Date().getFullYear()} {storeConfig.businessName || 'Laser Machine'}. Todos los derechos reservados.
             </p>
             <div className="flex gap-6 text-xs text-zinc-500">
-              <button onClick={onLogin} className="hover:text-yellow-500 transition-colors">
+              <button onClick={onLogin} className="hover:text-accent-500 transition-colors">
                 Iniciar Sesión
               </button>
-              <button onClick={() => onNavigate('LANDING')} className="hover:text-yellow-500 transition-colors">
+              <button onClick={() => onNavigate('LANDING')} className="hover:text-accent-500 transition-colors">
                 Inicio
               </button>
             </div>
