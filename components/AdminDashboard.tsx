@@ -20,7 +20,7 @@ import {
   Flame, Ban, CheckCheck, Timer, CheckCircle, Play, MoreHorizontal, ChevronLeft, StickyNote,
   Layers, Forward, CheckSquare, Square, FileJson, EyeOff, ChevronUp, ImagePlus, Pencil, Crop,
   Paperclip, Lock, PhoneCall, Bell, CalendarClock, ShoppingBag, TrendingDown, PanelRight,
-  History, Banknote, QrCode, Grid3X3, AlignLeft,
+  History, Banknote, QrCode, Grid3X3, AlignLeft, Edit2,
   LayoutTemplate
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
@@ -1163,17 +1163,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   
   const filteredClients = useMemo(() => {
       const clientMap = new Map();
-      orders.forEach(o => { 
+      orders.forEach(o => {
           const key = o.customerPhone;
           if (!clientMap.has(key)) {
-              clientMap.set(key, { 
-                  name: o.customerName, 
-                  phone: o.customerPhone, 
-                  email: o.customerEmail || '-', 
-                  totalOrders: 0, 
-                  totalSpent: 0, 
-                  lastOrderDate: o.createdAt, 
+              clientMap.set(key, {
+                  name: o.customerName,
+                  phone: o.customerPhone,
+                  email: o.customerEmail || '-',
+                  totalOrders: 0,
+                  totalSpent: 0,
+                  lastOrderDate: o.createdAt,
                   orders: [],
+                  pointsEarned: 0,
                   pointsRedeemed: 0
               });
           }
@@ -1181,10 +1182,67 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           c.totalOrders++;
           c.totalSpent += o.total;
           c.orders.push(o);
-          if(o.pointsRedeemed) c.pointsRedeemed += o.pointsRedeemed;
+          // Sumar puntos ganados (vienen en cada orden al pagar)
+          if (o.pointsEarned) c.pointsEarned += o.pointsEarned;
+          if (o.pointsRedeemed) c.pointsRedeemed += o.pointsRedeemed;
+          // Mantener el email más reciente no-vacío
+          if (o.customerEmail && o.customerEmail !== '-') c.email = o.customerEmail;
       });
-      return Array.from(clientMap.values()).filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      return Array.from(clientMap.values())
+          .map(c => ({ ...c, currentPoints: Math.max(0, c.pointsEarned - c.pointsRedeemed) }))
+          .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [orders, searchQuery]);
+
+  // Exportar lista de clientes a CSV
+  const handleExportClientsCSV = () => {
+      if (filteredClients.length === 0) {
+          alert('No hay clientes para exportar.');
+          return;
+      }
+      const headers = ['Nombre', 'Telefono', 'Email', 'Pedidos', 'Total Gastado', 'Puntos Actuales', 'Ultima Orden'];
+      const rows = filteredClients.map(c => [
+          c.name,
+          c.phone,
+          c.email || '-',
+          c.totalOrders,
+          c.totalSpent.toFixed(2),
+          c.currentPoints,
+          c.lastOrderDate ? new Date(c.lastOrderDate).toISOString().split('T')[0] : '-'
+      ]);
+      // Escapar comillas y envolver campos con coma/comilla/salto de línea
+      const escape = (v: any) => {
+          const s = String(v ?? '');
+          return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `clientes-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+  };
+
+  // Estado para edición inline del cliente en CRM
+  const [editingClient, setEditingClient] = useState(false);
+  const [clientEditForm, setClientEditForm] = useState({ name: '', email: '' });
+  const startEditClient = () => {
+      if (!selectedClient) return;
+      setClientEditForm({ name: selectedClient.name, email: selectedClient.email === '-' ? '' : selectedClient.email });
+      setEditingClient(true);
+  };
+  const saveEditClient = () => {
+      if (!selectedClient) return;
+      const newName = clientEditForm.name.trim() || selectedClient.name;
+      const newEmail = clientEditForm.email.trim();
+      onUpdateClient(selectedClient.phone, newName, selectedClient.phone, newEmail);
+      // Actualizar selectedClient local para reflejar el cambio inmediato
+      setSelectedClient({ ...selectedClient, name: newName, email: newEmail || '-' });
+      setEditingClient(false);
+  };
 
   const handleGoToClient = (phone: string) => {
       const client = filteredClients.find(c => c.phone === phone);
@@ -2981,11 +3039,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {/* CLIENT LIST */}
                     <div className={`flex flex-col gap-4 overflow-y-auto pr-2 pb-12 ${selectedClient ? 'hidden md:flex md:w-[320px] shrink-0' : 'w-full md:w-[400px]'}`}>
                         {/* Header Compacto */}
-                        <div className="flex items-center justify-between pb-2">
+                        <div className="flex items-center justify-between pb-2 gap-2">
                             <div>
                                 <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Clientes</h3>
                                 <p className="text-xs text-zinc-500">{filteredClients.length} clientes</p>
                             </div>
+                            <button
+                                onClick={handleExportClientsCSV}
+                                title="Exportar a CSV"
+                                className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-emerald-500 hover:text-zinc-900 border border-zinc-200 dark:border-zinc-700 px-3 py-2 rounded-lg text-[10px] font-bold uppercase transition-colors"
+                            >
+                                <Download size={12}/> CSV
+                            </button>
                         </div>
                         
                         {/* SEARCH */}
@@ -3046,17 +3111,65 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <button onClick={() => setSelectedClient(null)} className="md:hidden absolute top-4 right-4 p-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg"><X size={18}/></button>
                                 
                                 {/* Header */}
-                                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-800">
-                                    <div className="w-14 h-14 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xl font-black text-zinc-600 dark:text-zinc-300">
+                                <div className="flex items-start gap-4 mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-800">
+                                    <div className="w-14 h-14 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xl font-black text-zinc-600 dark:text-zinc-300 shrink-0">
                                         {selectedClient.name.charAt(0)}
                                     </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-zinc-900 dark:text-white uppercase">{selectedClient.name}</h2>
-                                        <div className="flex gap-3 text-xs text-zinc-500 mt-1">
-                                            <span className="flex items-center gap-1"><Phone size={12}/> {selectedClient.phone}</span>
-                                            <span className="flex items-center gap-1"><Mail size={12}/> {selectedClient.email}</span>
-                                        </div>
+                                    <div className="flex-1 min-w-0">
+                                        {editingClient ? (
+                                            <div className="space-y-2">
+                                                <input
+                                                    value={clientEditForm.name}
+                                                    onChange={e => setClientEditForm({ ...clientEditForm, name: e.target.value })}
+                                                    placeholder="Nombre"
+                                                    className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-sm font-bold outline-none focus:border-emerald-500 dark:text-white"
+                                                />
+                                                <input
+                                                    value={clientEditForm.email}
+                                                    onChange={e => setClientEditForm({ ...clientEditForm, email: e.target.value })}
+                                                    placeholder="Email (opcional)"
+                                                    type="email"
+                                                    className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded-lg text-xs outline-none focus:border-emerald-500 dark:text-white"
+                                                />
+                                                <div className="flex gap-2">
+                                                    <button onClick={saveEditClient} className="bg-emerald-500 hover:bg-emerald-600 text-zinc-900 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase flex items-center gap-1"><Check size={12}/> Guardar</button>
+                                                    <button onClick={() => setEditingClient(false)} className="bg-zinc-200 dark:bg-zinc-800 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase">Cancelar</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <h2 className="text-xl font-bold text-zinc-900 dark:text-white uppercase truncate">{selectedClient.name}</h2>
+                                                <div className="flex flex-wrap gap-3 text-xs text-zinc-500 mt-1">
+                                                    <span className="flex items-center gap-1"><Phone size={12}/> {selectedClient.phone}</span>
+                                                    {selectedClient.email && selectedClient.email !== '-' && (
+                                                        <span className="flex items-center gap-1 truncate"><Mail size={12}/> {selectedClient.email}</span>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
+                                    {!editingClient && (
+                                        <div className="flex gap-1 shrink-0">
+                                            <button
+                                                onClick={startEditClient}
+                                                title="Editar cliente"
+                                                className="p-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-300"
+                                            >
+                                                <Edit2 size={14}/>
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const phone = selectedClient.phone.replace(/\D/g, '');
+                                                    const msg = encodeURIComponent(`Hola ${selectedClient.name.split(' ')[0]}, te contactamos de LaserMachine...`);
+                                                    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+                                                }}
+                                                title="Abrir WhatsApp"
+                                                className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-600 dark:text-emerald-400"
+                                            >
+                                                <MessageCircle size={14}/>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 {/* Stats */}
