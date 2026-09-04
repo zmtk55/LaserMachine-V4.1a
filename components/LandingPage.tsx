@@ -278,7 +278,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
         
         {/* Gradient blob estático (no animado) para mejor performance */}
         <div 
-          className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-yellow-400/20 via-amber-500/10 to-orange-500/20 rounded-full blur-[80px]"
+          className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-zinc-900/20 dark:from-white/20 via-zinc-900/10 dark:via-white/10 to-zinc-900/10 dark:to-white/10 rounded-full blur-[80px]"
           style={{ 
             transform: `translate(${scrollY * 0.05}px, ${scrollY * 0.1}px)`,
           }}
@@ -308,9 +308,9 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
             {/* Left: Content */}
             <div className="space-y-6 lg:space-y-8 text-center lg:text-left">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400/10 dark:bg-yellow-400/20 rounded-full border border-yellow-400/20">
-                <Sparkles size={14} className="text-yellow-500" />
-                <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900/5 dark:bg-white/5 dark:bg-zinc-900/10 dark:bg-white/10 rounded-full border border-zinc-900/20 dark:border-white/20">
+                <Sparkles size={14} className="text-zinc-900 dark:text-white" />
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                   Personalización Láser Premium
                 </span>
               </div>
@@ -319,7 +319,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               <div className="space-y-4">
                 <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-zinc-900 dark:text-white uppercase leading-[0.95] tracking-tight">
                   <span className="block">Laser</span>
-                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600">
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-zinc-700 dark:from-zinc-300 via-zinc-800 dark:via-zinc-200 to-zinc-800 dark:to-zinc-200">
                     Machine
                   </span>
                 </h2>
@@ -333,7 +333,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <button 
                   onClick={() => onNavigate('SHOP')}
-                  className="group relative px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider rounded-xl flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-yellow-400/25 hover:-translate-y-0.5"
+                  className="group relative px-8 py-4 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-black font-black uppercase text-sm tracking-wider rounded-xl flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-zinc-900/20 dark:shadow-white/5 hover:-translate-y-0.5"
                 >
                   Ver Catálogo
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -350,15 +350,15 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               {/* Trust badges - más compactos */}
               <div className="flex flex-wrap justify-center lg:justify-start gap-6 pt-2">
                 <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                  <Shield size={16} className="text-yellow-500" />
+                  <Shield size={16} className="text-zinc-900 dark:text-white" />
                   <span className="font-medium">Garantía de por vida</span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                  <Truck size={16} className="text-yellow-500" />
+                  <Truck size={16} className="text-zinc-900 dark:text-white" />
                   <span className="font-medium">Envío en 24-48h</span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                  <Star size={16} className="text-yellow-500" />
+                  <Star size={16} className="text-zinc-900 dark:text-white" />
                   <span className="font-medium">+1,000 clientes felices</span>
                 </div>
               </div>
@@ -372,7 +372,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                 style={{ transform: `translate(-50%, -50%) rotate(${scrollY * 0.02}deg)` }}
               />
               <div 
-                className="absolute w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] lg:w-[380px] lg:h-[380px] rounded-full bg-yellow-400/5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                className="absolute w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] lg:w-[380px] lg:h-[380px] rounded-full bg-zinc-900/5 dark:bg-white/5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
               />
 
               {/* Product images container - CENTRADO PERFECTO */}
@@ -392,7 +392,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                   <h3 className="font-bold text-zinc-900 dark:text-white text-sm lg:text-base mb-1">
                     {HERO_PRODUCTS[currentSlide].name}
                   </h3>
-                  <p className="text-yellow-500 font-black text-xl">
+                  <p className="text-zinc-900 dark:text-white font-black text-xl">
                     ${HERO_PRODUCTS[currentSlide].price}
                   </p>
                 </div>
@@ -422,7 +422,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                     onClick={() => goToSlide(index)}
                     className={`h-2 rounded-full transition-all ${
                       index === currentSlide 
-                        ? 'w-8 bg-yellow-400' 
+                        ? 'w-8 bg-zinc-900 dark:bg-white' 
                         : 'w-2 bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400'
                     }`}
                     aria-label={`Ir al producto ${index + 1}`}
@@ -449,7 +449,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               <span>Entrega Rápida</span>
             </div>
             <div className="flex items-center gap-2 text-zinc-400 text-sm">
-              <Award size={18} className="text-yellow-500" />
+              <Award size={18} className="text-zinc-900 dark:text-white" />
               <span>Calidad Premium</span>
             </div>
             <div className="flex items-center gap-2 text-zinc-400 text-sm">
@@ -467,7 +467,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
         <div className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-10">
             <div>
-              <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Catálogo</span>
+              <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">Catálogo</span>
               <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase mt-2">
                 Productos Populares
               </h3>
@@ -551,7 +551,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
       <section className="py-20 lg:py-24 px-6 lg:px-12 bg-white dark:bg-zinc-950">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Testimonios</span>
+            <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">Testimonios</span>
             <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase mt-2">
               Lo que dicen nuestros clientes
             </h3>
@@ -573,7 +573,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left: Content */}
             <div className="space-y-6 order-2 lg:order-1">
-              <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Diseño Fácil</span>
+              <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">Diseño Fácil</span>
               <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase leading-tight">
                 Crea tu diseño en minutos
               </h3>
@@ -589,7 +589,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                   'Calidad garantizada'
                 ].map((item, index) => (
                   <li key={index} className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
-                    <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-6 h-6 bg-zinc-900 dark:bg-white rounded-full flex items-center justify-center flex-shrink-0">
                       <BadgeCheck size={14} className="text-black" />
                     </div>
                     {item}
@@ -610,7 +610,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               <div className="relative w-[260px] h-[520px] bg-zinc-900 rounded-[2.5rem] p-2 shadow-2xl shadow-black/30 border-2 border-zinc-800">
                 <div className="w-full h-full bg-white dark:bg-zinc-950 rounded-[2rem] overflow-hidden relative">
                   {/* Mockup Header */}
-                  <div className="h-12 bg-yellow-400 flex items-center justify-between px-4">
+                  <div className="h-12 bg-zinc-900 dark:bg-white flex items-center justify-between px-4">
                     <span className="font-black text-black text-sm">LM</span>
                     <div className="w-16 h-4 bg-black/20 rounded-full"></div>
                   </div>
@@ -634,7 +634,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                         <span className="text-xs text-zinc-400">Escribe tu texto...</span>
                       </div>
                       <div className="flex gap-2">
-                        <div className="flex-1 h-9 bg-yellow-400 rounded-lg flex items-center justify-center">
+                        <div className="flex-1 h-9 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center">
                           <span className="text-xs font-bold text-black">Personalizar</span>
                         </div>
                         <div className="w-9 h-9 bg-zinc-200 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
@@ -652,7 +652,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                 <div className="absolute top-5 left-1/2 -translate-x-1/2 w-16 h-5 bg-zinc-900 rounded-full"></div>
               </div>
 
-              <div className="absolute -z-10 w-56 h-56 bg-yellow-400/20 rounded-full blur-[60px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+              <div className="absolute -z-10 w-56 h-56 bg-zinc-900/10 dark:bg-white/10 rounded-full blur-[60px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
             </div>
           </div>
         </div>
@@ -665,8 +665,8 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
         <div className="max-w-5xl mx-auto">
           <div className="relative bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-900 rounded-3xl overflow-hidden">
             {/* Background decoration simplificada */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/10 rounded-full blur-[80px]" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/10 rounded-full blur-[60px]" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-900/5 dark:bg-white/5 rounded-full blur-[80px]" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-zinc-900/5 dark:bg-white/5 rounded-full blur-[60px]" />
             
             <div className="relative z-10 px-8 py-14 md:px-16 md:py-20">
               <div className="flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
@@ -680,7 +680,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                 </div>
                 <button 
                   onClick={() => onNavigate('CUSTOMIZER')}
-                  className="group px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider rounded-xl flex items-center gap-3 transition-all hover:scale-105 hover:shadow-lg hover:shadow-yellow-400/25 flex-shrink-0"
+                  className="group px-8 py-4 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-black font-black uppercase text-sm tracking-wider rounded-xl flex items-center gap-3 transition-all hover:scale-105 hover:shadow-lg hover:shadow-zinc-900/20 dark:shadow-white/5 flex-shrink-0"
                 >
                   Empezar a Diseñar
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -700,7 +700,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
             {/* Logo y descripción */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center">
                   <span className="font-black text-black">LM</span>
                 </div>
                 <span className="font-black text-xl uppercase text-zinc-900 dark:text-white">
@@ -788,7 +788,7 @@ const ProductCard = React.memo(({
     >
       <div className="relative aspect-square bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-800 rounded-2xl overflow-hidden mb-4 shadow-md group-hover:shadow-xl transition-shadow duration-300">
         {/* Price badge */}
-        <div className="absolute top-3 left-3 z-10 px-3 py-1.5 bg-yellow-400 text-black text-xs font-bold rounded-full">
+        <div className="absolute top-3 left-3 z-10 px-3 py-1.5 bg-zinc-900 dark:bg-white text-black text-xs font-bold rounded-full">
           ${product.price}
         </div>
         
@@ -800,13 +800,13 @@ const ProductCard = React.memo(({
         
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-6">
-          <span className="px-6 py-2.5 bg-yellow-400 text-black font-bold rounded-full text-sm transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+          <span className="px-6 py-2.5 bg-zinc-900 dark:bg-white text-black font-bold rounded-full text-sm transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
             Personalizar
           </span>
         </div>
       </div>
       <div className="space-y-1 px-1">
-        <h4 className="font-bold text-zinc-900 dark:text-white truncate group-hover:text-yellow-500 transition-colors">
+        <h4 className="font-bold text-zinc-900 dark:text-white truncate group-hover:text-zinc-900 dark:text-white transition-colors">
           {product.name}
         </h4>
         <p className="text-sm text-zinc-500">{product.brand}</p>
@@ -831,11 +831,11 @@ const StepCard = React.memo(({
     <div className="relative text-center group">
       {/* Connector line - solo en desktop y no en el último */}
       {index < 2 && (
-        <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-yellow-400/30 to-transparent" />
+        <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-zinc-900/30 dark:from-white/30 to-transparent" />
       )}
       
       <div className="relative w-20 h-20 mx-auto mb-6">
-        <div className="relative w-full h-full bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
+        <div className="relative w-full h-full bg-gradient-to-br from-zinc-700 dark:from-zinc-300 to-zinc-800 dark:to-zinc-200 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
           <Icon size={28} className="text-black" />
         </div>
       </div>
@@ -844,7 +844,7 @@ const StepCard = React.memo(({
         {item.step}
       </span>
       
-      <h4 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-yellow-500 transition-colors">
+      <h4 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-zinc-900 dark:text-white transition-colors">
         {item.title}
       </h4>
       <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
@@ -863,21 +863,21 @@ const TestimonialCard = React.memo(({
   testimonial: typeof TESTIMONIALS[0];
 }) => {
   return (
-    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl p-6 border border-zinc-100 dark:border-zinc-800 hover:border-yellow-400/30 transition-colors">
+    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl p-6 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-900/30 dark:hover:border-white/30 transition-colors">
       <div className="flex gap-1 mb-4">
         {Array.from({ length: testimonial.rating }).map((_, i) => (
-          <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
+          <Star key={i} size={16} className="text-zinc-700 dark:text-zinc-300 fill-zinc-900 dark:fill-white" />
         ))}
       </div>
       <div className="flex gap-3 mb-4">
-        <Quote size={24} className="text-yellow-400/50 flex-shrink-0" />
+        <Quote size={24} className="text-zinc-700 dark:text-zinc-300/50 flex-shrink-0" />
         <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">
           {testimonial.text}
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-yellow-400/20 rounded-full flex items-center justify-center">
-          <span className="font-bold text-yellow-600 dark:text-yellow-400 text-sm">
+        <div className="w-10 h-10 bg-zinc-900/10 dark:bg-white/10 rounded-full flex items-center justify-center">
+          <span className="font-bold text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300 text-sm">
             {testimonial.name.charAt(0)}
           </span>
         </div>
