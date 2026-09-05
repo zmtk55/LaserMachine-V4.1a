@@ -10,9 +10,8 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
-      define: {
-        'process.env.GROQ_API_KEY': JSON.stringify(env.GROQ_API_KEY),
-      },
+      // No inyectar secrets al cliente via 'define' — usar import.meta.env.VITE_GROQ_API_KEY
+      // (Vite expone automáticamente vars con prefijo VITE_ desde .env / .env.local y Vercel las inyecta en build)
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
