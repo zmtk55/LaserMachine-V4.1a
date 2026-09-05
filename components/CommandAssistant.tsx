@@ -105,7 +105,11 @@ function localTopProducts(orders: Order[], products: Product[], limit: number): 
 
 // ...existing code...
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL   = 'llama-3.3-70b-versatile';
+// 2026-09-04: llama-3.3-70b-versatile fue deprecated por Groq el 17 jun 2026 (shutdown 16 ago 2026).
+// Reemplazo: openai/gpt-oss-20b (Production, instruct-style, JSON nativo, $0.075/M input vs $0.59 del anterior).
+// Es reasoning model: gasta tokens pensando antes de responder → max_tokens alto (2000) para que tenga espacio.
+const GROQ_MODEL   = 'openai/gpt-oss-20b';
+const GROQ_MAX_TOKENS = 2000;
 
 const SYSTEM_PROMPT = `Eres RAB, asistente de LaserMachine. RESPUESTA: SOLO JSON válido. EJEMPLOS:
 - "cuánto vendimos" → {"action":"get_stats"}
@@ -141,6 +145,7 @@ async function askGroq(userText: string): Promise<AiAction> {
     body: JSON.stringify({
       model: GROQ_MODEL,
       temperature: 0,
+      max_tokens: GROQ_MAX_TOKENS,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user',   content: userText },
