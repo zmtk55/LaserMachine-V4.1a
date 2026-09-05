@@ -37,3 +37,13 @@ dist-ssr
  ui-ux-pro-max-skill/
 
 .vercel/
+
+# Personal artifacts (screenshots, debug images, prebuilt bundles)
+*.png
+!public/**/*.png
+!src/**/*.png
+*.zip
+*.backup
+*.bak
+components/*.backup.*
+
