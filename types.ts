@@ -325,45 +325,11 @@ export interface Order {
   internalNotes?: OrderInternalNote[]; // Notas internas del staff
 }
 
-export interface CustomerProfile {
-  id?: string;
-  phone: string;
-  name: string;
-  company?: string;
-  email?: string;
-  address?: string;
-  totalOrders: number;
-  totalSpent: number;
-  loyaltyPoints: number;
-  lastOrderDate: string;
-  tags: string[];
-}
-
 export type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMIZER' | 'CART' | 'ADMIN_DASHBOARD' | 'CLIENT_DASHBOARD' | 'FONTS_SHOWCASE' | 'PUBLIC_TRACKING' | 'TRACKING';
 
 // ========================================
 //   ORDER HISTORY TYPES
 // ========================================
-
-export interface OrderHistoryItem {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  total: number;
-  status: OrderStatus;
-  createdAt: string;
-  items: OrderItem[];
-  deliveryDate?: string;
-  deliveryTime?: string;
-  shippingAddress?: string;
-  paymentMethod?: PaymentMethod;
-  paymentStatus: PaymentStatus;
-  amountPaid: number;
-  isPriority?: boolean;
-  history: OrderEvent[];
-  mockupUrl?: string;
-  internalNotes?: OrderInternalNote[];
-}
 
 // ========================================
 //   CONTEXT MENU SYSTEM TYPES
@@ -401,57 +367,6 @@ export enum ProductionStatus {
   PENDING = 'PENDIENTE',
   IN_PROGRESS = 'EN_PROCESO',
   COMPLETED = 'COMPLETADO'
-}
-
-export interface ProductionItem {
-  // Identificación
-  orderId: string;
-  orderItemId: string;
-  sequenceNumber: number;
-  
-  // Producto
-  productName: string;
-  productBrand: ProductBrand;
-  colorName: string;
-  colorHex: string;
-  productImageUrl: string;
-  
-  // Diseño - Frente
-  frontText: string;
-  frontText2?: string;
-  frontFontId: number;
-  frontFontName: string;
-  frontFontCssFamily?: string;
-  frontDesignState: DesignState;
-  frontDesignState2?: DesignState;
-  frontLogos: LogoItem[];
-  
-  // Diseño - Dorso
-  backText: string;
-  backText2?: string;
-  backFontId?: number;
-  backFontName?: string;
-  backFontCssFamily?: string;
-  backDesignState: DesignState;
-  backDesignState2?: DesignState;
-  backLogos: LogoItem[];
-  
-  // Producción
-  quantity: number;
-  notes?: string;
-  specialInstructions?: string;
-  
-  // Logística (para el empleado)
-  deliveryDate?: string;
-  deliveryTime?: string;
-  isPriority?: boolean;
-  customerName?: string;
-  
-  // Estado de producción
-  productionStatus: ProductionStatus;
-  startedAt?: string;
-  completedAt?: string;
-  estimatedCompletionAt?: string;
 }
 
 // ========================================

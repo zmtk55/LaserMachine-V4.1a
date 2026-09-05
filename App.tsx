@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BackgroundProvider } from './contexts/BackgroundContext';
 import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
 import { CartProvider, useCartPanel } from './contexts/CartContext';
-import { OrderHistoryProvider } from './contexts/OrderHistoryContext';
 import { ContextMenuProvider } from './contexts/ContextMenuContext';
 import ContextMenu from './components/ContextMenu';
 import { NavBar } from './components/NavBar';
@@ -678,7 +677,6 @@ const App = () => {
       <NotificationProvider>
         <CartProvider>
         <BackgroundProvider>
-        <OrderHistoryProvider>
         <ContextMenuProvider>
           <div className={`min-h-screen flex flex-col font-mono-tech bg-zinc-50 dark:bg-zinc-950 ${isDarkMode ? 'dark' : ''}`}>
       {/* Notification Manager - Solo cuando hay usuario logueado */}
@@ -1194,7 +1192,6 @@ const App = () => {
           
         </div>
       </ContextMenuProvider>
-      </OrderHistoryProvider>
       </BackgroundProvider>
       </CartProvider>
       </NotificationProvider>
