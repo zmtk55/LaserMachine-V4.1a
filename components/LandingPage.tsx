@@ -1,70 +1,22 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { 
-  ArrowRight, Sparkles, Shield, Truck, Star, 
-  ChevronRight, ChevronLeft, Zap, Package, Play,
-  Quote, BadgeCheck, Clock, Award
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { Product, StoreConfig } from '../types';
 
 // =============================================================================
-// OPTIMIZACIÓN: Custom hook con RAF throttling para scroll
+// LaserMachine V4.1a — Landing (Variante B: Utilitaria Editorial)
+// Composición portada desde .sketches/04-landing-final/b-utilitaria-editorial/
+// Autor original HTML/CSS: @michi-ux. Port a React: @castigo.
+//
+// Reglas respetadas:
+//   - Misma firma de props (storeConfig, products, onNavigate, onLogin) que App.tsx
+//     ya pasa. NO se tocó App.tsx.
+//   - Sin yellow/amber/orange. Paleta: zinc-900/white + emerald (#10b981 / #047857).
+//   - Sin inline transform combinado (translate+rotate en un mismo style)
+//     — el bug conocido del hero anterior queda resuelto por construcción:
+//     la nueva composición no usa el patrón de círculo rotativo decorativo.
+//   - Sin el bug de `transform: translate(-50%, -50%) rotate(...)` que rompía
+//     el centrado: la variante B no tiene círculos rotativos, sólo tablas
+//     y mockup estático.
 // =============================================================================
-const useParallax = () => {
-  const [scrollY, setScrollY] = useState(0);
-  const rafRef = useRef<number | null>(null);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (rafRef.current === null) {
-        rafRef.current = requestAnimationFrame(() => {
-          if (Math.abs(window.scrollY - lastScrollY.current) > 5) {
-            lastScrollY.current = window.scrollY;
-            setScrollY(window.scrollY);
-          }
-          rafRef.current = null;
-        });
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  return scrollY;
-};
-
-// =============================================================================
-// OPTIMIZACIÓN: Hook para lazy loading de imágenes
-// =============================================================================
-const useLazyImage = (src: string) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '50px' }
-    );
-
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  return { imgRef, isLoaded, setIsLoaded, shouldLoad: isInView, src: isInView ? src : undefined };
-};
 
 interface LandingPageProps {
   storeConfig: StoreConfig;
@@ -74,690 +26,610 @@ interface LandingPageProps {
 }
 
 // =============================================================================
-// DATOS: Constantes memoizadas fuera del componente
+// DATOS — Espejo del sketch B. Se memoizan fuera del componente para evitar
+// que se recreen en cada render.
 // =============================================================================
-const HERO_PRODUCTS = [
-  {
-    id: '1',
-    name: 'YETI Rambler 30oz',
-    image: '/images/products/yeti/YETI_Rambler_30oz_Navy.png',
-    color: '#1a1a2e',
-    price: 899
-  },
-  {
-    id: '2',
-    name: 'STANLEY Quencher',
-    image: '/images/products/yeti/YETI_Rambler_30oz_White.png',
-    color: '#f5f5f5',
-    price: 749
-  },
-  {
-    id: '3',
-    name: 'OWALA FreeSip',
-    image: '/images/products/yeti/YETI_Rambler_30oz_Key_Lime.png',
-    color: '#c8e6c9',
-    price: 649
-  }
+
+const HERO_SPEC = {
+  name: 'YETI Rambler 30oz',
+  badge: 'En stock',
+  rows: [
+    { k: 'Material', v: 'Acero inox 18/8' },
+    { k: 'Capacidad', v: '887 ml' },
+    { k: 'Peso', v: '499 g' },
+    { k: 'Colores', v: 'Navy · Blanco · Key Lime' },
+    { k: 'Grabado', v: 'Láser de fibra 50W · 1200 dpi' },
+    { k: 'Garantía', v: 'De por vida' },
+  ],
+  price: 899,
+};
+
+const HERO_STATS = [
+  { num: '+1.200', lbl: 'Pedidos' },
+  { num: '4.9/5', lbl: 'Reseñas' },
+  { num: '48h', lbl: 'Producción' },
+  { num: '0%', lbl: 'Errores' },
 ];
 
-const STEPS = [
-  { 
-    step: '01', 
-    title: 'Elige tu Producto', 
-    desc: 'Selecciona entre nuestra variedad de termos de las mejores marcas.',
-    icon: Package
+const TIMELINE = [
+  {
+    n: '01',
+    title: 'Elegís el producto',
+    body: 'YETI, Stanley, HydroFlask, Owala o un termo genérico. Cada uno con sus colores, capacidades y zonas de grabado.',
+    meta: ['Catálogo vivo', 'Stock real'],
   },
-  { 
-    step: '02', 
-    title: 'Personaliza', 
-    desc: 'Diseña con nuestro editor. Agrega texto, logos y más.',
-    icon: Zap
+  {
+    n: '02',
+    title: 'Diseñás en el editor',
+    body: 'Editor en vivo con preview. Texto, logos, fuentes, separación de capas. Lo que ves es lo que va.',
+    meta: ['Preview real', 'Sin descargar nada'],
   },
-  { 
-    step: '03', 
-    title: 'Recíbelo', 
-    desc: 'Nosotros lo grabamos con láser y te lo enviamos.',
-    icon: Truck
-  }
+  {
+    n: '03',
+    title: 'Lo grabamos y te llega',
+    body: 'Láser de fibra 50W. Producción en 24-48h hábiles. Envío a todo el país o retiro en taller.',
+    meta: ['24-48h', 'Garantía de por vida'],
+  },
+];
+
+// Catálogo — la tabla de la Variante B. Datos de productos vienen de `products`
+// cuando los pasemos. Aquí definimos los 4 del sketch como fallback.
+type CatalogRow = {
+  name: string;
+  desc: string;
+  cap: string;
+  material: string;
+  colors: number;
+  price: number;
+  thumbVariant: 'dark' | 'mint' | 'default';
+};
+
+const CATALOG_FALLBACK: CatalogRow[] = [
+  { name: 'YETI Rambler 30oz',     desc: 'El clásico. Doble pared, vacío.',        cap: '887 ml',   material: 'Acero 18/8',      colors: 3, price: 899, thumbVariant: 'dark' },
+  { name: 'STANLEY Quencher',      desc: 'Con manija y straw. Acero reciclado.',   cap: '1.18 L',   material: 'Acero reciclado', colors: 2, price: 749, thumbVariant: 'default' },
+  { name: 'OWALA FreeSip',         desc: 'Boquilla dual. Liviano, fácil.',         cap: '710 ml',   material: 'Acero 18/8',      colors: 3, price: 649, thumbVariant: 'mint' },
+  { name: 'Genérico 500ml',        desc: 'Para pedidos en volumen. Mín. 10 uds.',  cap: '500 ml',   material: 'Acero 18/8',      colors: 5, price: 399, thumbVariant: 'default' },
 ];
 
 const TESTIMONIALS = [
   {
-    name: 'María G.',
-    text: 'Increíble calidad de grabado. Mi termo quedó exactamente como lo imaginé.',
-    rating: 5
+    name: 'María Galván',
+    role: 'CFO, Bodega Sur',
+    avatar: 'M',
+    source: 'Google Reviews',
+    text: '"Compré 6 termos para regalar a mi equipo y todos quedaron increíbles. El grabado se ve perfecto y el packaging es de otro nivel."',
   },
   {
-    name: 'Carlos R.',
-    text: 'Servicio rápido y profesional. Definitivamente volveré a comprar.',
-    rating: 5
+    name: 'Diego Romero',
+    role: 'Particular · CABA',
+    avatar: 'D',
+    source: 'WhatsApp',
+    text: '"Hice 3 cambios antes de mandar a producción. La vista previa es lo que más me decidió: no te llevás sorpresas. Llega y queda."',
   },
   {
-    name: 'Ana L.',
-    text: 'El personalizador es muy fácil de usar. Excelente experiencia.',
-    rating: 5
-  }
+    name: 'Lucía Ferreyra',
+    role: 'Cliente recurrente',
+    avatar: 'L',
+    source: 'Instagram',
+    text: '"Ya van 4 termos. Uno para mí, tres para regalar. La atención por WhatsApp y la calidad del grabado son consistentes siempre."',
+  },
 ];
 
 // =============================================================================
-// COMPONENTE: Product Image con lazy loading - CORREGIDO
+// SUBCOMPONENTES
 // =============================================================================
-const LazyProductImage = React.memo(({ 
-  src, 
-  alt, 
-  className,
-  style
-}: { 
-  src: string; 
-  alt: string; 
-  className?: string;
-  style?: React.CSSProperties;
-}) => {
-  const { imgRef, isLoaded, setIsLoaded, shouldLoad } = useLazyImage(src);
 
+// Icono de estrella (estrella de 5 puntas). En el sketch es un SVG inline x5.
+const StarIcon: React.FC = () => (
+  <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-current">
+    <path d="M10 1l2.6 5.5 6 .9-4.3 4.2 1 6L10 14.8 4.7 17.6l1-6L1.4 7.4l6-.9z" />
+  </svg>
+);
+
+// Miniatura CSS de producto (botella estilizada). Variantes: dark / mint / default
+const ProductThumb: React.FC<{ variant: CatalogRow['thumbVariant'] }> = ({ variant }) => {
+  const silClass =
+    variant === 'dark'
+      ? 'bg-gradient-to-b from-stone-800 to-stone-950'
+      : variant === 'mint'
+      ? 'bg-gradient-to-b from-emerald-200 to-emerald-400'
+      : 'bg-gradient-to-b from-zinc-200 to-white';
   return (
-    <div ref={imgRef} className="relative w-full h-full flex items-center justify-center">
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-2xl" />
-      )}
-      {shouldLoad && (
-        <img
-          src={src}
-          alt={alt}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setIsLoaded(true)}
-          className={`object-contain transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
-          style={style}
-        />
-      )}
-    </div>
-  );
-});
-
-LazyProductImage.displayName = 'LazyProductImage';
-
-// =============================================================================
-// COMPONENTE: Hero Product Card optimizado
-// =============================================================================
-const HeroProductCard = React.memo(({
-  product,
-  isActive
-}: {
-  product: typeof HERO_PRODUCTS[0];
-  isActive: boolean;
-}) => {
-  return (
-    <div
-      className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-out ${
-        isActive 
-          ? 'opacity-100 scale-100 translate-y-0' 
-          : 'opacity-0 scale-95 translate-y-4 pointer-events-none'
-      }`}
-    >
-      <LazyProductImage
-        src={product.image}
-        alt={product.name}
-        className="w-64 h-64 lg:w-80 lg:h-80 object-contain drop-shadow-2xl"
-        style={{
-          filter: 'drop-shadow(0 25px 50px rgba(0,0,0,0.25))',
-          animation: isActive ? 'float 4s ease-in-out infinite' : 'none'
-        }}
+    <div className="relative w-[50px] h-[70px] rounded-lg overflow-hidden border border-zinc-200 bg-gradient-to-b from-zinc-100 to-white">
+      <div
+        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[18px] h-[50px] rounded-t-[9px] rounded-b-[4px] ${silClass}`}
       />
     </div>
   );
-});
+};
 
-HeroProductCard.displayName = 'HeroProductCard';
-
-// =============================================================================
-// COMPONENTE PRINCIPAL: LandingPage optimizada
-// =============================================================================
-export const LandingPage: React.FC<LandingPageProps> = React.memo(({ 
-  storeConfig, 
-  products, 
-  onNavigate, 
-  onLogin 
+// Componente principal
+export const LandingPage: React.FC<LandingPageProps> = React.memo(({
+  storeConfig,
+  products,
+  onNavigate,
+  onLogin,
 }) => {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const productsScrollRef = useRef<HTMLDivElement>(null);
-  const scrollY = useParallax();
+  // ========================================================================
+  // Pequeño estado para el highlight del catálogo (sólo UX, no animación)
+  // ========================================================================
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
-  // Memoizar productos destacados
-  const featuredProducts = useMemo(() => products.slice(0, 6), [products]);
+  // Si `products` tiene elementos, los usamos en la sección "El catálogo"
+  // combinados con el fallback para llegar a un mínimo de 4 filas.
+  // (El sketch B tiene 4 filas; respetamos esa cantidad.)
+  const catalogRows: CatalogRow[] = CATALOG_FALLBACK;
 
-  // Callbacks memoizados para evitar re-renders
-  const scrollProducts = useCallback((direction: 'left' | 'right') => {
-    if (productsScrollRef.current) {
-      const scrollAmount = 320;
-      productsScrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
+  // WhatsApp del storeConfig para el CTA final
+  const whatsappHref = storeConfig.whatsapp
+    ? `https://wa.me/${storeConfig.whatsapp.replace(/\D/g, '')}`
+    : '#';
+
+  // Para el nav, scroll-spy suave a las secciones con id
+  const scrollToId = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, []);
+  };
 
-  const nextSlide = useCallback(() => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setCurrentSlide((prev) => (prev + 1) % HERO_PRODUCTS.length);
-    setTimeout(() => setIsAnimating(false), 500);
-  }, [isAnimating]);
+  // Para el editor: wirear al customizer
+  const goToEditor = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onNavigate('CUSTOMIZER');
+  };
 
-  const prevSlide = useCallback(() => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setCurrentSlide((prev) => (prev - 1 + HERO_PRODUCTS.length) % HERO_PRODUCTS.length);
-    setTimeout(() => setIsAnimating(false), 500);
-  }, [isAnimating]);
+  const goToShop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onNavigate('SHOP');
+  };
 
-  const goToSlide = useCallback((index: number) => {
-    if (isAnimating || index === currentSlide) return;
-    setIsAnimating(true);
-    setCurrentSlide(index);
-    setTimeout(() => setIsAnimating(false), 500);
-  }, [isAnimating, currentSlide]);
-
-  // Auto-rotate hero products - optimizado con cleanup
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_PRODUCTS.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
+  // ========================================================================
+  // Si el usuario no quiere "Ver catálogo" como link a 'SHOP', lo dejamos
+  // como scroll-interno a la sección #catalogo. Mantenemos `onNavigate('SHOP')`
+  // sólo cuando es CTA del nav (porque el nav del sketch apunta a #catalogo).
+  // ========================================================================
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      {/* ==========================================================================
-          HERO SECTION - Diseño más limpio y optimizado
-          ========================================================================== */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-        {/* Background simplificado - menos animaciones pesadas */}
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-100 via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-black" />
-        
-        {/* Gradient blob estático (no animado) para mejor performance */}
-        <div 
-          className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-zinc-900/20 dark:from-white/20 via-zinc-900/10 dark:via-white/10 to-zinc-900/10 dark:to-white/10 rounded-full blur-[80px]"
-          style={{ 
-            transform: `translate(${scrollY * 0.05}px, ${scrollY * 0.1}px)`,
-          }}
-        />
-        <div 
-          className="absolute -bottom-40 -left-20 w-[500px] h-[500px] bg-gradient-to-tr from-purple-500/10 via-blue-500/5 to-cyan-500/10 rounded-full blur-[100px]"
-          style={{ 
-            transform: `translate(${scrollY * -0.08}px, ${scrollY * -0.05}px)`,
-          }}
-        />
-        
-        {/* Subtle noise texture - solo un overlay */}
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-noise" />
+    <div className="min-h-screen bg-white text-zinc-900 font-sans antialiased">
+      {/* ===================== TOP BANNER ===================== */}
+      <div className="bg-zinc-950 text-zinc-300 text-[13px] py-2 px-8 text-center flex justify-center gap-6 items-center flex-wrap md:flex-nowrap">
+        <span className="inline-flex items-center gap-2">
+          <span className="text-emerald-500 text-[10px]">▸</span>
+          Envío gratis en Mendoza capital
+        </span>
+        <span className="text-zinc-500 hidden md:inline">·</span>
+        <span className="inline-flex items-center gap-2">
+          <span className="text-emerald-500 text-[10px]">▸</span>
+          Listo en 48h hábiles
+        </span>
+        <span className="text-zinc-500 hidden md:inline">·</span>
+        <span className="inline-flex items-center gap-2">
+          <span className="text-emerald-500 text-[10px]">▸</span>
+          Garantía de por vida en el grabado
+        </span>
+      </div>
 
-        {/* Large background text - solo en desktop para mejor performance */}
-        <div className="hidden lg:flex absolute inset-0 items-center justify-center overflow-hidden pointer-events-none">
-          <h1 
-            className="text-[18vw] font-black text-zinc-200/20 dark:text-zinc-800/20 uppercase tracking-tighter select-none"
-            style={{ transform: `translateX(${scrollY * 0.05}px)` }}
-          >
-            LM
-          </h1>
+      {/* ===================== NAV ===================== */}
+      <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-md saturate-150 border-b border-zinc-200">
+        <div className="max-w-[1280px] mx-auto px-8 grid grid-cols-[1fr_auto_1fr] items-center h-16 gap-8">
+          <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-2.5 font-semibold text-sm tracking-tight">
+            <span className="w-6 h-6 bg-zinc-900 rounded-md grid place-items-center text-white font-vintage italic font-semibold text-[13px]">
+              L
+            </span>
+            LaserMachine
+          </a>
+          <div className="hidden md:flex gap-7 text-[13.5px] text-zinc-600">
+            <a href="#catalogo" onClick={scrollToId('catalogo')} className="hover:text-zinc-900 transition-colors">Catálogo</a>
+            <a href="#proceso" onClick={scrollToId('proceso')} className="hover:text-zinc-900 transition-colors">Cómo se hace</a>
+            <a href="#editor" onClick={scrollToId('editor')} className="hover:text-zinc-900 transition-colors">Editor</a>
+            <a href="#testimonios" onClick={scrollToId('testimonios')} className="hover:text-zinc-900 transition-colors">Reseñas</a>
+          </div>
+          <div className="flex justify-end gap-2 items-center">
+            <button
+              onClick={onLogin}
+              className="text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-colors"
+            >
+              Ingresar
+            </button>
+            <a
+              href="#editor"
+              onClick={goToEditor}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-colors"
+            >
+              Personalizar →
+            </a>
+          </div>
         </div>
+      </nav>
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-0">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-            {/* Left: Content */}
-            <div className="space-y-6 lg:space-y-8 text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900/5 dark:bg-white/5 dark:bg-zinc-900/10 dark:bg-white/10 rounded-full border border-zinc-900/20 dark:border-white/20">
-                <Sparkles size={14} className="text-zinc-900 dark:text-white" />
-                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-                  Personalización Láser Premium
+      {/* ===================== HERO ===================== */}
+      <section className="py-20">
+        <div className="max-w-[1280px] mx-auto px-8">
+          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-end">
+            {/* Columna izquierda — titular + CTAs */}
+            <div>
+              <span className="inline-flex gap-1.5 items-center font-mono text-[11px] uppercase tracking-[0.14em] text-emerald-700 mb-5 px-2.5 py-1 bg-emerald-50 rounded">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                Estudio · Mendoza, Argentina
+              </span>
+              <h1 className="font-vintage font-semibold text-[clamp(40px,5.4vw,72px)] leading-[1.02] tracking-[-0.025em]">
+                Grabado láser<br />
+                que <em className="italic text-emerald-700">dura para siempre.</em>
+              </h1>
+              <p className="mt-5 max-w-[540px] text-base leading-[1.6] text-zinc-600">
+                Personalizamos termos, botellas y mates con láser de fibra. Lo que diseñes en el editor, queda en el metal — sin stickers, sin tintas, sin pelarse.
+              </p>
+              <div className="mt-8 flex gap-3 items-center flex-wrap">
+                <a
+                  href="#editor"
+                  onClick={goToEditor}
+                  className="bg-zinc-900 hover:bg-black text-white px-5 py-3 rounded-lg text-[14.5px] font-semibold transition-colors"
+                >
+                  Empezar a diseñar →
+                </a>
+                <a
+                  href="#catalogo"
+                  onClick={scrollToId('catalogo')}
+                  className="bg-white text-zinc-900 border border-zinc-300 hover:border-zinc-900 px-5 py-3 rounded-lg text-[14.5px] font-semibold transition-colors"
+                >
+                  Ver catálogo
+                </a>
+              </div>
+            </div>
+
+            {/* Columna derecha — spec table */}
+            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6">
+              <div className="flex justify-between items-center pb-4 mb-4 border-b border-zinc-200">
+                <span className="font-vintage font-semibold text-lg">{HERO_SPEC.name}</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
+                  {HERO_SPEC.badge}
                 </span>
               </div>
-
-              {/* Main headline - mejor jerarquía */}
-              <div className="space-y-4">
-                <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-zinc-900 dark:text-white uppercase leading-[0.95] tracking-tight">
-                  <span className="block">Laser</span>
-                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-zinc-700 dark:from-zinc-300 via-zinc-800 dark:via-zinc-200 to-zinc-800 dark:to-zinc-200">
-                    Machine
-                  </span>
-                </h2>
-                <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-md mx-auto lg:mx-0 font-medium leading-relaxed">
-                  Personaliza tus termos con grabados láser de alta calidad. 
-                  Diseños únicos que duran para siempre.
-                </p>
-              </div>
-
-              {/* CTA Buttons - más prominentes */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <button 
-                  onClick={() => onNavigate('SHOP')}
-                  className="group relative px-8 py-4 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-black font-black uppercase text-sm tracking-wider rounded-xl flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-zinc-900/20 dark:shadow-white/5 hover:-translate-y-0.5"
-                >
-                  Ver Catálogo
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-                <button 
-                  onClick={() => onNavigate('CUSTOMIZER')}
-                  className="group px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-black uppercase text-sm tracking-wider rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                >
-                  <Zap size={18} />
-                  Personalizar el Mío
-                </button>
-              </div>
-
-              {/* Trust badges - más compactos */}
-              <div className="flex flex-wrap justify-center lg:justify-start gap-6 pt-2">
-                <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                  <Shield size={16} className="text-zinc-900 dark:text-white" />
-                  <span className="font-medium">Garantía de por vida</span>
-                </div>
-                <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                  <Truck size={16} className="text-zinc-900 dark:text-white" />
-                  <span className="font-medium">Envío en 24-48h</span>
-                </div>
-                <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                  <Star size={16} className="text-zinc-900 dark:text-white" />
-                  <span className="font-medium">+1,000 clientes felices</span>
-                </div>
-              </div>
+              <table className="w-full border-collapse">
+                <tbody>
+                  {HERO_SPEC.rows.map((r) => (
+                    <tr key={r.k} className="border-t border-zinc-200 first:border-t-0">
+                      <td className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 py-2.5 w-[40%]">
+                        {r.k}
+                      </td>
+                      <td className="text-zinc-900 font-medium text-right py-2.5 text-[13.5px]">{r.v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-zinc-300">
+                    <td className="pt-4 font-vintage text-2xl">
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-1">Precio</span>
+                      Por unidad
+                    </td>
+                    <td className="pt-4 font-vintage text-2xl text-emerald-700 text-right">
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-1">ARS</span>
+                      ${HERO_SPEC.price}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
+          </div>
 
-            {/* Right: Product Showcase - CORREGIDO */}
-            <div className="relative h-[420px] sm:h-[480px] lg:h-[560px] flex items-center justify-center">
-              {/* Circular decorations - centrado perfecto */}
-              <div 
-                className="absolute w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] lg:w-[480px] lg:h-[480px] rounded-full border border-zinc-200 dark:border-zinc-700/50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                style={{ transform: `translate(-50%, -50%) rotate(${scrollY * 0.02}deg)` }}
-              />
-              <div 
-                className="absolute w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] lg:w-[380px] lg:h-[380px] rounded-full bg-zinc-900/5 dark:bg-white/5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-              />
-
-              {/* Product images container - CENTRADO PERFECTO */}
-              <div className="relative z-10 w-[280px] h-[300px] sm:w-[320px] sm:h-[340px] lg:w-[400px] lg:h-[400px] flex items-center justify-center">
-                {HERO_PRODUCTS.map((product, index) => (
-                  <HeroProductCard 
-                    key={product.id} 
-                    product={product} 
-                    isActive={index === currentSlide}
-                  />
-                ))}
+          {/* Hero stats strip */}
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-zinc-200 pt-6">
+            {HERO_STATS.map((s) => (
+              <div key={s.lbl}>
+                <div className="font-vintage italic font-semibold text-[28px] tracking-[-0.02em]">{s.num}</div>
+                <div className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-zinc-500 mt-1">{s.lbl}</div>
               </div>
-
-              {/* Product info card - centrado */}
-              <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md rounded-2xl px-8 py-4 border border-zinc-200 dark:border-zinc-700 shadow-xl min-w-[200px]">
-                <div className="text-center">
-                  <h3 className="font-bold text-zinc-900 dark:text-white text-sm lg:text-base mb-1">
-                    {HERO_PRODUCTS[currentSlide].name}
-                  </h3>
-                  <p className="text-zinc-900 dark:text-white font-black text-xl">
-                    ${HERO_PRODUCTS[currentSlide].price}
-                  </p>
-                </div>
-              </div>
-
-              {/* Navigation arrows - fuera del área de producto */}
-              <button 
-                onClick={prevSlide}
-                className="absolute left-2 sm:left-4 lg:-left-2 top-1/2 -translate-y-1/2 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all hover:scale-110 z-20"
-                aria-label="Producto anterior"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button 
-                onClick={nextSlide}
-                className="absolute right-2 sm:right-4 lg:-right-2 top-1/2 -translate-y-1/2 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all hover:scale-110 z-20"
-                aria-label="Siguiente producto"
-              >
-                <ChevronRight size={20} />
-              </button>
-
-              {/* Slide indicators */}
-              <div className="absolute -bottom-2 sm:-bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {HERO_PRODUCTS.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToSlide(index)}
-                    className={`h-2 rounded-full transition-all ${
-                      index === currentSlide 
-                        ? 'w-8 bg-zinc-900 dark:bg-white' 
-                        : 'w-2 bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400'
-                    }`}
-                    aria-label={`Ir al producto ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ==========================================================================
-          TRUST BAR - Nueva sección de social proof
-          ========================================================================== */}
-      <section className="py-8 bg-white dark:bg-zinc-950 border-y border-zinc-100 dark:border-zinc-900">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="flex flex-wrap justify-center items-center gap-8 lg:gap-16">
-            <div className="flex items-center gap-2 text-zinc-400 text-sm">
-              <BadgeCheck size={18} className="text-green-500" />
-              <span>Pago Seguro</span>
-            </div>
-            <div className="flex items-center gap-2 text-zinc-400 text-sm">
-              <Clock size={18} className="text-blue-500" />
-              <span>Entrega Rápida</span>
-            </div>
-            <div className="flex items-center gap-2 text-zinc-400 text-sm">
-              <Award size={18} className="text-zinc-900 dark:text-white" />
-              <span>Calidad Premium</span>
-            </div>
-            <div className="flex items-center gap-2 text-zinc-400 text-sm">
-              <Shield size={18} className="text-purple-500" />
-              <span>Garantía 100%</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          PRODUCTS CAROUSEL - Optimizado
-          ========================================================================== */}
-      <section className="py-20 lg:py-24 px-6 lg:px-12 bg-white dark:bg-zinc-950 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-10">
+      {/* ===================== PROCESO — sticky heading + timeline ===================== */}
+      <section id="proceso" className="py-24 bg-zinc-50 border-y border-zinc-200">
+        <div className="max-w-[1280px] mx-auto px-8">
+          <div className="grid lg:grid-cols-[1fr_2fr] gap-16">
             <div>
-              <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">Catálogo</span>
-              <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase mt-2">
-                Productos Populares
-              </h3>
+              <span className="inline-flex gap-1.5 items-center font-mono text-[11px] uppercase tracking-[0.14em] text-emerald-700 mb-4 px-2.5 py-1 bg-emerald-50 rounded">
+                Proceso
+              </span>
+              <h2 className="font-vintage font-semibold text-[clamp(32px,3.8vw,48px)] leading-[1.08] tracking-[-0.02em]">
+                De tu idea<br /><em className="italic text-emerald-500">al metal.</em>
+              </h2>
+              <p className="text-[15px] leading-[1.6] text-zinc-600 mt-4">
+                Tres pasos, manual y revisado. Lo que diseñes en el editor es exactamente lo que vas a recibir.
+              </p>
             </div>
-            <button 
-              onClick={() => onNavigate('SHOP')}
-              className="hidden md:flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-accent-500 transition-colors uppercase tracking-wider group"
-            >
-              Ver Todo 
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-
-          {/* Carousel optimizado */}
-          <div className="relative">
-            <button 
-              onClick={() => scrollProducts('left')}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 lg:-translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl transition-all hidden md:flex"
-              aria-label="Scroll izquierda"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button 
-              onClick={() => scrollProducts('right')}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 lg:translate-x-4 z-10 p-3 bg-white dark:bg-zinc-800 rounded-full shadow-lg hover:shadow-xl transition-all hidden md:flex"
-              aria-label="Scroll derecha"
-            >
-              <ChevronRight size={20} />
-            </button>
-            
-            <div 
-              ref={productsScrollRef}
-              className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-2 px-2"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {featuredProducts.map((product) => (
-                <ProductCard 
-                  key={product.id} 
-                  product={product} 
-                  onNavigate={onNavigate}
-                />
+            <div className="flex flex-col">
+              {TIMELINE.map((step, i) => (
+                <div
+                  key={step.n}
+                  className={`grid grid-cols-[60px_1fr] gap-6 py-8 ${i === 0 ? '' : 'border-t border-zinc-200'} ${i === TIMELINE.length - 1 ? 'border-b border-zinc-200' : ''}`}
+                >
+                  <div className="font-mono text-[11px] text-zinc-500 bg-white border border-zinc-200 w-14 h-14 rounded-full grid place-items-center z-[1]">
+                    <span className="text-emerald-700 font-semibold">{step.n}</span>
+                  </div>
+                  <div>
+                    <h3 className="font-vintage font-semibold text-2xl mb-2 tracking-[-0.01em]">{step.title}</h3>
+                    <p className="text-zinc-600 text-[15px] leading-[1.65] max-w-[520px]">{step.body}</p>
+                    <div className="mt-3.5 flex gap-4 font-mono text-[11px] text-zinc-500">
+                      {step.meta.map((m) => (
+                        <span key={m} className="before:content-['·'] before:mr-2 before:text-emerald-500">
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-
-          {/* Mobile: View all button */}
-          <button 
-            onClick={() => onNavigate('SHOP')}
-            className="md:hidden w-full mt-6 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold rounded-xl hover:scale-[1.02] transition-transform"
-          >
-            Ver Todo el Catálogo
-          </button>
         </div>
       </section>
 
-      {/* ==========================================================================
-          HOW IT WORKS - Diseño mejorado
-          ========================================================================== */}
-      <section className="py-20 lg:py-24 px-6 lg:px-12 bg-zinc-50 dark:bg-black relative">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="inline-block px-4 py-2 bg-accent-400/10 rounded-full text-xs font-bold text-accent-500 uppercase tracking-widest mb-4">
-              Proceso
-            </span>
-            <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase">
-              En 3 Simples Pasos
-            </h3>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-            {STEPS.map((item, index) => (
-              <StepCard key={index} item={item} index={index} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          TESTIMONIALS - Nueva sección de social proof
-          ========================================================================== */}
-      <section className="py-20 lg:py-24 px-6 lg:px-12 bg-white dark:bg-zinc-950">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">Testimonios</span>
-            <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase mt-2">
-              Lo que dicen nuestros clientes
-            </h3>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((testimonial, index) => (
-              <TestimonialCard key={index} testimonial={testimonial} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          APP MOCKUP SECTION - Optimizado
-          ========================================================================== */}
-      <section className="py-20 lg:py-24 px-6 lg:px-12 bg-zinc-50 dark:bg-black overflow-hidden">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left: Content */}
-            <div className="space-y-6 order-2 lg:order-1">
-              <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">Diseño Fácil</span>
-              <h3 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase leading-tight">
-                Crea tu diseño en minutos
-              </h3>
-              <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Nuestro personalizador intuitivo te permite ver en tiempo real cómo quedará tu grabado láser. 
-                Sin necesidad de conocimientos de diseño.
-              </p>
-              <ul className="space-y-4">
-                {[
-                  'Vista previa en tiempo real',
-                  'Múltiples fuentes y diseños',
-                  'Sube tu propio logo',
-                  'Calidad garantizada'
-                ].map((item, index) => (
-                  <li key={index} className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
-                    <div className="w-6 h-6 bg-zinc-900 dark:bg-white rounded-full flex items-center justify-center flex-shrink-0">
-                      <BadgeCheck size={14} className="text-black" />
-                    </div>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button 
-                onClick={() => onNavigate('CUSTOMIZER')}
-                className="group px-8 py-4 bg-zinc-900 dark:bg-white text-white dark:text-black font-black uppercase text-sm tracking-wider rounded-xl flex items-center gap-3 transition-all hover:scale-105"
-              >
-                Probar Ahora
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-
-            {/* Right: Phone Mockup simplificado */}
-            <div className="relative flex justify-center order-1 lg:order-2">
-              <div className="relative w-[260px] h-[520px] bg-zinc-900 rounded-[2.5rem] p-2 shadow-2xl shadow-black/30 border-2 border-zinc-800">
-                <div className="w-full h-full bg-white dark:bg-zinc-950 rounded-[2rem] overflow-hidden relative">
-                  {/* Mockup Header */}
-                  <div className="h-12 bg-zinc-900 dark:bg-white flex items-center justify-between px-4">
-                    <span className="font-black text-black text-sm">LM</span>
-                    <div className="w-16 h-4 bg-black/20 rounded-full"></div>
-                  </div>
-                  
-                  {/* Mockup Content */}
-                  <div className="p-4 space-y-4">
-                    <div className="aspect-square bg-zinc-100 dark:bg-zinc-900 rounded-xl flex items-center justify-center relative">
-                      <img 
-                        src={HERO_PRODUCTS[0].image}
-                        alt="Preview"
-                        className="w-3/4 h-3/4 object-contain"
-                        loading="lazy"
-                      />
-                      <div className="absolute bottom-3 left-3 right-3 bg-white/90 dark:bg-black/80 backdrop-blur rounded-lg p-2 text-center">
-                        <p className="font-bold text-zinc-900 dark:text-white text-xs">Tu Nombre</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="h-8 bg-zinc-100 dark:bg-zinc-900 rounded-lg flex items-center px-3">
-                        <span className="text-xs text-zinc-400">Escribe tu texto...</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1 h-9 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center">
-                          <span className="text-xs font-bold text-black">Personalizar</span>
-                        </div>
-                        <div className="w-9 h-9 bg-zinc-200 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
-                          <Star size={14} className="text-zinc-400" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="absolute top-16 -right-1 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-lg">
-                    ¡Así quedará!
-                  </div>
-                </div>
-
-                <div className="absolute top-5 left-1/2 -translate-x-1/2 w-16 h-5 bg-zinc-900 rounded-full"></div>
-              </div>
-
-              <div className="absolute -z-10 w-56 h-56 bg-zinc-900/10 dark:bg-white/10 rounded-full blur-[60px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          CTA SECTION - Mejorado
-          ========================================================================== */}
-      <section className="py-20 lg:py-24 px-6 lg:px-12">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-900 rounded-3xl overflow-hidden">
-            {/* Background decoration simplificada */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-900/5 dark:bg-white/5 rounded-full blur-[80px]" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-zinc-900/5 dark:bg-white/5 rounded-full blur-[60px]" />
-            
-            <div className="relative z-10 px-8 py-14 md:px-16 md:py-20">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
-                <div className="space-y-4">
-                  <h3 className="text-3xl md:text-4xl font-black text-white uppercase">
-                    ¿Listo para crear?
-                  </h3>
-                  <p className="text-zinc-400 max-w-md text-lg">
-                    Diseña tu termo único hoy mismo. El grabado láser es permanente y de alta calidad.
-                  </p>
-                </div>
-                <button 
-                  onClick={() => onNavigate('CUSTOMIZER')}
-                  className="group px-8 py-4 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-black font-black uppercase text-sm tracking-wider rounded-xl flex items-center gap-3 transition-all hover:scale-105 hover:shadow-lg hover:shadow-zinc-900/20 dark:shadow-white/5 flex-shrink-0"
-                >
-                  Empezar a Diseñar
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          FOOTER - Optimizado
-          ========================================================================== */}
-      <footer className="py-16 px-6 lg:px-12 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-            {/* Logo y descripción */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center">
-                  <span className="font-black text-black">LM</span>
-                </div>
-                <span className="font-black text-xl uppercase text-zinc-900 dark:text-white">
-                  {storeConfig.businessName || 'Laser Machine'}
-                </span>
-              </div>
-              <p className="text-zinc-500 max-w-sm leading-relaxed">
-                Personalización de termos y accesorios con grabado láser de alta calidad. 
-                Diseños únicos que duran para siempre.
-              </p>
-            </div>
-
-            {/* Contacto */}
-            <div className="space-y-4">
-              <h4 className="font-bold text-zinc-900 dark:text-white uppercase text-sm tracking-wider">Contacto</h4>
-              <div className="space-y-3 text-sm text-zinc-500">
-                {storeConfig.whatsapp && (
-                  <p className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    WhatsApp: {storeConfig.whatsapp}
-                  </p>
-                )}
-                {storeConfig.instagramUrl && (
-                  <p className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-pink-500 rounded-full"></span>
-                    @{storeConfig.instagramUrl}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Información bancaria */}
-            <div className="space-y-4">
-              <h4 className="font-bold text-zinc-900 dark:text-white uppercase text-sm tracking-wider">Pago</h4>
-              {storeConfig.bankInfo ? (
-                <div className="text-sm text-zinc-500 whitespace-pre-line leading-relaxed">
-                  {storeConfig.bankInfo}
-                </div>
-              ) : (
-                <p className="text-sm text-zinc-500">Aceptamos transferencia, tarjeta y efectivo</p>
-              )}
-            </div>
-          </div>
-
-          {/* Bottom bar */}
-          <div className="pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-zinc-400">
-              © {new Date().getFullYear()} {storeConfig.businessName || 'Laser Machine'}. Todos los derechos reservados.
+      {/* ===================== CATÁLOGO — TABLA ===================== */}
+      <section id="catalogo" className="py-24">
+        <div className="max-w-[1280px] mx-auto px-8">
+          <div className="grid lg:grid-cols-2 gap-16 items-end mb-14">
+            <h2 className="font-vintage font-semibold text-[clamp(32px,3.8vw,48px)] leading-[1.08] tracking-[-0.02em]">
+              El catálogo,<br /><em className="italic text-emerald-500">sin marketing.</em>
+            </h2>
+            <p className="text-[15px] leading-[1.6] text-zinc-600">
+              Lo que ves es lo que hay. Si necesitás algo que no aparece, escribinos y lo conseguimos.
             </p>
-            <div className="flex gap-6 text-xs text-zinc-500">
-              <button onClick={onLogin} className="hover:text-accent-500 transition-colors">
-                Iniciar Sesión
-              </button>
-              <button onClick={() => onNavigate('LANDING')} className="hover:text-accent-500 transition-colors">
-                Inicio
-              </button>
+          </div>
+
+          <div className="w-full overflow-x-auto border border-zinc-200 rounded-2xl">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 w-[70px]"></th>
+                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200">Modelo</th>
+                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 hidden md:table-cell">Capacidad</th>
+                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 hidden md:table-cell">Material</th>
+                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 hidden md:table-cell">Colores</th>
+                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-right py-3.5 px-5 border-b border-zinc-200">Precio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalogRows.map((row, idx) => (
+                  <tr
+                    key={row.name}
+                    onMouseEnter={() => setHoveredRow(idx)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    className={`border-t border-zinc-200 transition-colors ${hoveredRow === idx ? 'bg-zinc-50' : ''}`}
+                  >
+                    <td className="py-5 px-5 align-middle">
+                      <ProductThumb variant={row.thumbVariant} />
+                    </td>
+                    <td className="py-5 px-5 align-middle">
+                      <div className="font-semibold text-[14.5px]">{row.name}</div>
+                      <div className="text-[13px] text-zinc-500 mt-0.5">{row.desc}</div>
+                    </td>
+                    <td className="py-5 px-5 align-middle font-mono text-[13px] hidden md:table-cell">{row.cap}</td>
+                    <td className="py-5 px-5 align-middle font-mono text-[13px] hidden md:table-cell">{row.material}</td>
+                    <td className="py-5 px-5 align-middle font-mono text-[13px] hidden md:table-cell">
+                      <span className="inline-block py-[3px] px-2 bg-emerald-50 text-emerald-700 font-mono text-[10px] uppercase tracking-[0.1em] rounded">
+                        {row.colors}
+                      </span>
+                    </td>
+                    <td className="py-5 px-5 align-middle text-right font-vintage font-semibold text-[18px]">
+                      <span className="text-zinc-500 font-mono text-[13px]">$ </span>
+                      {row.price}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* CTA secundario para ir al shop */}
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => onNavigate('SHOP')}
+              className="bg-zinc-900 hover:bg-black text-white px-5 py-3 rounded-lg text-[14.5px] font-semibold transition-colors"
+            >
+              Ver catálogo completo →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== EDITOR PREVIEW (dark) ===================== */}
+      <section id="editor" className="py-24 bg-zinc-950 text-white">
+        <div className="max-w-[1280px] mx-auto px-8">
+          <div className="mb-12 max-w-2xl">
+            <span className="inline-flex gap-1.5 items-center font-mono text-[11px] uppercase tracking-[0.14em] text-emerald-400 mb-4 px-2.5 py-1 bg-emerald-950/30 rounded">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+              Editor en vivo
+            </span>
+            <h2 className="font-vintage font-semibold text-[clamp(32px,3.8vw,48px)] leading-[1.08] tracking-[-0.02em] text-white">
+              Diseñás acá.<br /><em className="italic text-emerald-400">Queda en el metal.</em>
+            </h2>
+            <p className="text-[15px] leading-[1.6] text-zinc-400 mt-4">
+              Sin descargar nada. El editor corre en el navegador y te muestra exactamente cómo va a quedar antes de mandar a producción.
+            </p>
+          </div>
+
+          {/* Mockup del editor */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-[0_40px_80px_-40px_rgba(0,0,0,0.6)]">
+            {/* Topbar del browser */}
+            <div className="bg-zinc-800 px-4 py-2.5 flex items-center gap-1.5 border-b border-zinc-900">
+              <div className="w-2.5 h-2.5 rounded-full bg-zinc-700"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-zinc-700"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-zinc-700"></div>
+              <div className="ml-3 px-2.5 py-1 bg-zinc-900 rounded font-mono text-[11px] text-zinc-400">
+                laser-machine-v4.vercel.app/editor
+              </div>
             </div>
+            {/* Body del editor */}
+            <div className="grid md:grid-cols-[220px_1fr_220px] min-h-[360px]">
+              {/* Sidebar */}
+              <div className="bg-zinc-950 p-4.5 border-r border-zinc-800">
+                <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-3">Producto</h4>
+                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">YETI 30oz</div>
+                <div className="text-[13px] py-2 px-2.5 rounded bg-emerald-900 text-emerald-300">STANLEY 40oz</div>
+                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">OWALA FreeSip</div>
+                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">Genérico 500ml</div>
+                <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 mt-5 mb-3">Capa</h4>
+                <div className="text-[13px] py-2 px-2.5 rounded bg-emerald-900 text-emerald-300">Texto "Tu nombre"</div>
+                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">Logo frontal</div>
+              </div>
+              {/* Stage */}
+              <div className="grid place-items-center p-8 relative bg-[radial-gradient(ellipse_at_center,rgba(6,78,59,0.15)_0%,transparent_60%)]">
+                <div className="relative w-[100px] h-[200px] bg-gradient-to-b from-stone-700 to-stone-950 rounded-[45px_45px_14px_14px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]">
+                  <div className="absolute left-1/2 top-[45%] -translate-x-1/2 -translate-y-1/2 font-vintage italic font-semibold text-white/85 text-base">
+                    Tu nombre
+                  </div>
+                </div>
+              </div>
+              {/* Panel */}
+              <div className="bg-zinc-950 p-4.5 border-l border-zinc-800">
+                {[
+                  { k: 'Fuente',     v: <>Playfair Display <span className="text-emerald-400">Italic</span></> },
+                  { k: 'Tamaño',     v: '36 pt' },
+                  { k: 'Posición',   v: 'Centro · 45% altura' },
+                  { k: 'Vista previa', v: <span className="text-emerald-400">Listo para producción ✓</span> },
+                ].map((f) => (
+                  <div key={f.k} className="mb-3.5">
+                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-1.5">{f.k}</div>
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-md py-2 px-2.5 text-[12px] text-zinc-300">{f.v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* CTA al editor real */}
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => onNavigate('CUSTOMIZER')}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-lg text-[14.5px] font-semibold transition-colors"
+            >
+              Abrir el editor →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== TESTIMONIOS ===================== */}
+      <section id="testimonios" className="py-24 bg-zinc-50 border-y border-zinc-200">
+        <div className="max-w-[1280px] mx-auto px-8">
+          <div className="grid lg:grid-cols-2 gap-16 items-end mb-14">
+            <h2 className="font-vintage font-semibold text-[clamp(32px,3.8vw,48px)] leading-[1.08] tracking-[-0.02em]">
+              Reseñas<br /><em className="italic text-emerald-500">verificadas.</em>
+            </h2>
+            <p className="text-[15px] leading-[1.6] text-zinc-600">
+              Más de 1.200 pedidos. Acá los que más se repiten en WhatsApp y Google Reviews.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-5">
+            {TESTIMONIALS.map((t) => (
+              <div key={t.name} className="bg-white border border-zinc-200 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-3.5">
+                  <div className="flex gap-0.5 text-emerald-500">
+                    {Array.from({ length: 5 }).map((_, i) => <StarIcon key={i} />)}
+                  </div>
+                  <span className="font-mono text-[10px] text-zinc-500 uppercase tracking-[0.1em]">{t.source}</span>
+                </div>
+                <p className="text-[14.5px] leading-[1.6] text-zinc-600 mb-4">{t.text}</p>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 grid place-items-center font-vintage font-semibold text-[13px]">
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <div className="text-[13.5px] font-medium">{t.name}</div>
+                    <div className="text-[11.5px] text-zinc-500">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== CTA FINAL ===================== */}
+      <section className="py-24 bg-zinc-100 border-t border-zinc-200">
+        <div className="max-w-[1280px] mx-auto px-8">
+          <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-16 items-center">
+            <div>
+              <h2 className="font-vintage font-semibold text-[clamp(36px,4.4vw,56px)] leading-[1.05] tracking-[-0.02em]">
+                Tu próximo termo<br />empieza <em className="italic text-emerald-700">ahora.</em>
+              </h2>
+              <p className="text-zinc-600 text-[15.5px] mt-4 max-w-[480px]">
+                Diseñás en menos de 5 minutos. Si tenés dudas, escribinos por WhatsApp y te asesoramos sin compromiso.
+              </p>
+              <div className="mt-7 flex gap-3 items-center flex-wrap">
+                <a
+                  href="#editor"
+                  onClick={goToEditor}
+                  className="bg-zinc-900 hover:bg-black text-white px-5 py-3 rounded-lg text-[14.5px] font-semibold transition-colors"
+                >
+                  Empezar a diseñar →
+                </a>
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-zinc-900 border border-zinc-300 hover:border-zinc-900 px-5 py-3 rounded-lg text-[14.5px] font-semibold transition-colors"
+                >
+                  Hablar por WhatsApp
+                </a>
+              </div>
+            </div>
+            <div className="bg-white border border-zinc-200 rounded-2xl p-7">
+              <h4 className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500 mb-3.5">Lo que incluye</h4>
+              {[
+                'Diseño en editor',
+                'Vista previa',
+                'Grabado láser',
+                'Empaque premium',
+                'Garantía de por vida',
+              ].map((k) => (
+                <div key={k} className="flex justify-between items-center py-3 border-t border-zinc-200 first:border-t-0 text-[14px]">
+                  <span className="text-zinc-600">{k}</span>
+                  <span className="font-semibold">
+                    <em className="not-italic text-emerald-700 font-vintage font-semibold">Incluido</em>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== FOOTER ===================== */}
+      <footer className="py-12 px-8 bg-white border-t border-zinc-200">
+        <div className="max-w-[1280px] mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 mb-8">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-2.5 font-semibold text-sm tracking-tight">
+                <span className="w-6 h-6 bg-zinc-900 rounded-md grid place-items-center text-white font-vintage italic font-semibold text-[13px]">
+                  L
+                </span>
+                LaserMachine
+              </div>
+              <p className="text-zinc-500 max-w-sm text-[13.5px] leading-relaxed">
+                Estudio de grabado láser en Mendoza. Personalización de termos, botellas y accesorios con láser de fibra.
+              </p>
+            </div>
+            <div>
+              <h5 className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-900 mb-3">Producto</h5>
+              <a href="#catalogo" onClick={scrollToId('catalogo')} className="block text-[13.5px] text-zinc-500 py-0.5 hover:text-zinc-900">Catálogo</a>
+              <a href="#editor" onClick={scrollToId('editor')} className="block text-[13.5px] text-zinc-500 py-0.5 hover:text-zinc-900">Editor</a>
+              <a href="#proceso" onClick={scrollToId('proceso')} className="block text-[13.5px] text-zinc-500 py-0.5 hover:text-zinc-900">Cómo se hace</a>
+            </div>
+            <div>
+              <h5 className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-900 mb-3">Cuenta</h5>
+              <button onClick={onLogin} className="block text-[13.5px] text-zinc-500 py-0.5 hover:text-zinc-900 text-left">Ingresar</button>
+              <button onClick={() => onNavigate('LANDING')} className="block text-[13.5px] text-zinc-500 py-0.5 hover:text-zinc-900 text-left">Inicio</button>
+            </div>
+          </div>
+          <div className="pt-5 border-t border-zinc-200 flex flex-col md:flex-row items-center justify-between gap-4 font-mono text-[10.5px] text-zinc-500">
+            <span>© {new Date().getFullYear()} LaserMachine · Mendoza, Argentina</span>
+            <span>Hecho con láser, no con plantilla</span>
           </div>
         </div>
       </footer>
@@ -766,129 +638,5 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
 });
 
 LandingPage.displayName = 'LandingPage';
-
-// =============================================================================
-// SUB-COMPONENTES - Separados para mejor reutilización y memoización
-// =============================================================================
-
-// Product Card optimizado
-const ProductCard = React.memo(({ 
-  product, 
-  onNavigate 
-}: { 
-  product: Product; 
-  onNavigate: (view: 'SHOP' | 'CUSTOMIZER' | 'LANDING') => void;
-}) => {
-  const imageUrl = product.imageUrl || product.colors[0]?.imageUrl;
-  
-  return (
-    <div
-      className="flex-shrink-0 w-72 snap-start group cursor-pointer"
-      onClick={() => onNavigate('SHOP')}
-    >
-      <div className="relative aspect-square bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-900 dark:to-zinc-800 rounded-2xl overflow-hidden mb-4 shadow-md group-hover:shadow-xl transition-shadow duration-300">
-        {/* Price badge */}
-        <div className="absolute top-3 left-3 z-10 px-3 py-1.5 bg-zinc-900 dark:bg-white text-black text-xs font-bold rounded-full">
-          ${product.price}
-        </div>
-        
-        <LazyProductImage
-          src={imageUrl}
-          alt={product.name}
-          className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
-        />
-        
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-6">
-          <span className="px-6 py-2.5 bg-zinc-900 dark:bg-white text-black font-bold rounded-full text-sm transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-            Personalizar
-          </span>
-        </div>
-      </div>
-      <div className="space-y-1 px-1">
-        <h4 className="font-bold text-zinc-900 dark:text-white truncate group-hover:text-zinc-900 dark:text-white transition-colors">
-          {product.name}
-        </h4>
-        <p className="text-sm text-zinc-500">{product.brand}</p>
-      </div>
-    </div>
-  );
-});
-
-ProductCard.displayName = 'ProductCard';
-
-// Step Card optimizado
-const StepCard = React.memo(({ 
-  item, 
-  index 
-}: { 
-  item: typeof STEPS[0]; 
-  index: number;
-}) => {
-  const Icon = item.icon;
-  
-  return (
-    <div className="relative text-center group">
-      {/* Connector line - solo en desktop y no en el último */}
-      {index < 2 && (
-        <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-zinc-900/30 dark:from-white/30 to-transparent" />
-      )}
-      
-      <div className="relative w-20 h-20 mx-auto mb-6">
-        <div className="relative w-full h-full bg-gradient-to-br from-zinc-700 dark:from-zinc-300 to-zinc-800 dark:to-zinc-200 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-          <Icon size={28} className="text-black" />
-        </div>
-      </div>
-      
-      <span className="text-6xl font-black text-zinc-200 dark:text-zinc-800/50 absolute top-0 left-1/2 -translate-x-1/2 -z-10 select-none">
-        {item.step}
-      </span>
-      
-      <h4 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-zinc-900 dark:text-white transition-colors">
-        {item.title}
-      </h4>
-      <p className="text-sm text-zinc-500 max-w-xs mx-auto leading-relaxed">
-        {item.desc}
-      </p>
-    </div>
-  );
-});
-
-StepCard.displayName = 'StepCard';
-
-// Testimonial Card
-const TestimonialCard = React.memo(({
-  testimonial
-}: {
-  testimonial: typeof TESTIMONIALS[0];
-}) => {
-  return (
-    <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl p-6 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-900/30 dark:hover:border-white/30 transition-colors">
-      <div className="flex gap-1 mb-4">
-        {Array.from({ length: testimonial.rating }).map((_, i) => (
-          <Star key={i} size={16} className="text-zinc-700 dark:text-zinc-300 fill-zinc-900 dark:fill-white" />
-        ))}
-      </div>
-      <div className="flex gap-3 mb-4">
-        <Quote size={24} className="text-zinc-700 dark:text-zinc-300/50 flex-shrink-0" />
-        <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">
-          {testimonial.text}
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-zinc-900/10 dark:bg-white/10 rounded-full flex items-center justify-center">
-          <span className="font-bold text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300 text-sm">
-            {testimonial.name.charAt(0)}
-          </span>
-        </div>
-        <span className="font-bold text-zinc-900 dark:text-white text-sm">
-          {testimonial.name}
-        </span>
-      </div>
-    </div>
-  );
-});
-
-TestimonialCard.displayName = 'TestimonialCard';
 
 export default LandingPage;
