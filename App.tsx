@@ -358,13 +358,18 @@ const App = () => {
   }, []);
 
   // Auth Guard - Redirect to login if accessing protected routes without user
-  useEffect(() => {
-    const protectedViews = ['SHOP', 'FONTS_SHOWCASE', 'CUSTOMIZER', 'CLIENT_DASHBOARD', 'ADMIN_DASHBOARD'];
-    if (protectedViews.includes(view) && !user) {
-      setView('LANDING');
-      setIsLoginOpen(true);
-    }
-  }, [view, user]);
+    // Note: We DO NOT open the login modal when view is LANDING, to avoid
+    // auto-focusing the register/login modal on page load.
+    useEffect(() => {
+      const protectedViews = ['SHOP', 'FONTS_SHOWCASE', 'CUSTOMIZER', 'CLIENT_DASHBOARD', 'ADMIN_DASHBOARD'];
+      if (protectedViews.includes(view) && !user) {
+        setView('LANDING');
+        // Only open login modal if we're NOT already on LANDING
+        if (view !== 'LANDING') {
+          setIsLoginOpen(true);
+        }
+      }
+    }, [view, user]);
 
   // Handle login from LoginModal - now receives properly formatted User
   const handleAuth = (loggedInUser: User) => {
