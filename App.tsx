@@ -1,3 +1,4 @@
+import{ShopProductCard}from'./components/ShopProductCard';
 import {usePersistentCart} from './services/usePersistentCart';
 import {commitCartItem} from './utils/cartEditing';
 import {checkoutCouponError} from './utils/couponValidation';
@@ -106,36 +107,6 @@ const DEFAULT_STORE: StoreConfig = {
 
 const formatMXN = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n);
 
-const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () => void, key?: React.Key }) => {
-    const [loaded, setLoaded] = useState(false);
-    return (
-        <div onClick={onClick} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onClick();}}} aria-label={`Diseñar ${product.name}`} className="group cursor-pointer rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1">
-            <div className="aspect-square bg-white dark:bg-zinc-950 relative overflow-hidden flex items-center justify-center p-2">
-                {!loaded && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 z-10 animate-pulse">
-                        <Loader2 className="animate-spin text-zinc-400 w-5 h-5"/>
-                    </div>
-                )}
-                {product.illustrativeImage && (
-                    <span className="absolute bottom-2 left-2 z-10 text-[9px] font-black uppercase tracking-widest bg-zinc-950/80 text-white px-2 py-1 rounded-md">Foto de referencia</span>
-                )}
-                <img alt={product.name}
-                    src={productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO')}
-                    onLoad={() => setLoaded(true)}
-                    className={`max-w-[94%] max-h-[94%] object-contain group-hover:scale-105 transition-transform duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-                />
-            </div>
-            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{product.brand}</span>
-                <h3 className="font-bold text-sm uppercase tracking-tight leading-snug mt-1 text-zinc-900 dark:text-white">{product.name}</h3>
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mt-3">
-                    <p className="font-black text-base text-zinc-900 dark:text-white">{formatMXN(product.price)}</p>
-                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Diseñar</span>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const App = () => {
   const [view, setView] = useState<ViewState>('LANDING');
@@ -346,7 +317,8 @@ const App = () => {
     const viewParam = urlParams.get('view');
     const orderIdParam = urlParams.get('id');
 
-    if (viewParam === 'TRACKING' && orderIdParam) {
+    if (viewParam === 'SHOP') setView('SHOP');
+    if (viewParam === 'TRACKING') {
       setView('PUBLIC_TRACKING');
       setPreSelectedOrderId(orderIdParam);
     }
@@ -592,16 +564,19 @@ const App = () => {
             {preSelectedFontId && (
                 <div className="lm-shop-font-notice mb-8 p-4 bg-amber-500/10 border border-amber-500 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
                     <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                        <Zap size={14}/> Tipografía #{preSelectedFontId} seleccionada.
+                        <Zap size={14}/> Letra seleccionada.
                     </span>
                     <button aria-label="Quitar fuente seleccionada" onClick={() => setPreSelectedFontId(null)} className="text-[10px] font-black uppercase underline hover:text-black dark:hover:text-white">Cancelar</button>
                 </div>
             )}
             {/* Título removido - ahora en NavBar */}
 
+            {trackingLoad==='loading'&&<div role="status" className="lm-catalog-state"><Loader2 className="animate-spin" size={22}/><h1>Cargando catálogo</h1></div>}
+            {trackingLoad==='error'&&<div role="alert" className="lm-catalog-state"><h1>No se pudo cargar el catálogo</h1><p>Revisa tu conexión y vuelve a intentar. No se añadieron productos al pedido.</p><button onClick={()=>window.location.reload()}>Volver a intentar</button></div>}
+            {trackingLoad==='ready'&&!products.length&&<div role="status" className="lm-catalog-state"><h1>No hay productos disponibles</h1><p>El taller aún no tiene productos publicados.</p></div>}
             {/* CATALOG GRID */}
             <div className={`lm-shop-grid grid gap-5 ${products.length === 1 ? 'grid-cols-1 max-w-[240px] mx-auto' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
-              {products.map(p => (
+              {trackingLoad==='ready'&&products.map(p => (
                 <ShopProductCard
                     key={p.id}
                     product={p}
@@ -1039,6 +1014,7 @@ const App = () => {
               isDarkMode={isDarkMode}
               toggleTheme={() => setIsDarkMode(!isDarkMode)}
               onBackToAdmin={user?.role === UserRole.ADMIN ? () => setView('ADMIN_DASHBOARD') : undefined}
+              onBackToStore={() => setView('SHOP')}
               onProductSelect={(product) => {
                 setSelectedProduct(product);
                 setEditingItem(null);
@@ -1094,7 +1070,7 @@ const App = () => {
               colorName: itemColorLabel(item),
               quantity: item.quantity,
               price: item.unitPrice,
-              imageUrl: productPreviewImage(products.find(p=>p.id===item.productId), item.colorName) ?? products.find(p=>p.id===item.productId)?.imageUrl
+              imageUrl: productPreviewImage(products.find(p=>p.id===item.productId), item.colorName, item.customBackgroundImage) ?? products.find(p=>p.id===item.productId)?.imageUrl
             }))}
             onUpdateQuantity={(id, qty) => {
               if (qty === 0) {

@@ -58,6 +58,7 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
   const [ownColor, setOwnColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imageFailed,setImageFailed]=useState(false);
   const previewBoxRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const [fit, setFit] = useState<SimpleFit>({ scale: 1, tooLong: false });
@@ -99,6 +100,7 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
 
   const colorObj = (product.colors || []).find(c => c.name === colorName);
   const image = productPreviewImage(product,colorName);
+  useEffect(()=>{setImgLoaded(false);setImageFailed(false);},[image]);
   const inventoryUnconfirmed = !ownItem && (product.colors || []).length === 0;
   const stock = colorObj?.stock ?? 0;
   const isOutOfStock = !ownItem && !inventoryUnconfirmed && stock <= 0;
@@ -175,23 +177,23 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
           {/* Preview: mismo render que el personalizador (posición y clase de fuente idénticas) */}
           <div ref={previewBoxRef} className="lm-simple-preview relative aspect-[5/6] bg-zinc-50 dark:bg-zinc-900 rounded-2xl overflow-hidden flex items-center justify-center mb-4">
             {productPreviewLabel(product,colorName)&&<span className="absolute bottom-2 left-2 right-2 z-20 text-[10px] bg-black/75 text-white p-1 rounded">{productPreviewLabel(product,colorName)}</span>}
-            {!imgLoaded && <Loader2 className="animate-spin text-zinc-400 w-6 h-6 absolute" />}
-            <img src={image} onLoad={() => setImgLoaded(true)} alt={productPreviewLabel(product,colorName)||product.name} style={{transform:`scale(${previewImageScale(product.illustrativeImage)})`}} className={`w-full h-full object-contain transition-opacity ${imgLoaded ? 'opacity-100' : 'opacity-0'}`} />
+            {!imgLoaded && !imageFailed && <Loader2 className="animate-spin text-zinc-400 w-6 h-6 absolute" />}
+            {imageFailed?<p role="alert" className="p-4 text-center text-sm">Foto no disponible. Cierra la vista y vuelve a intentarlo.</p>:<img src={image} onLoad={() => setImgLoaded(true)} onError={()=>{setImageFailed(true);setImgLoaded(true);}} alt={productPreviewLabel(product,colorName)||product.name} style={{transform:`scale(${previewImageScale(product.illustrativeImage)})`}} className={`w-full h-full object-contain transition-opacity ${imgLoaded ? 'opacity-100' : 'opacity-0'}`} />}
             {/* Medición fija a 48px (base del editor): oculta, sin viewport, alimenta computeSimpleFit */}
             <span ref={measureRef} aria-hidden="true" className={`${font?.cssFamily || ''} whitespace-nowrap font-bold`} style={{ position: 'absolute', left: 0, top: 0, visibility: 'hidden', pointerEvents: 'none', fontSize: EDITOR_TEXT_BASE_PX }}>{text}</span>
             {/* Texto inválido NO se simula sobre la silueta: se muestra completo fuera del preview, en el aviso */}
-            {!fit.tooLong && boxW > 0 && text.trim() && (
+            {!imageFailed && !fit.tooLong && boxW > 0 && text.trim() && (
               <div className="absolute" style={{ left: '50%', top: '40%', transform: 'translate(-50%, -50%)' }}>
                 <span className={`${font?.cssFamily || ''} whitespace-nowrap font-bold text-zinc-900 dark:text-zinc-100`} style={{ fontSize: simplePreviewFontPx(boxW, fit.scale),display:'block',lineHeight:1,color:previewInk(productColorHex(product,colorName)), textShadow: '0 1px 2px rgba(255,255,255,.35)' }}>{text}</span>
               </div>
             )}
-            {product.illustrativeImage && (
+            {product.illustrativeImage && !productPreviewLabel(product,colorName) && (
               <span className="absolute bottom-2 left-2 text-[9px] font-black uppercase tracking-widest bg-zinc-950/80 text-white px-2 py-1 rounded-md">Foto YETI de referencia</span>
             )}
           </div>
 
           <div className="flex items-center justify-between mb-3 text-xs">
-            <span className="text-zinc-500 flex items-center gap-1.5"><Type size={13} className="text-amber-500" /> Fuente: <b className="text-zinc-800 dark:text-zinc-200">{font?.name || 'Seleccionada'}</b></span>
+            <span className="text-zinc-500 flex items-center gap-1.5"><Type size={13} className="text-amber-500" /> Letra seleccionada</span>
             <button onClick={onChangeFont} className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-500 underline hover:text-black dark:hover:text-white">Cambiar fuente o texto</button>
           </div>
 
@@ -220,13 +222,13 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
             </div>
           )}
 
-          <div className="flex items-center justify-between mb-4">
+          <div className="lm-simple-quantity flex items-center justify-between mb-4 flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <p className="text-[10px] font-bold text-zinc-500 uppercase">Cantidad</p>
               <div className="flex items-center gap-2">
-                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 font-black text-zinc-600 dark:text-zinc-300">-</button>
+                <button aria-label="Reducir cantidad" disabled={quantity<=1} onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-11 h-11 rounded-full disabled:opacity-40 bg-zinc-100 dark:bg-zinc-800 font-black text-zinc-600 dark:text-zinc-300">-</button>
                 <span className="font-black text-sm w-5 text-center text-zinc-900 dark:text-white">{quantity}</span>
-                <button onClick={() => setQuantity(q => Math.min(20, q + 1))} className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 font-black text-zinc-600 dark:text-zinc-300">+</button>
+                <button aria-label="Aumentar cantidad" disabled={quantity>=20} onClick={() => setQuantity(q => Math.min(20, q + 1))} className="w-11 h-11 rounded-full disabled:opacity-40 bg-zinc-100 dark:bg-zinc-800 font-black text-zinc-600 dark:text-zinc-300">+</button>
               </div>
             </div>
             <div className="text-right">
@@ -245,8 +247,8 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
             {fit.tooLong && (
               <p className="text-[10px] font-bold text-amber-600 dark:text-amber-500 text-center break-words">"{text}" no cabe en el área de grabado: escríbelo más corto o personaliza a detalle.</p>
             )}
-            <button onClick={handleAdd} disabled={isUnavailable || unitPrice === null || fit.tooLong} className={`w-full font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${isUnavailable || unitPrice === null || fit.tooLong ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300 text-black'}`}>
-              <Zap size={16} /> {fit.tooLong ? 'Texto muy largo' : inventoryUnconfirmed ? 'Disponibilidad por confirmar' : isOutOfStock ? 'Agotado' : 'Agregar al pedido'}
+            <button onClick={handleAdd} disabled={isUnavailable || unitPrice === null || fit.tooLong || imageFailed} className={`w-full font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${isUnavailable || unitPrice === null || fit.tooLong || imageFailed ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300 text-black'}`}>
+              <Zap size={16} /> {imageFailed?'Vista previa no disponible':fit.tooLong ? 'Texto muy largo' : inventoryUnconfirmed ? 'Disponibilidad por confirmar' : isOutOfStock ? 'Agotado' : 'Agregar al pedido'}
             </button>
             <button onClick={()=>onOpenFullEditor(createDraft())} className="w-full py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-[11px] font-black uppercase text-zinc-600 dark:text-zinc-300 hover:border-amber-500 transition-all flex items-center justify-center gap-2">
               <PenTool size={13} /> Personalizar a detalle (opcional)

@@ -630,3 +630,7 @@ html.dark .lm-ui :is(input,textarea)::placeholder { color: var(--lm-text-seconda
 
 .lm-cart-save-warning{position:relative;z-index:40;width:calc(100% - 32px);background:#3d2410;border:1px solid #b7791f;border-radius:8px;padding:12px 16px;color:#fff3d6;font-size:13px;line-height:1.5;max-width:720px;margin:16px auto;}
 .lm-cart-local-note{font-size:12px;line-height:1.5;color:var(--lm-text-secondary);margin:-12px 0 16px;}
+
+/* Visual font choice has no customer-facing technical metadata. */
+.lm-font-browser .lm-font-card .lm-font-caption{justify-content:flex-end;position:absolute;right:0;top:0;width:auto;border:0;padding:10px;background:transparent;pointer-events:none}
+.lm-font-browser .lm-font-card{position:relative}

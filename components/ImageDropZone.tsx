@@ -58,6 +58,7 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
       return;
     }
 
+    if(file.size>5*1024*1024){alert('La imagen supera el máximo de 5 MB. Elige un archivo más pequeño.');return;}
     const current=++operation.current;
     setIsLoading(true);
     setIsProcessing(false);
@@ -125,6 +126,8 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
       )}
       
       <div
+        role="button" tabIndex={0} aria-label={`Seleccionar ${label.toLowerCase()}`}
+        onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==='Enter'||e.key===' ')){e.preventDefault();handleClick();}}}
         onClick={handleClick}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -165,7 +168,7 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
               className="w-full h-full object-contain p-2"
             />
             {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-3">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -250,7 +253,7 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
         <div className="flex-1 relative">
           <ImageIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
-            type="text"
+            type="text" aria-label={`URL de ${label.toLowerCase()}`}
             value={value}
             onChange={(e) => replaceImage(e.target.value)}
             placeholder="O pega una URL de imagen..."

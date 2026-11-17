@@ -11,7 +11,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Order, User, OrderStatus, Product, FontOption, Coupon, StoreConfig } from '../types';
 import { 
   Package, Clock, Search, Percent, Phone, MapPin, 
-  ChevronRight, Star, Copy, CheckCircle2, Truck,
+  ArrowLeft, ChevronRight, Star, Copy, CheckCircle2, Truck,
   Sparkles, Zap, Calendar, MessageCircle, Home, Grid3X3,
   Type, ChevronDown, ExternalLink, RefreshCcw, X,
   AlertTriangle, CheckCircle, Clock4, PackageCheck,
@@ -30,6 +30,7 @@ interface ClientDashboardProps {
   storeConfig?: StoreConfig;
   onProductSelect?: (product: Product) => void;
   onBackToAdmin?: () => void;
+  onBackToStore?: () => void;
   onCreateReferral?: (code:string) => void;
   onReorder?: (order: Order) => void;
   onApproveMockup?: (orderId: string, approved: boolean) => void;
@@ -67,7 +68,7 @@ type TabType = 'home' | 'orders' | 'fonts' | 'catalog' | 'coupons';
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ 
   user, orders, products, fonts, coupons = [], storeConfig, onReorder, onApproveMockup,
-  contentConfig, onProductSelect, onBackToAdmin, isDarkMode: propIsDarkMode, toggleTheme: propToggleTheme 
+  contentConfig, onProductSelect, onBackToAdmin, onBackToStore, isDarkMode: propIsDarkMode, toggleTheme: propToggleTheme
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -302,6 +303,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                       <p className="text-xs text-zinc-300">{banner.subtitle}</p>
                     )}
                   </div>
+                  {banner.link&&/^(https?:\/\/|\/(?!\/))/.test(banner.link)&&<a className="absolute inset-0 focus-visible:ring-2 focus-visible:ring-yellow-400" href={banner.link} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${banner.title}`}><span className="sr-only">Abrir {banner.title}</span></a>}
                 </div>
               </div>
             ))}
@@ -718,7 +720,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   <MessageCircle size={18} />
                   Contactar al taller
                 </button>
-                {selectedOrder.status === OrderStatus.COMPLETED && (
+                {selectedOrder.status === OrderStatus.COMPLETED && onReorder && (
                   <button 
                     onClick={() => onReorder?.(selectedOrder)}
                     className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-300 text-black rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
@@ -750,14 +752,17 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 <p className="text-[10px] text-zinc-500">Panel de cliente</p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+            {(onBackToAdmin||onBackToStore)&&<button onClick={onBackToAdmin||onBackToStore} className="lm-client-back" aria-label={onBackToAdmin?'Volver a administración':'Volver a la tienda'}><ArrowLeft size={18}/><span>{onBackToAdmin?'Admin':'Tienda'}</span></button>}
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
               className="p-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              aria-label={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
+            </button></div>
           </div>
         </div>
       </div>

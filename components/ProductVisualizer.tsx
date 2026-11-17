@@ -124,6 +124,7 @@ const SHOW_AI_BG_REMOVAL = false;
       }
   };
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [productImageFailed,setProductImageFailed]=useState(false);
   
   const defaultFontId = fonts.find(productionFont)?.id??999; 
 
@@ -264,8 +265,8 @@ const SHOW_AI_BG_REMOVAL = false;
   const isUnavailable = isOutOfStock || inventoryUnconfirmed;
 
   useEffect(() => {
-      setIsImageLoaded(false);
-      if (mainImageRef.current && mainImageRef.current.complete) setIsImageLoaded(true);
+      setIsImageLoaded(false);setProductImageFailed(false);
+      if (mainImageRef.current?.complete && mainImageRef.current.naturalWidth>0) setIsImageLoaded(true);
   }, [currentImage]);
 
   const colorOptions = useMemo(() => {
@@ -660,6 +661,7 @@ const SHOW_AI_BG_REMOVAL = false;
   const handleSaveClick = async (goToCart: boolean) => {
       const attempt=++addRevision.current;
       const isCurrent=()=>attempt===addRevision.current;
+      if(productImageFailed){setCanvasWarning('No se agregó al pedido: la foto no está disponible para revisar el diseño.');return;}
       if(missingTextFont){setStripNote('Tipografía sin archivo del taller. Puedes guardar este diseño como borrador; no se agrega al pedido.');return;}
       try{for(const id of new Set(textFonts.filter(([t])=>t.trim()).map(([,id])=>id)))await checkFontFile(fonts.find(f=>f.id===id)!.fileData!);}catch{if(isCurrent())setCanvasWarning('La tipografía no pudo cargarse. Conserva el diseño como borrador; no se agregó al pedido.');return;}
       if(!isCurrent())return;
@@ -1092,13 +1094,13 @@ const SHOW_AI_BG_REMOVAL = false;
                 <div className="lm-desktop-product-info absolute top-6 left-20 z-20 hidden lg:flex flex-col items-start gap-3 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl p-5 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-2xl min-w-[280px] max-w-[320px]">
                     <div className="text-left">
                         {referenceColor&&<p className="text-[10px] text-zinc-500 mb-2">{productPreviewLabel(product,selectedColor,userUploadedImage)}</p>}
-                        <h3 className="text-2xl font-black uppercase tracking-tight text-zinc-900 dark:text-white drop-shadow-sm select-none leading-tight mb-2">{product.name}</h3>
-                        <span className="text-[10px] font-black bg-amber-500/20 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/30">{isClientItem ? 'SERVICIO PROPIO' : inventoryUnconfirmed?'CATÁLOGO · POR CONFIRMAR':'PRODUCTO CATÁLOGO'}</span>
+                        <h3 className="text-2xl font-black uppercase tracking-tight text-zinc-900 dark:text-white drop-shadow-sm select-none leading-tight mb-2">{isClientItem?'Grabado en tu termo':product.name}</h3>
+                        <span className="text-[10px] font-black bg-amber-500/20 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/30">{isClientItem ? 'TRAIGO MI TERMO' : inventoryUnconfirmed?'CATÁLOGO · POR CONFIRMAR':'PRODUCTO CATÁLOGO'}</span>
                     </div>
                     <div className="flex flex-col gap-1.5 w-full text-xs">
-                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">{referenceColor?'Color solicitado:':'Color:'}</span><span className="font-bold text-zinc-900 dark:text-white">{selectedColor}</span></div>
-                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">Disponibilidad:</span><span className={`uppercase font-black ${isClientItem ? 'text-blue-500' : inventoryUnconfirmed ? 'text-zinc-400' : isOutOfStock ? 'text-red-500' : !product.availabilityOnly && currentStock < 5 ? 'text-amber-500' : 'text-emerald-500'}`}>{isClientItem ? 'N/A (Servicio)' : inventoryUnconfirmed ? 'POR CONFIRMAR' : isOutOfStock ? 'AGOTADO' : product.availabilityOnly ? 'Disponible' : currentStock < 5 ? `¡Últimas ${currentStock}!` : `${currentStock} Disponibles`}</span></div>
-                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">Precio Base:</span><span className="font-bold text-zinc-900 dark:text-white">{formatMXN(isClientItem ? 0 : product.price)}</span></div>
+                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">{isClientItem?'Tu termo:':referenceColor?'Color solicitado:':'Color:'}</span><span className="font-bold text-zinc-900 dark:text-white">{isClientItem?([clientItemBrand==='OTRO'?'':clientItemBrand,clientItemColor].filter(Boolean).join(' · ')||'Sin especificar'):selectedColor}</span></div>
+                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">Disponibilidad:</span><span className={`uppercase font-black ${isClientItem ? 'text-blue-500' : inventoryUnconfirmed ? 'text-zinc-400' : isOutOfStock ? 'text-red-500' : !product.availabilityOnly && currentStock < 5 ? 'text-amber-500' : 'text-emerald-500'}`}>{isClientItem ? 'Lo traes tú' : inventoryUnconfirmed ? 'POR CONFIRMAR' : isOutOfStock ? 'AGOTADO' : product.availabilityOnly ? 'Disponible' : currentStock < 5 ? `¡Últimas ${currentStock}!` : `${currentStock} Disponibles`}</span></div>
+                        <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300 border-b border-zinc-200/50 dark:border-zinc-700/50 pb-1.5"><span className="text-zinc-400">{isClientItem?'Termo:':'Precio Base:'}</span><span className="font-bold text-zinc-900 dark:text-white">{isClientItem?'No incluido':formatMXN(product.price)}</span></div>
                         <div className="flex justify-between items-center font-semibold text-zinc-600 dark:text-zinc-300"><span className="text-zinc-400">+ Grabado:</span><span className="font-bold text-amber-500">{(()=>{const p=calculatePrice();if(p===null)return 'A cotizar';const d=p-(isClientItem?0:product.price);return product.engravingIncluded&&!isClientItem&&d===0?'Incluido':formatMXN(d);})()}</span></div>
                     </div>
                 </div>
@@ -1139,7 +1141,7 @@ const SHOW_AI_BG_REMOVAL = false;
 
                         
                         {/* Loading Overlay */}
-                        {!isImageLoaded && !isOutOfStock && !(isClientItem && !userUploadedImage) && (
+                        {!isImageLoaded && !productImageFailed && !isOutOfStock && !(isClientItem && !userUploadedImage) && (
                             <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm transition-opacity duration-300">
                                 <div className="bg-white dark:bg-zinc-900 p-4 rounded-full shadow-xl">
                                     <Loader2 className="animate-spin text-yellow-400 w-8 h-8"/>
@@ -1147,6 +1149,7 @@ const SHOW_AI_BG_REMOVAL = false;
                             </div>
                         )}
 
+                        {productImageFailed&&<div role="alert" className="absolute inset-0 z-30 flex items-center justify-center p-8 bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-center">Foto no disponible. Conserva tu diseño y elige otra foto o producto para comprobarlo.</div>}
                         {/* The Scaled Stage: 500x600 px */}
                         <div 
                             id="virtual-stage" data-illustrative={product.illustrativeImage&&!userUploadedImage?'true':undefined}
@@ -1168,7 +1171,8 @@ const SHOW_AI_BG_REMOVAL = false;
                                 alt={userUploadedImage?'Foto de tu producto':isClientItem?'Termo de referencia para colocar el diseño':product.illustrativeImage?`Foto de referencia YETI Rambler 30oz ${referenceColor||'NEGRO'}`:product.name}
                                 style={{transform:`scale(${previewImageScale(product.illustrativeImage,userUploadedImage)})`}}
                                 src={currentImage}
-                                onLoad={() => setIsImageLoaded(true)}
+                                onLoad={() => {setIsImageLoaded(true);setProductImageFailed(false);}}
+                                onError={()=>{setProductImageFailed(true);setIsImageLoaded(true);}}
                                 className={`lm-product-photo ${userUploadedImage ? 'lm-user-photo' : ''} w-full h-full object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.5)] pointer-events-none select-none transition-all duration-700 ease-in-out relative z-10 ${isOutOfStock ? 'grayscale opacity-50' : ''} ${isImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
                             />
                             <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
@@ -1229,9 +1233,9 @@ const SHOW_AI_BG_REMOVAL = false;
             <div className="lm-review-quantity flex items-center justify-between"><span className="text-sm">Cantidad de termos</span><div className="flex items-center gap-4"><button aria-label="Reducir cantidad en revisión" onClick={()=>setQuantity(Math.max(1,quantity-1))}>−</button><span>{quantity}</span><button aria-label="Aumentar cantidad en revisión" onClick={()=>setQuantity(quantity+1)}>+</button></div></div>
             <dl className="text-sm space-y-3"><div className="flex justify-between gap-4"><dt className="text-zinc-400">Color</dt><dd>{selectedColor||'Sin elegir'}{inventoryUnconfirmed&&selectedColor?' · solicitado':''}</dd></div><div className="flex justify-between gap-4"><dt className="text-zinc-400">Disponibilidad</dt><dd>{isClientItem?'Producto propio':inventoryUnconfirmed?'Por confirmar con el taller':isOutOfStock?'Agotado':product.availabilityOnly?'Disponible':`${currentStock} disponibles`}</dd></div><div className="flex justify-between gap-4"><dt className="text-zinc-400">Total · {quantity} {quantity===1?'pieza':'piezas'}</dt><dd>{calculatePrice()===null?'A cotizar':formatMXN(calculatePrice()!*quantity)}</dd></div></dl>
             <p className="text-sm text-zinc-300">{product.engravingIncluded&&!isClientItem?'Incluye nombre al frente. Un logo o monograma al reverso +'+formatMXN(pricing.extraSidePrice)+'. Texto al reverso y otras combinaciones: a cotizar.':isClientItem?`Nombre al frente ${formatMXN(pricing.baseEngravingPrice)}. El total cambia según el diseño; no incluye comprar un termo.`:'El taller confirma el precio de esta combinación antes de cobrar.'}</p>
-            {referenceColor&&<p className="text-sm text-zinc-400">Foto real de un YETI Rambler 30oz como referencia. No es el termo genérico de 20oz seleccionado ni confirma marca, capacidad o existencias.</p>}
+            {referenceColor&&<p className="text-sm text-zinc-400">Foto real de un YETI Rambler 30oz como referencia. {isClientItem?'No es tu termo ni confirma su marca o capacidad.':'No es el termo genérico de 20oz seleccionado ni confirma marca, capacidad o existencias.'}</p>}
             {inventoryUnconfirmed&&<p className="text-xs text-zinc-400">Guardar tu diseño no hace un pedido.</p>}
-            <div className="flex gap-2 pt-2"><button aria-label="Guardar diseño revisado" disabled={historyBusy} onClick={async()=>{if(await saveCurrentDesign())setShowProductDetails(false);}} className={`lm-reviewed-save flex-1 p-3 rounded-lg font-bold flex items-center justify-center gap-2 ${isUnavailable?'bg-yellow-400 text-black':'border border-zinc-600'}`}><Save size={18}/>Guardar diseño</button>{!inventoryUnconfirmed&&<button disabled={isOutOfStock||missingTextFont} onClick={()=>{setShowProductDetails(false);handleSaveClick(true);}} className="lm-review-submit flex-1 p-3 rounded-lg bg-yellow-400 text-black disabled:bg-zinc-800 disabled:text-zinc-500 font-bold">{missingTextFont?'Tipografía pendiente':isOutOfStock?'Agotado':calculatePrice()===null?'Guardar borrador':'Agregar'}</button>}</div>
+            <div className="flex gap-2 pt-2"><button aria-label="Guardar diseño revisado" disabled={historyBusy} onClick={async()=>{if(await saveCurrentDesign())setShowProductDetails(false);}} className={`lm-reviewed-save flex-1 p-3 rounded-lg font-bold flex items-center justify-center gap-2 ${isUnavailable?'bg-yellow-400 text-black':'border border-zinc-600'}`}><Save size={18}/>Guardar diseño</button>{!inventoryUnconfirmed&&<button disabled={isOutOfStock||missingTextFont||productImageFailed} onClick={()=>{setShowProductDetails(false);handleSaveClick(true);}} className="lm-review-submit flex-1 p-3 rounded-lg bg-yellow-400 text-black disabled:bg-zinc-800 disabled:text-zinc-500 font-bold">{productImageFailed?'Foto pendiente':missingTextFont?'Tipografía pendiente':isOutOfStock?'Agotado':calculatePrice()===null?'Guardar borrador':'Agregar'}</button>}</div>
           </div>
         </div>}
         {showPhotoOptions&&<div ref={photoDialog} className="lm-customizer-modal lm-photo-modal fixed inset-0 z-[260] bg-black/70 flex items-end md:items-center justify-center p-3" role="dialog" aria-modal="true" data-tool-label="Termo" aria-label="Foto de producto propio">
@@ -1291,13 +1295,13 @@ const SHOW_AI_BG_REMOVAL = false;
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar bg-zinc-50 dark:bg-black">
                         {!fonts.some(productionFont)&&<p className="lm-font-missing mb-4">Las tipografías del taller aún no están cargadas. Los diseños anteriores conservan sus referencias. Puedes seguir preparando un borrador.</p>}<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {filteredFonts.map(f => {
+                            {filteredFonts.map((f,index) => {
                                 const isSelected = getCurrentFontId(fontModalTarget) === f.id;
                                 const txt = (view === 'FRONT' ? (fontModalTarget === 'text1' ? frontText : frontText2) : (fontModalTarget === 'text1' ? backText : backText2)) || 'Muestra';
                                 return (
-                                    <button key={f.id} onClick={() => handleFontSelect(f.id)} className={`h-24 md:h-32 rounded-2xl flex flex-col items-center justify-center p-3 border-2 transition-all ${isSelected ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/10' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400'}`}>
+                                    <button key={f.id} aria-label={`Elegir muestra ${index+1}`} aria-pressed={isSelected} onClick={() => handleFontSelect(f.id)} className={`h-24 md:h-32 rounded-2xl flex flex-col items-center justify-center p-3 border-2 transition-all ${isSelected ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/10' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400'}`}>
                                         <span className={`${f.cssFamily} text-3xl md:text-4xl break-words text-center line-clamp-2`}>{txt}</span>
-                                        <span className="text-[9px] font-bold text-zinc-400 mt-3 uppercase tracking-wider">{f.name}</span>
+                                        <span className="text-[9px] font-bold text-zinc-400 mt-3">{isSelected ? 'Seleccionada' : ''}</span>
                                     </button>
                                 );
                             })}
