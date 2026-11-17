@@ -1,0 +1,8 @@
+import React,{useRef,useState}from'react';
+import{render,screen,fireEvent,cleanup}from'@testing-library/react';
+import{it,expect,afterEach,vi}from'vitest';
+import{useModalFocus}from'../../utils/useModalFocus';
+import fs from'node:fs';
+afterEach(()=>{cleanup();vi.restoreAllMocks();});
+it('labels the real final customer preview as a modal and connects its existing focus behavior',()=>{const source=fs.readFileSync('App.tsx','utf8');expect(source).toContain('useModalFocus(!!previewItem,finalPreviewRef,()=>setPreviewItem(null))');expect(source).toContain('ref={finalPreviewRef} role="dialog" aria-modal="true" aria-labelledby="final-design-title"');expect(source).toContain('id="final-design-title"');});
+it('closes with Escape and restores the actual opener',()=>{vi.spyOn(HTMLElement.prototype,'getClientRects').mockReturnValue([{}]as any);function Example(){const[open,setOpen]=useState(false),ref=useRef<HTMLDivElement>(null);useModalFocus(open,ref,()=>setOpen(false));return <><button onClick={()=>setOpen(true)}>Abrir</button>{open&&<div ref={ref} role="dialog"><button>Cerrar</button><button>Guías</button></div>}</>;}render(<Example/>);const opener=screen.getByRole('button',{name:'Abrir'});opener.focus();fireEvent.click(opener);expect(screen.getByRole('button',{name:'Cerrar'})).toHaveFocus();fireEvent.keyDown(document,{key:'Tab',shiftKey:true});expect(screen.getByRole('button',{name:'Guías'})).toHaveFocus();fireEvent.keyDown(document,{key:'Tab'});expect(screen.getByRole('button',{name:'Cerrar'})).toHaveFocus();fireEvent.keyDown(document,{key:'Escape'});expect(screen.queryByRole('dialog')).toBeNull();expect(opener).toHaveFocus();});

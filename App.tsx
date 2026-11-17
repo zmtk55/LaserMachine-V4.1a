@@ -1,3 +1,4 @@
+import {useModalFocus} from './utils/useModalFocus';
 import{ShopProductCard}from'./components/ShopProductCard';
 import {usePersistentCart} from './services/usePersistentCart';
 import {commitCartItem} from './utils/cartEditing';
@@ -240,6 +241,8 @@ const App = () => {
   const [customizerDraft,setCustomizerDraft]=useState<OrderItem|null>(null);
   useEffect(()=>{if(view!=='CUSTOMIZER')setCustomizerDraft(null);},[view]);
   const [previewItem, setPreviewItem] = useState<OrderItem | null>(null); // For Modal Preview
+  const finalPreviewRef=useRef<HTMLDivElement>(null);
+  useModalFocus(!!previewItem,finalPreviewRef,()=>setPreviewItem(null));
 
   // New state for font flow
   const [preSelectedFontId, setPreSelectedFontId] = useState<number | null>(null);
@@ -932,9 +935,9 @@ const App = () => {
         {/* PREVIEW MODAL */}
         {previewItem && (
             <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in zoom-in-95">
-                <div className="bg-white dark:bg-zinc-950 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 relative shadow-2xl">
+                <div ref={finalPreviewRef} role="dialog" aria-modal="true" aria-labelledby="final-design-title" className="bg-white dark:bg-zinc-950 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 relative shadow-2xl">
                     <button aria-label="Cerrar ficha técnica" onClick={() => setPreviewItem(null)} className="absolute top-6 right-6 p-2 bg-zinc-100 dark:bg-zinc-900 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"><X size={20}/></button>
-                    <h3 className="text-xl sm:text-2xl pr-10 font-black text-zinc-900 dark:text-white uppercase mb-8">Vista previa de tu diseño</h3>
+                    <h3 id="final-design-title" className="text-xl sm:text-2xl pr-10 font-black text-zinc-900 dark:text-white uppercase mb-8">Vista previa de tu diseño</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <TechnicalPreview
