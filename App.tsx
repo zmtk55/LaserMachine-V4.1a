@@ -1,3 +1,4 @@
+import {FontIdentification} from './components/FontIdentification';
 import {useModalFocus} from './utils/useModalFocus';
 import{ShopProductCard}from'./components/ShopProductCard';
 import {usePersistentCart} from './services/usePersistentCart';
@@ -712,7 +713,7 @@ const App = () => {
         {view === 'CART' && (
           <div className="lm-checkout w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-10 min-h-screen bg-white/90 dark:bg-black/80 backdrop-blur-sm">
             <h2 className="text-2xl md:text-3xl font-extrabold mb-6 text-zinc-900 dark:text-white uppercase tracking-tighter">Tu pedido</h2>
-            {!cartStorageError&&cart.length>0&&<p className="lm-cart-local-note">Carrito conservado en este navegador. No es un pedido enviado. Revisa precios y disponibilidad antes de continuar.</p>}
+            {!cartStorageError&&cart.length>0&&<p className="lm-cart-local-note">Carrito conservado en este navegador. No es un pedido enviado. Las fuentes incluidas no tienen número de taller asignado. Revisa precios y disponibilidad antes de continuar.</p>}
             {import.meta.env.VITE_CHECKOUT_ENABLED!=='true'&&<aside className="lm-intake-notice" role="status"><strong>Recepción de pedidos cerrada por ahora</strong><p>Puedes probar tu diseño y revisar el precio. Todavía no se envían pedidos ni se hacen cobros.</p></aside>}
             {cart.length === 0 ? (
                <div className="py-40 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/10 rounded-3xl">
@@ -761,6 +762,7 @@ const App = () => {
                                    </button>
                               </div>
 
+                              <div className="mt-3"><span className="text-xs font-bold">Frente</span><FontIdentification fonts={fonts} text={item.frontText} text2={item.frontText2} fontId={item.frontFontId} fontId2={item.frontFontId2} logos={item.frontLogos}/>{(item.backText||item.backText2||item.backLogos.length>0)&&<><span className="text-xs font-bold">Posterior</span><FontIdentification fonts={fonts} text={item.backText} text2={item.backText2} fontId={item.backFontId} fontId2={item.backFontId2} logos={item.backLogos}/></>}</div>
                               {/* Price Breakdown Mini */}
                               <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-4 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase">
                                   {!item.isClientItem&&<><span>Base: <b className="text-zinc-900 dark:text-white">{formatMXN(basePrice)}</b></span><span>+</span></>}
@@ -947,7 +949,7 @@ const App = () => {
                             font2Css={fonts.find(f=>f.id===previewItem.frontFontId2)?.cssFamily}
                             imageUrl={productPreviewImage(products.find(p => p.id === previewItem.productId),previewItem.colorName,previewItem.customBackgroundImage)}
                             text={previewItem.frontText} text2={previewItem.frontText2}
-                            fontName={previewItem.frontFontName} fontId={previewItem.frontFontId} hideElementCounts hideFontMetadata fontCss={fonts.find(f => f.id === previewItem.frontFontId)?.cssFamily || ''}
+                            fonts={fonts} fontId2={previewItem.frontFontId2} fontName={previewItem.frontFontName} fontId={previewItem.frontFontId} hideElementCounts hideFontMetadata fontCss={fonts.find(f => f.id === previewItem.frontFontId)?.cssFamily || ''}
                             logos={previewItem.frontLogos}
                             designState={previewItem.frontDesignState} designState2={previewItem.frontDesignState2}
                             sideLabel="LADO A (FRENTE)"
@@ -959,7 +961,7 @@ const App = () => {
                             font2Css={fonts.find(f=>f.id===previewItem.backFontId2)?.cssFamily}
                             imageUrl={productPreviewImage(products.find(p => p.id === previewItem.productId),previewItem.colorName,previewItem.customBackgroundImage)}
                             text={previewItem.backText} text2={previewItem.backText2}
-                            fontName={previewItem.backFontName} fontId={previewItem.backFontId} hideElementCounts hideFontMetadata fontCss={fonts.find(f => f.id === previewItem.backFontId)?.cssFamily || ''}
+                            fonts={fonts} fontId2={previewItem.backFontId2} fontName={previewItem.backFontName} fontId={previewItem.backFontId} hideElementCounts hideFontMetadata fontCss={fonts.find(f => f.id === previewItem.backFontId)?.cssFamily || ''}
                             logos={previewItem.backLogos}
                             designState={previewItem.backDesignState} designState2={previewItem.backDesignState2}
                             sideLabel="LADO B (POSTERIOR)"
@@ -967,7 +969,7 @@ const App = () => {
                     </div>
 
                     <div className="mt-8 text-center">
-                        <p className="text-xs text-zinc-500 font-mono">Vista orientativa. El contraste en pantalla ayuda a revisar el diseño; el taller confirma el acabado antes de fabricar.</p>
+                        <p className="text-xs text-zinc-500 font-mono">Las fuentes incluidas se identifican por familia; no tienen número de taller asignado. Vista orientativa. El contraste en pantalla ayuda a revisar el diseño; el taller confirma el acabado antes de fabricar.</p>
                     </div>
                 </div>
             </div>
@@ -1068,6 +1070,7 @@ const App = () => {
           <CartPanel
             cartItems={cart.map(item => ({
               id: item.id,
+              fontDetails:<><FontIdentification fonts={fonts} text={item.frontText} text2={item.frontText2} fontId={item.frontFontId} fontId2={item.frontFontId2} logos={item.frontLogos}/><FontIdentification fonts={fonts} text={item.backText} text2={item.backText2} fontId={item.backFontId} fontId2={item.backFontId2} logos={item.backLogos}/></>,
               productName: item.isClientItem ? itemProductLabel(item).replace('Producto propio','Grabado en tu termo') : (products.find(p=>p.id===item.productId)?.name ?? item.productId),
               colorName: itemColorLabel(item)||(item.isClientItem?'Color sin especificar':''),
               quantity: item.quantity,

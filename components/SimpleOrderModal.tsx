@@ -1,3 +1,4 @@
+import {fontReference,fontReferenceBrief} from '../utils/fontReference';
 import{productionFont,checkFontFile}from'../utils/fontProvenance';
 import {productPreviewImage,productColorHex,productPreviewLabel} from '../utils/productColorPreview';
 import {previewImageScale,previewInk} from '../utils/designPreview';
@@ -200,6 +201,8 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
             <button onClick={onChangeFont} className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-500 underline hover:text-black dark:hover:text-white">Cambiar fuente o texto</button>
           </div>
 
+          <p className="mb-3 text-xs break-words">{fontReferenceBrief(fontReference(font,fontId))}</p>
+          {font?.bundled&&<p className="mb-3 text-xs text-zinc-500">Fuente incluida, sin número de taller asignado.</p>}
           {ownItem ? (
             <div className="mb-3">
               <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1.5">Tu termo</p>

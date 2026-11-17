@@ -21,5 +21,5 @@ export function useOwnPhotoInk(photo:string|undefined|null,fallback:string){
 export function monogramPreviewUrl(url:string,ink:string){
  const prefix='data:image/svg+xml;charset=utf-8,';
  if(!url.startsWith(prefix))return url;
- try{const svg=decodeURIComponent(url.slice(prefix.length));if(!svg.includes('data-lm-monogram="true"'))return url;return prefix+encodeURIComponent(svg.replaceAll('#c4c9cf',ink));}catch{return url;}
+ try{const svg=decodeURIComponent(url.slice(prefix.length));if(!svg.includes('data-lm-monogram="true"')&&!svg.includes('id="lm-monogram"'))return url;return prefix+encodeURIComponent(svg.replaceAll('#c4c9cf',ink));}catch{return url;}
 }

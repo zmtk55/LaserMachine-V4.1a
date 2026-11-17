@@ -1,3 +1,5 @@
+import {FontIdentification} from './FontIdentification';
+import {readMonogramReference} from '../utils/fontReference';
 import {useOwnPhotoInk,monogramPreviewUrl} from '../utils/photoPreviewInk';
 import {DesktopFrostBackground} from './DesktopFrostBackground';
 import{catalogFontId}from'../utils/fontId';
@@ -692,7 +694,7 @@ const SHOW_AI_BG_REMOVAL = false;
     const isCurrent=beginHistory(),designRevision=addRevision.current;
     setHistoryBusy(true);setHistoryStatus('Guardando diseño y originales privados');
     try {
-      const fontIds=[frontFontId,frontFontId2,backFontId,backFontId2];
+      const fontIds=[frontFontId,frontFontId2,backFontId,backFontId2,...[...frontLogos,...backLogos].map(l=>readMonogramReference(l.originalUrl||l.url)?.font.id)];
       await saveDesign((frontText||backText||product.name||'Diseño').slice(0,100),{
         version:1,productId:product.id,selectedColor,view,quantity,isClientItem,clientItemBrand,clientItemColor,
         customBackgroundImage:userUploadedImage,frontText,frontText2,frontFontId,frontFontId2,frontDesign,frontDesign2,frontLogos,
@@ -833,6 +835,7 @@ const SHOW_AI_BG_REMOVAL = false;
     </div>;
   };
 
+  const selectedMonogram=readMonogramReference((view==='FRONT'?frontLogos:backLogos).find(l=>l.id===selectedElementId)?.originalUrl)||readMonogramReference((view==='FRONT'?frontLogos:backLogos).find(l=>l.id===selectedElementId)?.url);
   const selectedLogoId = selectedElementId && selectedElementId !== 'text1' && selectedElementId !== 'text2' ? selectedElementId : null;
 
   return (
@@ -895,7 +898,7 @@ const SHOW_AI_BG_REMOVAL = false;
                         <div className="lm-more-heading"><h3>Herramientas</h3><button aria-label="Cerrar más herramientas" onClick={()=>{setMoreToolsOpen(false);moreToolsTrigger.current?.focus();}}><X size={18}/></button></div>
                         <div className="lm-more-actions" onClickCapture={event=>{if((event.target as HTMLElement).closest('button:not(:disabled)'))moreToolsTrigger.current?.focus();}} onClick={event=>{if((event.target as HTMLElement).closest('button:not(:disabled)'))setMoreToolsOpen(false);}}>
                             <button data-tool-label="Termo" aria-label="Foto de producto propio" onClick={triggerCamera}  className="p-2 md:p-3 disabled:opacity-40"><Camera size={20}/><span className="lm-more-copy"><strong>Termo</strong><small>Foto de tu producto</small></span></button>
-                            <button data-tool-label="Monograma" aria-label="Monogramas y emblemas" onClick={() => setShowMonograms(true)} className="relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 hover:bg-zinc-800 text-white" title="Monogramas y emblemas"><Crown size={20} className="md:w-6 md:h-6" /><span className="lm-more-copy"><strong>Monogramas</strong><small>Iniciales y emblemas</small></span></button>
+                            <button data-tool-label="Monograma" aria-label="Monogramas y emblemas" onClick={() => setShowMonograms(true)} className="relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 hover:bg-zinc-800 text-white" title="Monogramas y emblemas"><Crown size={20} className="md:w-6 md:h-6" /><span className="lm-more-copy"><strong>{selectedMonogram?'Editar monograma':'Monogramas'}</strong><small>Iniciales y emblemas</small></span></button>
                             <button data-tool-label="Filtros" aria-label="Editar imagen" title={selectedLogoId?'Editar la imagen seleccionada':'Selecciona una imagen para usar los filtros'} aria-pressed={activeTool === 'MAGIC'} onClick={() => toggleTool('MAGIC')} disabled={!selectedLogoId} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'MAGIC' ? 'bg-yellow-400 text-black shadow-lg scale-110' : selectedLogoId ? 'hover:bg-zinc-800 text-white' : 'text-zinc-600 cursor-not-allowed opacity-50'}`}><Wand2 size={20} className="md:w-6 md:h-6" /><span className="lm-more-copy"><strong>Filtros</strong><small>{selectedLogoId?'Editar imagen seleccionada':'Primero selecciona una imagen'}</small></span></button>
                             <button data-tool-label="Eliminar" aria-label="Eliminar elemento seleccionado" title={selectedElementId?'Eliminar elemento seleccionado':'Selecciona texto o imagen para eliminar'} onClick={handleDeleteSelected} disabled={!selectedElementId} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${selectedElementId ? 'text-red-500 hover:bg-red-500/20' : 'text-zinc-600 cursor-not-allowed'}`}><Trash2 size={18} className="md:w-5 md:h-5" /><span className="lm-more-copy"><strong>Eliminar</strong><small>{selectedElementId?'Quitar elemento seleccionado':'Primero selecciona texto o imagen'}</small></span></button>
                             <button data-tool-label="Ajustes" aria-label="Ajustes del diseño" aria-pressed={activeTool === 'SETTINGS'} onClick={() => toggleTool('SETTINGS')} className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 ${activeTool === 'SETTINGS' ? 'bg-yellow-400 text-black shadow-lg scale-110' : 'hover:bg-zinc-800 text-white'}`}><Settings size={18} className="md:w-6 md:h-6" /><span className="lm-more-copy"><strong>Ajustes</strong><small>Tamaño y posición</small></span></button>
@@ -933,6 +936,7 @@ const SHOW_AI_BG_REMOVAL = false;
                                             actionIcon={<Type size={20} />}
                                             actionLabel="FUENTE"
                                         />}
+                                        <div className="mt-2"><FontIdentification fonts={fonts} text={activeTool==='TEXT1'?(view==='FRONT'?frontText:backText):(view==='FRONT'?frontText2:backText2)} fontId={activeTool==='TEXT1'?(view==='FRONT'?frontFontId:backFontId):(view==='FRONT'?frontFontId2:backFontId2)}/></div>
                                         <div className="flex justify-end mt-2">
                                             <button onClick={handleResetSelected} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 uppercase tracking-wider"><RotateCcw size={10}/> Resetear Posición</button>
                                         </div>
@@ -1300,7 +1304,7 @@ const SHOW_AI_BG_REMOVAL = false;
                                 const isSelected = getCurrentFontId(fontModalTarget) === f.id;
                                 const txt = (view === 'FRONT' ? (fontModalTarget === 'text1' ? frontText : frontText2) : (fontModalTarget === 'text1' ? backText : backText2)) || 'Muestra';
                                 return (
-                                    <button key={f.id} aria-label={`Elegir muestra ${index+1}`} aria-pressed={isSelected} onClick={() => handleFontSelect(f.id)} className={`h-24 md:h-32 rounded-2xl flex flex-col items-center justify-center p-3 border-2 transition-all ${isSelected ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/10' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400'}`}>
+                                    <button key={f.id} data-font-id={f.id} aria-label={`Elegir muestra ${index+1}`} aria-pressed={isSelected} onClick={() => handleFontSelect(f.id)} className={`h-24 md:h-32 rounded-2xl flex flex-col items-center justify-center p-3 border-2 transition-all ${isSelected ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/10' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400'}`}>
                                         <span className={`${f.cssFamily} text-3xl md:text-4xl break-words text-center line-clamp-2`}>{txt}</span>
                                         <span className="text-[9px] font-bold text-zinc-400 mt-3">{isSelected ? 'Seleccionada' : ''}</span>
                                     </button>
@@ -1342,10 +1346,12 @@ const SHOW_AI_BG_REMOVAL = false;
         {showMonograms && (
             <div ref={monogramDialog} role="dialog" aria-modal="true" aria-label="Monogramas y emblemas" className="lm-customizer-modal fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
                 <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <MonogramLibrary fonts={fonts}
+                    <MonogramLibrary fonts={fonts} initial={selectedMonogram}
                         onSelectMonogram={(monogram) => {
-                            const svg=monogram.svg.replace('<svg ','<svg data-lm-monogram="true" xmlns="http://www.w3.org/2000/svg" ').replaceAll('currentColor','#c4c9cf');
-                            addLogoToCanvas('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg));
+                            const svg=monogram.svg.replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ').replaceAll('currentColor','#c4c9cf');
+                            const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+                            if(selectedMonogram&&selectedLogoId){const update=(list:LogoItem[])=>list.map(l=>l.id===selectedLogoId?{...l,url,originalUrl:url,assetId:undefined,originalAssetId:undefined}:l);if(view==='FRONT')setFrontLogos(update);else setBackLogos(update);}
+                            else addLogoToCanvas(url);
                             setActiveTool(null);
                             setShowMonograms(false);
                         }}

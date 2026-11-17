@@ -11,6 +11,7 @@ interface CartItem {
   quantity: number;
   price: number;
   imageUrl?: string;
+  fontDetails?:React.ReactNode;
 }
 
 interface CartPanelProps {
@@ -116,7 +117,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                     <h4 className="font-semibold text-sm text-zinc-900 dark:text-white truncate">
                       {item.productName}
                     </h4>
-                    <p className="text-xs text-zinc-500">{item.colorName}</p>
+                    <p className="text-xs text-zinc-500">{item.colorName}</p><div className="mt-2">{item.fontDetails}</div>
                     <p className="text-sm font-black text-zinc-900 dark:text-white mt-1">
                       {formatMXN(item.price)} <span className="text-xs font-normal text-zinc-500">por pieza</span>
                     </p>

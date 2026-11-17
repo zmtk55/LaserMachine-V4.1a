@@ -1,0 +1,11 @@
+import {describe,it,expect} from 'vitest';
+import {fontReference,fontReferenceLabel,identifyMonogram,readMonogramReference} from '../../utils/fontReference';
+import {validateEngravingSvg} from '../../server/validateSvg.mjs';
+import {BUNDLED_FONTS} from '../../utils/bundledFonts';
+describe('identificación estable de letras',()=>{
+ it('no confunde el ID del catálogo incluido con un número del taller ni con su alias',()=>{const ref=fontReference({id:102,name:'Signature Script',cssFamily:BUNDLED_FONTS[102].cssFamily,bundled:true} as any);expect(ref?.name).toBe('Permanent Marker');expect(fontReferenceLabel(ref)).toContain('Catálogo #102');expect(fontReferenceLabel(ref)).toContain('sin número de taller');});
+ it('conserva el número existente de una fuente propia sin renumerarlo',()=>{expect(fontReferenceLabel(fontReference({id:15,name:'Comic Sans',isCustom:true} as any))).toBe('Fuente #15 · Comic Sans');});
+ it('un ID desconocido no se sustituye ni se presenta como asignación verificada',()=>{expect(fontReferenceLabel(fontReference(undefined,55))).toBe('Catálogo #55 · número de taller sin confirmar');expect(fontReferenceLabel(undefined)).toBe('Fuente sin identificar');});
+ it('el original SVG conserva identidad, iniciales y plantilla bajo validación real del servidor y serialización',()=>{const ref={id:102,name:'Permanent Marker',source:'included' as const};const svg=identifyMonogram('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 0 L10 10"/></svg>',ref,'JÁ & <X>','shield-crown');expect(validateEngravingSvg(svg).original).toBe(svg);const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);const item=JSON.parse(JSON.stringify({frontLogos:[{id:'one',url,originalUrl:url,state:{x:33,y:44,rotate:90,scale:.8}}]}));expect(readMonogramReference(item.frontLogos[0].originalUrl)).toEqual({version:1,font:ref,text:'JÁ & <X>',template:'shield-crown'});expect(item.frontLogos[0].state).toEqual({x:33,y:44,rotate:90,scale:.8});const b64='data:image/svg+xml;base64,'+Buffer.from(svg).toString('base64');expect(readMonogramReference(b64)?.font).toEqual(ref);});
+ it('no inventa una fuente en un logo antiguo sin referencia',()=>{expect(readMonogramReference('data:image/svg+xml,'+encodeURIComponent('<svg/>'))).toBeUndefined();});
+});

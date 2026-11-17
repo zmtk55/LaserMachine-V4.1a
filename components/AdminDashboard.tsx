@@ -1914,7 +1914,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     {/* Previews: tabs Frente/Reverso, una sola vista grande */}
                                                     <div className="p-3 lg:p-5 bg-zinc-50/50 dark:bg-zinc-900/50">
                                                         <SidePreviewTabs
-                                                            front={<TechnicalPreview fontId={item.frontFontId} hideElementCounts
+                                                            front={<TechnicalPreview workshopMetadata fonts={fonts} fontId2={item.frontFontId2} fontId={item.frontFontId} hideElementCounts
                             imageScale={previewImageScale(products.find(p=>p.id===item.productId)?.illustrativeImage,item.customBackgroundImage)}
                             inkColor={previewInk(productColorHex(products.find(p=>p.id===item.productId),item.colorName))}
                             font2Css={fonts.find(f=>String(f.id)===String(item.frontFontId2))?.cssFamily} 
@@ -1927,7 +1927,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             allowExpand
                                                             referencePhoto={!item.customBackgroundImage && referencePhotoColor(products.find(p => p.id === item.productId), item.colorName) !== undefined}
                                                         />}
-                                                            back={<TechnicalPreview fontId={item.backFontId} hideElementCounts
+                                                            back={<TechnicalPreview workshopMetadata fonts={fonts} fontId2={item.backFontId2} fontId={item.backFontId} hideElementCounts
                             imageScale={previewImageScale(products.find(p=>p.id===item.productId)?.illustrativeImage,item.customBackgroundImage)}
                             inkColor={previewInk(productColorHex(products.find(p=>p.id===item.productId),item.colorName))}
                             font2Css={fonts.find(f=>String(f.id)===String(item.backFontId2))?.cssFamily} 
