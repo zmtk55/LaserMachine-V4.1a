@@ -964,7 +964,7 @@ const App = () => {
                     </div>
 
                     <div className="mt-8 text-center">
-                        <p className="text-xs text-zinc-500 font-mono">Vista orientativa. El taller confirma los detalles antes de fabricar.</p>
+                        <p className="text-xs text-zinc-500 font-mono">Vista orientativa. El contraste en pantalla ayuda a revisar el diseño; el taller confirma el acabado antes de fabricar.</p>
                     </div>
                 </div>
             </div>

@@ -1,3 +1,4 @@
+import {useOwnPhotoInk,monogramPreviewUrl} from '../utils/photoPreviewInk';
 import {EngravingText} from './EngravingText';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -33,7 +34,8 @@ const STAGE_HEIGHT = 600;
 export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({ 
   imageUrl, compact=false, imageScale=1.45,inkColor='#e4e4e7', text, text2, fontName, fontId, hideElementCounts=false, hideFontMetadata=false, fontCss, font2Css, logos, designState, designState2, sideLabel, referencePhoto=false, referenceLabel, allowExpand=false
 }) => {
-  const [showGuides, setShowGuides] = useState(!compact);
+  const [showGuides, setShowGuides] = useState(!compact&&!hideFontMetadata);
+  const visibleInk=useOwnPhotoInk(imageScale===1?imageUrl:null,inkColor);
   const [expanded, setExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scaleFactor, setScaleFactor] = useState(1);
@@ -83,7 +85,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
            {!compact&&<button 
              onClick={() => setShowGuides(!showGuides)} 
              className={`p-1.5 rounded-md transition-colors ${showGuides ? 'bg-amber-500 text-white' : 'text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} 
-             title="Alternar Guías"
+             title="Alternar Guías" aria-label={`Guías ${displayLabel}`} aria-pressed={showGuides}
            >
              <Ruler size={12}/>
            </button>}
@@ -154,7 +156,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                             transform: `translate(-50%, -50%) rotate(${safeDesign.rotate}deg) scale(${safeDesign.scale})`,
                                         }}
                                     >
-                                        <EngravingText text={text} fontCss={fontCss} baseSize={48} color={inkColor} lineHeight={safeDesign.textLineHeight} lineSizes={safeDesign.textLineSizes}/>
+                                        <EngravingText text={text} fontCss={fontCss} baseSize={48} color={visibleInk} lineHeight={safeDesign.textLineHeight} lineSizes={safeDesign.textLineSizes}/>
                                         {showGuides && <div className="absolute -inset-2 border border-blue-400/50"></div>}
                                     </div>
                                 )}
@@ -169,7 +171,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                             transform: `translate(-50%, -50%) rotate(${safeDesign2.rotate}deg) scale(${safeDesign2.scale})`,
                                         }}
                                     >
-                                        <EngravingText text={text2} fontCss={font2Css||fontCss} color={inkColor} lineHeight={safeDesign2.textLineHeight} lineSizes={safeDesign2.textLineSizes}/>
+                                        <EngravingText text={text2} fontCss={font2Css||fontCss} color={visibleInk} lineHeight={safeDesign2.textLineHeight} lineSizes={safeDesign2.textLineSizes}/>
                                         {showGuides && <div className="absolute -inset-2 border border-blue-400/50"></div>}
                                     </div>
                                 )}
@@ -186,7 +188,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                         }}
                                     >
                                         <img 
-                                            src={logo.url} 
+                                            src={monogramPreviewUrl(logo.url,visibleInk)}
                                             style={{ width: '160px' }} // MATCHES VISUALIZER FIXED PX
                                             className="h-auto"
                                             alt="Logo Overlay"

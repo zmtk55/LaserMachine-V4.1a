@@ -1,3 +1,4 @@
+import {useOwnPhotoInk,monogramPreviewUrl} from '../utils/photoPreviewInk';
 import {DesktopFrostBackground} from './DesktopFrostBackground';
 import{catalogFontId}from'../utils/fontId';
 import{useModalFocus}from'../utils/useModalFocus';
@@ -277,7 +278,7 @@ const SHOW_AI_BG_REMOVAL = false;
   const clientItemLabel = isClientItem ? 'Producto Propio' : 'Producto Catálogo';
 
   // Tono de grabado según el color del producto: marca clara sobre recubrimiento oscuro, oscura sobre claro
-  const engravingTone = previewInk(userUploadedImage?colorOptions.find(c=>c.name===selectedColor)?.hex:productColorHex(product,selectedColor));
+  const engravingTone = useOwnPhotoInk(userUploadedImage,previewInk(userUploadedImage?colorOptions.find(c=>c.name===selectedColor)?.hex:productColorHex(product,selectedColor)));
   const referenceColor=!userUploadedImage&&!isClientItem?referencePhotoColor(product,selectedColor):undefined;
 
   // null = combinación sin tarifa publicada: se cotiza, no se cobra un inventado
@@ -1185,7 +1186,7 @@ const SHOW_AI_BG_REMOVAL = false;
                                         <EngravingText text={view==='FRONT'?frontText2:backText2} fontCss={fonts.find(f=>f.id===(view==='FRONT'?frontFontId2:backFontId2))?.cssFamily} color={engravingTone} lineHeight={(view==='FRONT'?frontDesign2:backDesign2).textLineHeight} lineSizes={(view==='FRONT'?frontDesign2:backDesign2).textLineSizes}/>,view==='FRONT'?frontDesign2:backDesign2)}
                                     {(view === 'FRONT' ? frontLogos : backLogos).map(logo => (
                                         <React.Fragment key={logo.id}>
-                                            {renderInteractiveElement(logo.id, <div className="relative"><img src={logo.url} style={{ width: '160px' }} className="h-auto pointer-events-none drop-shadow-sm transition-all duration-300" /></div>, logo.state)}
+                                            {renderInteractiveElement(logo.id, <div className="relative"><img src={monogramPreviewUrl(logo.url,engravingTone)} style={{ width: '160px' }} className="h-auto pointer-events-none drop-shadow-sm transition-all duration-300" /></div>, logo.state)}
                                         </React.Fragment>
                                     ))}
                                 </div>
@@ -1343,7 +1344,7 @@ const SHOW_AI_BG_REMOVAL = false;
                 <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                     <MonogramLibrary fonts={fonts}
                         onSelectMonogram={(monogram) => {
-                            const svg=monogram.svg.replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" ').replaceAll('currentColor','#c4c9cf');
+                            const svg=monogram.svg.replace('<svg ','<svg data-lm-monogram="true" xmlns="http://www.w3.org/2000/svg" ').replaceAll('currentColor','#c4c9cf');
                             addLogoToCanvas('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg));
                             setActiveTool(null);
                             setShowMonograms(false);
