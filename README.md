@@ -45,3 +45,7 @@ Los modulos Firebase/Neon heredados que siguen en el repositorio no definen el b
 El arreglo esta publicado en Vercel, pero esta rama debe revisarse antes de integrarla. Produccion estaba ligada a `main` en la comprobacion del16nov2026; verificar la configuracion real antes de cualquier publicacion. No cambiar la integracion ni mezclar PR #2 a ciegas. No ejecutar SQL, cambiar auth, abrir pedidos o crear recursos como efecto secundario de publicar el frontend.
 
 Ver el detalle de pruebas, diferencias amplias y exclusiones en las notas de reconciliacion. La rotacion de credenciales historicas sigue siendo una tarea separada; retirarlas del arbol no las elimina del historial.
+
+## Validacion de previews (17 noviembre 2026)
+
+El preview de Netlify compila, pero no trae la configuracion publica del Supabase existente y por ello no puede verificar el catalogo. No se debe confundir ese build con una validacion funcional completa. Vercel exige commits con firma verificada; conservar esa proteccion, no desactivarla para publicar. Validar siempre la configuracion ya existente del entorno de preview sin copiar secretos al repositorio.
