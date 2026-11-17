@@ -151,7 +151,7 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
       
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4">
-        <div className="mb-4 text-sm space-y-2"><p>Geometrías integradas. Las iniciales se convierten a contornos con un archivo propio del taller, sin fuentes del navegador.</p>{ownFonts.length>0&&<label className="block">Tipografía propia<select aria-label="Tipografía del monograma" value={selectedFont?.id} onChange={e=>setFontId(Number(e.target.value))} className="block w-full p-2 rounded border bg-transparent">{ownFonts.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}{fontError&&<p role="status" className="text-amber-600 dark:text-amber-400">{fontError}</p>}</div>
+        <div className="mb-4 text-sm space-y-2"><p>Geometrías integradas. Las iniciales se convierten a contornos con el archivo de letra seleccionado, sin sustitutas del navegador.</p>{ownFonts.length>0&&<div><span className="block mb-1">Letra de las iniciales</span><details className="relative" onKeyDown={e=>{if(e.key==='Escape'&&e.currentTarget.open){e.preventDefault();e.stopPropagation();e.currentTarget.open=false;e.currentTarget.querySelector('summary')?.focus();}}}><summary aria-label="Cambiar letra de las iniciales" className="block w-full p-2 rounded border cursor-pointer bg-transparent list-none"><span className={selectedFont?.cssFamily} style={{fontFamily:selectedFont?.cssFamily,fontSize:24}}>{text||'AB'}</span><span aria-hidden="true" className="float-right">⌄</span></summary><div role="group" aria-label="Muestras de letra para iniciales" className="absolute top-full left-0 right-0 z-20 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">{ownFonts.map((f,index)=><button key={f.id} type="button" aria-label={`Elegir muestra ${index+1}`} aria-pressed={selectedFont?.id===f.id} onClick={e=>{setFontId(f.id);e.currentTarget.closest('details')?.removeAttribute('open');e.currentTarget.closest('details')?.querySelector('summary')?.focus();}} className={`block w-full min-h-11 p-2 text-left border-b border-zinc-200 dark:border-zinc-700 ${f.cssFamily} ${selectedFont?.id===f.id?'bg-yellow-400/20':''}`} style={{fontFamily:f.cssFamily,fontSize:24}}>{text||'AB'}</button>)}</div></details>{selectedFont&&<p className="mt-1 text-xs text-zinc-500">{selectedFont.bundled?'Archivo incluido y verificado':'Archivo del taller'}</p>}</div>}{fontError&&<p role="status" className="text-amber-600 dark:text-amber-400">{fontError}</p>}</div>
         {/* Text Input */}
         <div className="mb-4">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Tus iniciales (1-2 letras)</label>
@@ -159,6 +159,7 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value.replace(/[^\p{L}\p{N}]/gu,'').slice(0, 2).toUpperCase())}
+            aria-label="Tus iniciales"
             placeholder="AB"
             maxLength={2}
             className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-center text-2xl font-bold tracking-widest uppercase"
@@ -170,7 +171,7 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(cat)}
+              aria-pressed={activeCategory===cat} onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1.5 rounded-lg font-bold text-xs uppercase whitespace-nowrap transition-all ${
                 activeCategory === cat
                   ? 'bg-yellow-400 text-black'
@@ -226,11 +227,12 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
                 type="text"
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
+                aria-label="Describe tu diseño"
                 placeholder="Describe tu diseño..."
                 className="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm"
               />
               <button
-                onClick={handleAIGenerate}
+                aria-label="Generar monograma con IA" onClick={handleAIGenerate}
                 disabled={!aiPrompt.trim() || isGenerating}
                 className="px-4 py-2 bg-yellow-400 disabled:bg-zinc-300 text-black font-bold rounded-lg"
               >

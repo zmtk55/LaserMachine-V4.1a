@@ -356,6 +356,7 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
               <input
                 type="text"
+                aria-label="Buscar plantillas"
                 placeholder="Buscar plantillas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -368,7 +369,7 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
               {(Object.keys(OCCASIONS) as Array<TemplateOccasion | 'TODAS'>).map((occ) => (
                 <button
                   key={occ}
-                  onClick={() => setSelectedOccasion(occ)}
+                  aria-pressed={selectedOccasion===occ} onClick={() => setSelectedOccasion(occ)}
                   className={`px-4 py-2.5 rounded-xl text-sm font-bold uppercase transition-all flex items-center gap-2 ${
                     selectedOccasion === occ
                       ? 'bg-yellow-400 text-zinc-900 shadow-lg shadow-yellow-500/20'
@@ -384,7 +385,7 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
             {/* View Mode */}
             <div className="flex bg-zinc-800 rounded-xl p-1">
               <button
-                onClick={() => setViewMode('grid')}
+                aria-label="Ver plantillas en cuadrícula" aria-pressed={viewMode==='grid'} onClick={() => setViewMode('grid')}
                 className={`p-2.5 rounded-lg transition-colors ${
                   viewMode === 'grid' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
                 }`}
@@ -392,7 +393,7 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
                 <LayoutGrid size={18} />
               </button>
               <button
-                onClick={() => setViewMode('list')}
+                aria-label="Ver plantillas en lista" aria-pressed={viewMode==='list'} onClick={() => setViewMode('list')}
                 className={`p-2.5 rounded-lg transition-colors ${
                   viewMode === 'list' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
                 }`}

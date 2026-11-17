@@ -114,6 +114,9 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
   }, pricing, ownItem), [product, pricing, ownItem]);
 
   const whatsapp = (storeConfig?.whatsapp || '').replace(/\D/g, '');
+  const inquiryMessage = ownItem
+    ? `Hola, quiero grabar mi termo con "${text}" y tengo una duda.`
+    : `Hola, quiero pedir ${product.name} con "${text}" y tengo una duda.`;
 
   const createDraft = ():OrderItem => ({
       id: Date.now().toString(),
@@ -254,7 +257,7 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
               <PenTool size={13} /> Personalizar a detalle (opcional)
             </button>
             {whatsapp && (
-              <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hola, quiero pedir un ${product.name} grabado con "${text}" y tengo una duda.`)}`} target="_blank" rel="noopener noreferrer" className="w-full py-2.5 rounded-xl text-[11px] font-black uppercase text-emerald-600 dark:text-emerald-500 hover:bg-emerald-500/10 transition-all flex items-center justify-center gap-2">
+              <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(inquiryMessage)}`} target="_blank" rel="noopener noreferrer" className="w-full py-2.5 rounded-xl text-[11px] font-black uppercase text-emerald-600 dark:text-emerald-500 hover:bg-emerald-500/10 transition-all flex items-center justify-center gap-2">
                 <MessageCircle size={13} /> ¿Dudas? Escríbenos por WhatsApp
               </a>
             )}
