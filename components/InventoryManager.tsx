@@ -1,3 +1,7 @@
+import{FilterDisclosure}from'./FilterDisclosure';
+import{productPreviewImage}from'../utils/productColorPreview';
+import{RowActions}from'./RowActions';
+import{useModalFocus}from'../utils/useModalFocus';
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Product, ProductBrand, ProductColor, ColorPreset } from '../types';
 import { ImageDropZone } from './ImageDropZone';
@@ -107,7 +111,10 @@ const ProductModal = ({
       category: 'General', price: 0, stockThreshold: 5, imageUrl: '', colors: [], sku: ''
     }
   );
-  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [pendingVariantImages,setPendingVariantImages]=useState(0);
+  const [busyImages,setBusyImages]=useState<string[]>([]);
+  const setImageBusy=useCallback((id:string,busy:boolean)=>setBusyImages(prev=>busy?(prev.includes(id)?prev:[...prev,id]):(prev.includes(id)?prev.filter(key=>key!==id):prev)),[]);
+  const photosPending=pendingVariantImages>0||busyImages.length>0;
   const [cropImage, setCropImage] = useState<string | null>(null);
   const [cropTarget, setCropTarget] = useState<'main' | { index: number } | null>(null);
 
@@ -124,18 +131,19 @@ const ProductModal = ({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const reader = new FileReader();
-      
+      setPendingVariantImages(n=>n+1);
+      reader.onerror=()=>setPendingVariantImages(n=>Math.max(0,n-1));
+      reader.onabort=()=>setPendingVariantImages(n=>Math.max(0,n-1));
       reader.onload = async (ev) => {
         let url = ev.target?.result as string;
         
         // Auto-remove background
         try {
-          setIsProcessingImage(true);
           url = await removeBackground(url);
         } catch (error) {
           console.error('Error removing background:', error);
         } finally {
-          setIsProcessingImage(false);
+          setPendingVariantImages(n=>Math.max(0,n-1));
         }
         
         // Intentar detectar color del nombre del archivo
@@ -180,25 +188,29 @@ const ProductModal = ({
     setCropTarget(null);
   };
 
+  const dialogRef=useRef<HTMLDivElement>(null);useModalFocus(isOpen&&!cropImage,dialogRef,onClose);
+  const [validation,setValidation]=useState('');
+  const saveProduct=()=>{if(photosPending)return;if(!formData.name.trim()){setValidation('Escribe el nombre del producto.');return;}if(!Number.isFinite(formData.price)||formData.price<=0){setValidation('El precio debe ser mayor a cero.');return;}if(!Number.isInteger(formData.stockThreshold)||formData.stockThreshold<0||formData.colors.some(c=>!c.name.trim()||!Number.isInteger(c.stock)||c.stock<0)){setValidation('Revisa los nombres de color y las existencias: usa números enteros de cero en adelante.');return;}onSave(formData);};
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-5xl rounded-2xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={product?"Editar producto":"Nuevo producto"} className="lm-product-dialog bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full max-w-5xl rounded-2xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-950">
           <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{product ? 'Editar Producto' : 'Nuevo Producto'}</h3>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Cancelar</button>
-            <button onClick={() => onSave(formData)} className="px-6 py-2 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-400 transition-colors">Guardar</button>
+            <button disabled={photosPending} onClick={saveProduct} className="px-6 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-amber-400 transition-colors">{photosPending?'Procesando imágenes...':'Guardar'}</button>
           </div>
         </div>
-        <div className="flex-1 flex overflow-hidden">
+        {validation&&<p role="alert" className="px-5 py-3 text-red-600">{validation}</p>}<div className="lm-product-fields flex-1 flex overflow-hidden">
           {/* Left Column - Main Image & Info */}
           <div className="w-1/3 p-6 border-r border-zinc-200 dark:border-zinc-800 overflow-y-auto space-y-6 bg-zinc-50 dark:bg-zinc-950">
             {/* Main Image with Drag & Drop */}
             <ImageDropZone
+              onBusyChange={busy=>setImageBusy('main',busy)}
               value={formData.imageUrl}
-              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+              onChange={(url) => setFormData(prev=>({ ...prev, imageUrl: url }))}
               onCrop={(url) => { setCropImage(url); setCropTarget('main'); }}
               label="Imagen Principal"
               placeholder="Arrastra imagen principal"
@@ -267,14 +279,15 @@ const ProductModal = ({
                   {/* Variant Image with Drag & Drop */}
                   <div className="w-20 shrink-0">
                     <ImageDropZone
+                      onBusyChange={busy=>setImageBusy(color.id,busy)}
                       value={color.imageUrl}
-                      onChange={(url) => updateVariantImage(index, url)}
+                      onChange={(url) => setFormData(prev=>({...prev,colors:prev.colors.map(c=>c.id===color.id?{...c,imageUrl:url}:c)}))}
                       aspectRatio="square"
                       showPreview={true}
                     />
                   </div>
                   
-                  <div className="flex-1 grid grid-cols-3 gap-3">
+                  <div className="flex-1 grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Nombre</label>
                       <input className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs font-bold uppercase outline-none focus:border-amber-500 transition-colors" value={color.name} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c) })} placeholder="COLOR"/>
@@ -305,18 +318,19 @@ const ProductModal = ({
           </div>
         </div>
       </div>
+      {cropImage&&<ImageCropper imageSrc={cropImage} onCropComplete={handleCropComplete} onCancel={()=>{setCropImage(null);setCropTarget(null);}} aspect={3/4}/>}
     </div>
   );
 };
 
 const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categories, globalColors, onAddProduct, onUpdateProduct, onDeleteProduct, onBulkDistributor }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('GALLERY');
+  const [viewMode, setViewMode] = useState<ViewMode>('LIST');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('TODAS');
   const [filterBrand, setFilterBrand] = useState<string>('TODAS');
-  const [filterStock, setFilterStock] = useState<'ALL' | 'LOW' | 'OUT' | 'OK'>('ALL');
+  const [filterStock, setFilterStock] = useState<'ALL' | 'LOW' | 'OUT' | 'OK' | 'PENDING'>('ALL');
   const [showFilters, setShowFilters] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -333,7 +347,8 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
       const totalStock = (p.colors || []).reduce((sum, c) => sum + c.stock, 0);
       switch (filterStock) {
         case 'LOW': return totalStock <= p.stockThreshold && totalStock > 0;
-        case 'OUT': return totalStock === 0;
+        case 'OUT': return totalStock === 0 && (p.colors || []).length > 0;
+        case 'PENDING': return (p.colors || []).length === 0;
         case 'OK': return totalStock > p.stockThreshold;
         default: return true;
       }
@@ -356,9 +371,10 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
     const totalProducts = products.length;
     const totalStock = products.reduce((sum, p) => sum + (p.colors || []).reduce((s, c) => s + c.stock, 0), 0);
     const lowStock = products.filter(p => { const stock = (p.colors || []).reduce((s, c) => s + c.stock, 0); return stock <= p.stockThreshold && stock > 0; }).length;
-    const outOfStock = products.filter(p => (p.colors || []).reduce((s, c) => s + c.stock, 0) === 0).length;
+    const outOfStock = products.filter(p => (p.colors || []).length > 0 && (p.colors || []).reduce((s, c) => s + c.stock, 0) === 0).length;
+    const pendingConfirm = products.filter(p => (p.colors || []).length === 0).length;
     const totalValue = products.reduce((sum, p) => sum + (p.price * (p.colors || []).reduce((s, c) => s + c.stock, 0)), 0);
-    return { totalProducts, totalStock, lowStock, outOfStock, totalValue };
+    return { totalProducts, totalStock, lowStock, outOfStock, pendingConfirm, totalValue };
   }, [products]);
 
   const handleSort = (field: SortField) => {
@@ -372,46 +388,27 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
   const hasActiveFilters = searchQuery || filterCategory !== 'TODAS' || filterBrand !== 'TODAS' || filterStock !== 'ALL';
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="lm-inventory h-full flex flex-col space-y-6">
       {/* Header Compacto */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Inventario</h3>
+          <h3 className="sr-only">Inventario</h3>
           <p className="text-xs text-zinc-500 mt-1">{filteredProducts.length} de {products.length} productos</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={onBulkDistributor} className="px-4 py-2.5 bg-zinc-900 dark:bg-zinc-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2">
-            <Layers size={14}/> Bulk
+            <Layers size={14}/> Editar existencias
           </button>
-          <button onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }} className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-500/80 shadow-lg shadow-black/20 transition-all flex items-center gap-2">
-            <Plus size={16}/> Nuevo
+          <button onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }} className="px-4 py-2.5 bg-yellow-400 text-black rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-500/80 shadow-lg shadow-black/20 transition-all flex items-center gap-2">
+            <Plus size={16}/> Nuevo producto
           </button>
         </div>
       </div>
 
-      {/* Stats Compactos */}
-      <div className="flex flex-wrap gap-3">
-        {[
-          { label: 'Productos', value: stats.totalProducts, icon: Package, color: 'text-zinc-600' },
-          { label: 'Stock', value: stats.totalStock, icon: Warehouse, color: 'text-blue-600' },
-          { label: 'Bajo Stock', value: stats.lowStock, icon: AlertTriangle, color: 'text-amber-600' },
-          { label: 'Agotados', value: stats.outOfStock, icon: X, color: 'text-red-600' },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2">
-            <Icon size={14} className={color} />
-            <span className="text-xs font-bold text-zinc-500 uppercase">{label}</span>
-            <span className="text-sm font-black text-zinc-900 dark:text-white">{value}</span>
-          </div>
-        ))}
-        <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2">
-          <DollarSign size={14} className="text-green-600" />
-          <span className="text-xs font-bold text-zinc-500 uppercase">Valor</span>
-          <span className="text-sm font-black text-green-600">{formatCurrency(stats.totalValue)}</span>
-        </div>
-      </div>
+      <div className="inventory-summary"><span><strong>{stats.totalProducts}</strong> {stats.totalProducts===1?'producto':'productos'}</span><span><strong>{stats.totalStock}</strong> piezas confirmadas</span>{stats.pendingConfirm>0&&<span className="inventory-unconfirmed">{stats.pendingConfirm} por confirmar</span>}<details><summary aria-label="Resumen del inventario">Resumen</summary><p>{stats.lowStock} con stock bajo · {stats.outOfStock} agotados · Valor confirmado {formatCurrency(stats.totalValue)}</p></details></div>
 
       {/* Toolbar Compacta */}
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="lm-catalog-toolbar flex flex-col xl:flex-row gap-3">
         {/* Búsqueda */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
@@ -433,8 +430,8 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
         </div>
         
         {/* Filtros en dropdowns */}
-        <div className="flex gap-2">
-          <select 
+        <FilterDisclosure label="Filtros" count={[filterCategory!=='TODAS',filterBrand!=='TODAS',filterStock!=='ALL'].filter(Boolean).length}><div className="flex gap-2">
+          <select aria-label="Categoría de producto"
             value={filterCategory} 
             onChange={e => setFilterCategory(e.target.value)} 
             className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
@@ -443,7 +440,7 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           
-          <select 
+          <select aria-label="Marca de producto"
             value={filterBrand} 
             onChange={e => setFilterBrand(e.target.value)} 
             className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
@@ -452,7 +449,7 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
             {Array.from(new Set(products.map(p => p.brand))).map(b => <option key={b} value={b}>{b}</option>)}
           </select>
           
-          <select 
+          <select aria-label="Existencias de producto"
             value={filterStock} 
             onChange={e => setFilterStock(e.target.value as any)} 
             className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
@@ -460,25 +457,12 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
             <option value="ALL">Todo el stock</option>
             <option value="LOW">Stock bajo</option>
             <option value="OUT">Agotados</option>
+            <option value="PENDING">Por confirmar</option>
             <option value="OK">Disponible</option>
           </select>
           
-          {/* Vista toggle */}
-          <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-xl p-1">
-            <button 
-              onClick={() => setViewMode('GALLERY')} 
-              className={`p-2 rounded-lg transition-all ${viewMode === 'GALLERY' ? 'bg-white dark:bg-zinc-700 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
-            >
-              <Grid size={14}/>
-            </button>
-            <button 
-              onClick={() => setViewMode('LIST')} 
-              className={`p-2 rounded-lg transition-all ${viewMode === 'LIST' ? 'bg-white dark:bg-zinc-700 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
-            >
-              <List size={14}/>
-            </button>
           </div>
-          
+
           {hasActiveFilters && (
             <button 
               onClick={clearFilters}
@@ -488,23 +472,10 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
               <X size={16}/>
             </button>
           )}
-        </div>
+        </FilterDisclosure>
       </div>
 
-      {/* Results */}
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-xs text-zinc-500">Mostrando <span className="font-bold text-zinc-900 dark:text-white">{filteredProducts.length}</span> de <span className="font-bold text-zinc-900 dark:text-white">{products.length}</span> productos</p>
-        {viewMode === 'LIST' && (
-          <div className="flex gap-2">
-            {[{ field: 'name' as SortField, label: 'Nombre' }, { field: 'price' as SortField, label: 'Precio' }, { field: 'stock' as SortField, label: 'Stock' }].map(s => (
-              <button key={s.field} onClick={() => handleSort(s.field)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase flex items-center gap-1 transition-colors ${sortField === s.field ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900' : 'bg-white dark:bg-zinc-900 text-zinc-500 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'}`}>
-                {s.label}
-                {sortField === s.field && (sortDirection === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <div className="inventory-results">{hasActiveFilters?<span>{filteredProducts.length} resultados</span>:<span/>}<label>Ordenar<select aria-label="Ordenar inventario" value={sortField} onChange={e=>{setSortField(e.target.value as SortField);setSortDirection('asc');}}><option value="name">Nombre</option><option value="price">Precio</option><option value="stock">Existencias</option></select></label><button aria-label="Cambiar sentido de orden" onClick={()=>setSortDirection(d=>d==='asc'?'desc':'asc')}>{sortDirection==='asc'?<ArrowUp size={16}/>:<ArrowDown size={16}/>}</button><button aria-label="Ver productos en lista" aria-pressed={viewMode==='LIST'} onClick={()=>setViewMode('LIST')}><List size={17}/></button><button aria-label="Ver productos en galería" aria-pressed={viewMode==='GALLERY'} onClick={()=>setViewMode('GALLERY')}><Grid size={17}/></button></div>
 
       {/* Products */}
       <div className="flex-1 overflow-y-auto">
@@ -515,14 +486,13 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
             <p className="text-xs text-zinc-300">Intenta ajustar los filtros</p>
           </div>
         ) : viewMode === 'GALLERY' ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          <div className="lm-product-grid grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {filteredProducts.map(product => {
               const totalStock = (product.colors || []).reduce((a, b) => a + b.stock, 0);
               const isLowStock = totalStock <= product.stockThreshold && totalStock > 0;
-              const isOutOfStock = totalStock === 0;
-              // Get first color image or fallback to product image
-              const firstColorImage = product.colors?.[0]?.imageUrl;
-              const displayImage = firstColorImage || product.imageUrl;
+              const isOutOfStock = totalStock === 0 && (product.colors || []).length > 0;
+              const noColors = (product.colors || []).length === 0;
+              const displayImage = productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO');
               return (
                 <div 
                   key={product.id} 
@@ -539,17 +509,13 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
                     {/* Gradient overlay on hover */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
                     
-                    {/* Brand badge - top left */}
-                    <div className="absolute top-3 left-3">
+                    {/* Brand + stock badges share one row and wrap instead of overlapping */}
+                    <div className="lm-product-badges absolute top-3 left-3 right-3 flex flex-wrap items-start gap-1">
                       <span className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur text-[10px] font-black px-3 py-1.5 rounded-full text-zinc-700 dark:text-zinc-300 uppercase tracking-wider shadow-lg">
                         {product.brand}
                       </span>
-                    </div>
-                    
-                    {/* Stock badge - top right */}
-                    <div className="absolute top-3 right-3">
-                      <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${isOutOfStock ? 'bg-red-500 text-white' : isLowStock ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
-                        {isOutOfStock ? 'Sin Stock' : isLowStock ? 'Bajo Stock' : `${totalStock} pzas`}
+                      <span className={`lm-product-stock-badge ml-auto px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${noColors ? 'bg-zinc-500 text-white' : isOutOfStock ? 'bg-red-500 text-white' : isLowStock ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
+                        {noColors ? 'Inventario por confirmar' : isOutOfStock ? 'Sin Stock' : isLowStock ? 'Bajo Stock' : `${totalStock} pzas`}
                       </span>
                     </div>
 
@@ -562,7 +528,7 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
                   {/* Card Content */}
                   <div className="p-4">
                     <h4 className="font-bold text-sm text-zinc-900 dark:text-white uppercase truncate mb-1 group-hover:text-amber-500 transition-colors">{product.name}</h4>
-                    <p className="text-[10px] text-zinc-500 uppercase mb-3 tracking-wider">{product.category}</p>
+                    <p className="lm-product-meta"><span>{product.category}</span><strong>{formatCurrency(product.price)}</strong></p>
                     
                     {/* Color dots and stock info */}
                     <div className="flex items-center justify-between">
@@ -595,59 +561,11 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
             })}
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-bold text-zinc-500 uppercase">
-              <div className="col-span-4 flex items-center gap-2 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors" onClick={() => handleSort('name')}>Producto {sortField === 'name' && (sortDirection === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</div>
-              <div className="col-span-2 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors" onClick={() => handleSort('brand')}>Marca {sortField === 'brand' && (sortDirection === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</div>
-              <div className="col-span-2 cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors" onClick={() => handleSort('category')}>Categoría {sortField === 'category' && (sortDirection === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</div>
-              <div className="col-span-1 text-right cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors" onClick={() => handleSort('price')}>Precio {sortField === 'price' && (sortDirection === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</div>
-              <div className="col-span-1 text-center cursor-pointer hover:text-zinc-900 dark:hover:text-white transition-colors" onClick={() => handleSort('stock')}>Stock {sortField === 'stock' && (sortDirection === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</div>
-              <div className="col-span-2 text-right">Acciones</div>
-            </div>
-            {filteredProducts.map(product => {
-              const totalStock = (product.colors || []).reduce((a, b) => a + b.stock, 0);
-              const isLowStock = totalStock <= product.stockThreshold && totalStock > 0;
-              const isOutOfStock = totalStock === 0;
-              return (
-                <div key={product.id} className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors items-center group">
-                  <div className="col-span-4 flex items-center gap-3">
-                    <div className="w-14 h-14 bg-zinc-100 dark:bg-zinc-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
-                      <img src={product.imageUrl} className="w-full h-full object-contain p-1"/>
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-sm text-zinc-900 dark:text-white uppercase truncate">{product.name}</h4>
-                      {product.sku && <p className="text-[10px] text-zinc-400 font-mono">{product.sku}</p>}
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-xs text-zinc-600 dark:text-zinc-400">{product.brand}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded uppercase">{product.category}</span>
-                  </div>
-                  <div className="col-span-1 text-right">
-                    <span className="font-bold text-amber-500">{formatCurrency(product.price)}</span>
-                  </div>
-                  <div className="col-span-1 text-center">
-                    <span className={`font-bold text-sm ${isOutOfStock ? 'text-red-500' : isLowStock ? 'text-amber-500' : 'text-green-500'}`}>{totalStock}</span>
-                    <span className="text-[10px] text-zinc-400 block">{product.colors?.length || 0} vars</span>
-                  </div>
-                  <div className="col-span-2 flex justify-end gap-2">
-                    <button onClick={() => handleEditProduct(product)} className="p-2 text-zinc-400 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors">
-                      <Edit2 size={16}/>
-                    </button>
-                    <button onClick={() => handleDeleteProduct(product)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
-                      <Trash2 size={16}/>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <div className="inventory-ledger"><div className="inventory-ledger-head"><span>Producto</span><span>Precio</span><span>Existencias</span><span/></div>{filteredProducts.map(product=>{const count=(product.colors||[]).reduce((n,c)=>n+c.stock,0),unconfirmed=!product.colors?.length;return <div className="inventory-ledger-row" key={product.id}><button className="inventory-product" onClick={()=>handleEditProduct(product)}><img src={productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO')} alt=""/><span><strong>{product.name}</strong><small>{[product.sku,product.brand,product.category].filter(Boolean).join(' · ')}</small></span></button><strong className="inventory-price">{formatCurrency(product.price)}</strong><div className="inventory-quantity">{unconfirmed?<span>Inventario por confirmar</span>:<><strong>{count===0?'Sin Stock':`${count} piezas`}</strong><small>{product.colors.length} {product.colors.length===1?'color':'colores'}</small></>}</div><RowActions label={`Acciones de ${product.name}`}><button onClick={()=>handleEditProduct(product)}><Edit2 size={16}/>Editar producto y colores</button><button onClick={()=>handleDeleteProduct(product)}><Trash2 size={16}/>Eliminar</button></RowActions></div>})}</div>
         )}
       </div>
 
-      <ProductModal isOpen={isProductModalOpen} onClose={() => { setIsProductModalOpen(false); setEditingProduct(null); }} product={editingProduct} onSave={handleSaveProduct} presetColors={globalColors} categories={categories}/>
+      {isProductModalOpen&&<ProductModal key={editingProduct?.id??'new'} isOpen={isProductModalOpen} onClose={() => { setIsProductModalOpen(false); setEditingProduct(null); }} product={editingProduct} onSave={handleSaveProduct} presetColors={globalColors} categories={categories}/>}
     </div>
   );
 };

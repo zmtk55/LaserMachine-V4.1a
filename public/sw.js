@@ -1,6 +1,6 @@
-const CACHE_NAME = 'lasermachine-v1';
-const STATIC_CACHE = 'lasermachine-static-v1';
-const DYNAMIC_CACHE = 'lasermachine-dynamic-v1';
+const CACHE_NAME = 'lasermachine-v2';
+const STATIC_CACHE = 'lasermachine-static-v2';
+const DYNAMIC_CACHE = 'lasermachine-dynamic-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -39,6 +39,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Never proxy/cache Auth, per-user REST data, storage or third-party challenges.
+  // Static/offline caching is for this app's own public files only.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
   if (request.method !== 'GET') {
     return;

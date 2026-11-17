@@ -1,3 +1,4 @@
+import {useUserCloudState} from '../services/useUserCloudState';
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'order' | 'stock' | 'system';
@@ -17,6 +18,7 @@ export interface Notification {
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
+  persistenceStatus: string;
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -29,22 +31,9 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lm_notifications_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map((n: any) => ({ ...n, timestamp: new Date(n.timestamp) }));
-      }
-    }
-    return [];
-  });
+  const [storedNotifications,setNotifications,persistenceStatus] = useUserCloudState<Notification[]>('notifications',[]);
+  const notifications=storedNotifications.map(n=>({...n,timestamp:new Date(n.timestamp)}));
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-
-  // Persist notifications
-  useEffect(() => {
-    localStorage.setItem('lm_notifications_v1', JSON.stringify(notifications));
-  }, [notifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -78,6 +67,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     <NotificationContext.Provider value={{
       notifications,
       unreadCount,
+      persistenceStatus,
       addNotification,
       markAsRead,
       markAllAsRead,

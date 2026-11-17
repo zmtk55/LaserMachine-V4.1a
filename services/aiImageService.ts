@@ -16,7 +16,7 @@ export async function generateImageFromPrompt(prompt: string): Promise<GenerateI
   try {
     if (!HF_API_KEY) {
       // Return mock response for demo purposes when no API key
-      console.warn('Hugging Face API key not set. Using demo mode.');
+      console.log('Hugging Face API key not set. Using demo mode.');
       return {
         success: true,
         imageUrl: `https://placehold.co/512x512/f59e0b/ffffff?text=${encodeURIComponent(prompt.slice(0, 20))}`

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product, ProductColor } from '../types';
 import { Search, Filter, Grid, List, ShoppingBag, ArrowLeft, ChevronDown } from 'lucide-react';
+import { productPreviewImage } from '../utils/productColorPreview';
 
 interface PublicCatalogProps {
   products: Product[];
@@ -153,6 +154,9 @@ export const PublicCatalog: React.FC<PublicCatalogProps> = ({
 
               <div className="mb-6">
                 <h3 className="text-sm font-bold uppercase text-zinc-500 mb-3">Colores Disponibles</h3>
+                {(selectedProduct.colors || []).length === 0 && (
+                  <p className="text-sm text-zinc-500">Disponibilidad por confirmar con el taller.</p>
+                )}
                 <div className="flex flex-wrap gap-3">
                   {selectedProduct.colors?.map((color: ProductColor) => (
                     <div
@@ -279,10 +283,13 @@ export const PublicCatalog: React.FC<PublicCatalogProps> = ({
               >
                 <div className="aspect-square bg-zinc-100 dark:bg-zinc-800 relative">
                   <img
-                    src={product.imageUrl}
+                    src={productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO')}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
+                  {product.illustrativeImage && (
+                    <span className="absolute bottom-2 left-2 text-[9px] font-black uppercase tracking-widest bg-zinc-950/80 text-white px-2 py-1 rounded-md">Foto de referencia</span>
+                  )}
                   <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
@@ -317,12 +324,15 @@ export const PublicCatalog: React.FC<PublicCatalogProps> = ({
                 onClick={() => setSelectedProduct(product)}
                 className="w-full flex items-center gap-4 bg-white dark:bg-zinc-900 rounded-2xl p-4 hover:shadow-xl transition-all hover:-translate-y-1 text-left"
               >
-                <div className="w-24 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden shrink-0">
+                <div className="w-24 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden shrink-0 relative">
                   <img
-                    src={product.imageUrl}
+                    src={productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO')}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
+                  {product.illustrativeImage && (
+                    <span className="absolute bottom-1 left-1 text-[8px] font-black uppercase tracking-wider bg-zinc-950/80 text-white px-1.5 py-0.5 rounded">Foto de referencia</span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider">

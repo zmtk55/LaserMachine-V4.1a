@@ -8,6 +8,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Las pruebas nunca usan claves reales de .env.local: el captcha queda
+    // desactivado salvo que un test lo active explicitamente con stubEnv.
+    env: { VITE_TURNSTILE_SITE_KEY: '' },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
       provider: 'v8',

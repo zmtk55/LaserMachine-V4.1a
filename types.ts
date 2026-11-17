@@ -43,6 +43,7 @@ export interface ProductColor {
 }
 
 export interface Product {
+  availabilityOnly?: boolean; // Public projection is availability, not an inventory count.
   id: string;
   name: string;
   brand: ProductBrand;
@@ -52,6 +53,8 @@ export interface Product {
   colors: ProductColor[];
   imageUrl: string;
   laserPresetId?: string;
+  engravingIncluded?: boolean; // true: precio incluye grabado de nombre al frente + logo/dibujo al reverso por extraSidePrice. Codifica EXACTAMENTE las tarifas confirmadas el 2026-11-09; no reutilizar para otros modelos de precio sin confirmación nueva.
+  illustrativeImage?: boolean; // true: imageUrl es ilustración neutral sin marca, no foto del producto real
   sku?: string;
 }
 
@@ -141,6 +144,8 @@ export interface BrandingAsset {
 }
 
 export interface StoreConfig {
+  backgroundUrl?: string;
+  backgroundPatternOn?: boolean;
   businessName: string;
   slogan?: string;
   logoUrl: string;
@@ -197,9 +202,13 @@ export interface FontOption {
   isCustom?: boolean;
   fileData?: string;
   active?: boolean;
+  /** Bytes oficiales de la familia estándar, servidos como recurso versionado del frontend y verificados por sha256 al cargar. Nunca se guardan en el catálogo remoto. */
+  bundled?: boolean;
 }
 
 export interface DesignState {
+  textLineHeight?:number;
+  textLineSizes?:number[];
   x: number;
   y: number;
   scale: number;
@@ -209,6 +218,8 @@ export interface DesignState {
 export interface LogoItem {
   id: string;
   url: string;
+  assetId?:string;
+  originalAssetId?:string;
   originalUrl?: string; // NEW: Holds the raw image without filters
   mimeType?: string;
   state: DesignState;
@@ -246,6 +257,7 @@ export interface OrderItem {
   clientItemBrand?: string;
   clientItemColor?: string;
   customBackgroundImage?: string;
+  backgroundAssetId?: string;
 }
 
 export enum OrderStatus {
@@ -293,6 +305,11 @@ export interface OrderInternalNote {
 }
 
 export interface Order {
+  reviewRequired?:boolean;
+  totalConfirmed?:boolean;
+  requestedPoints?:number;
+  requestedCoupon?:string;
+  stockReserved?:boolean;
   id: string;
   userId: string;
   customerName: string;

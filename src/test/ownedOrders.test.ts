@@ -1,0 +1,2 @@
+import {describe,it,expect} from 'vitest';import {ownedOrders} from '../../utils/ownedOrders';
+describe('order identity',()=>{it('never grants by matching contact phone or email',()=>{const user:any={id:'mine',email:'same@example.test',phone:'123',isGuest:true};const own:any={id:'own',userId:'mine',createdAt:'2026-11-06',customerEmail:'different@example.test'};const other:any={id:'other',userId:'other',createdAt:'2026-11-06',customerEmail:user.email,customerPhone:user.phone};expect(ownedOrders([other,own],user)).toEqual([own]);});});

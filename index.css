@@ -13,14 +13,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: var(--lm-font-ui);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Dark mode applied to body when .dark class is present on html or body */
 html.dark, html.dark body {
-  background: #030712;
-  color: #f3f4f6;
+  background: var(--lm-bg);
+  color: var(--lm-text);
 }
 
 .google-title {
@@ -33,26 +33,26 @@ html.dark, html.dark body {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* New UI/UX Pro Max typography system */
+/* UI typography aliases. Engraving families below retain their original names. */
 .font-heading {
-  font-family: 'Rubik', sans-serif;
+  font-family: var(--lm-font-ui);
   font-weight: 700;
 }
 
 .font-body {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: var(--lm-font-ui);
   font-weight: 400;
 }
 
-/* Headings use Rubik */
+/* Interface headings */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Rubik', sans-serif;
+  font-family: var(--lm-font-ui);
   font-weight: 700;
 }
 
 /* Buttons and important text */
 .btn-primary, .btn-secondary, .font-bold {
-  font-family: 'Rubik', sans-serif;
+  font-family: var(--lm-font-ui);
 }
 
 /* Clases de fuentes para el grabador (Visualizer) */
@@ -62,7 +62,7 @@ h1, h2, h3, h4, h5, h6 {
 .font-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
 .font-script1 { font-family: 'Permanent Marker', cursive; }
 .font-serif1 { font-family: 'Playfair Display', serif; }
-.font-display1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; }
+.font-display1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; } /* 900 ya se representaba como 800: la familia no tiene cara 900; el peso declarado ahora coincide con lo renderizado */
 .font-script2 { font-family: 'Permanent Marker', cursive; font-style: italic; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -155,7 +155,7 @@ body::after {
 
 /* Unified button styles */
 .btn-primary {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: var(--lm-accent);
   color: #fff;
   font-weight: 700;
   text-transform: uppercase;
@@ -226,8 +226,18 @@ body::after {
 /* Input focus states */
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #f59e0b !important;
+  border-color: var(--lm-focus) !important;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
+}
+
+/* Diagnostic helper: reveal background by dimming full-screen overlays when ?debugbg=1 is set */
+body.debug-reveal .fixed.inset-0 {
+  background: transparent !important;
+  opacity: 0.12 !important;
+  pointer-events: none !important;
+}
+body.debug-reveal .fixed.inset-0 > * {
+  pointer-events: none !important;
 }
 
 @keyframes fadeIn {

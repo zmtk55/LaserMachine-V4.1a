@@ -1,5 +1,7 @@
+import{deliveryMethodLabel}from'../utils/deliveryMethodLabel';
 import React, { useRef } from 'react';
 import { Order, OrderItem } from '../types';
+import{itemProductLabel,itemColorLabel}from'../utils/orderItemDisplay';
 import { StoreConfig } from '../types';
 
 interface TicketReceiptProps {
@@ -129,11 +131,11 @@ const TicketReceipt: React.FC<TicketReceiptProps> = ({ order, storeConfig, onClo
               {order.items.map((item, idx) => (
                 <div key={idx} className="mb-3 pl-2 border-l-2 border-amber-500">
                   <div className="flex justify-between font-medium">
-                    <span>{item.productId}</span>
+                    <span>{itemProductLabel(item)}</span>
                     <span>{formatCurrency(item.totalPrice)}</span>
                   </div>
                   <div className="text-xs text-zinc-500 ml-2">
-                    {item.colorName} x{item.quantity}
+                    {[itemColorLabel(item),`x${item.quantity}`].filter(Boolean).join(' ')}
                   </div>
                   {item.frontText && (
                     <div className="text-xs text-zinc-500 ml-2">
@@ -142,7 +144,7 @@ const TicketReceipt: React.FC<TicketReceiptProps> = ({ order, storeConfig, onClo
                   )}
                   {item.backText && (
                     <div className="text-xs text-zinc-500 ml-2">
-                      Dorso: {item.backText}
+                      Posterior: {item.backText}
                     </div>
                   )}
                 </div>
@@ -184,7 +186,7 @@ const TicketReceipt: React.FC<TicketReceiptProps> = ({ order, storeConfig, onClo
               {order.deliveryMethod && (
                 <div className="flex justify-between text-xs text-zinc-500">
                   <span>Entrega:</span>
-                  <span>{order.deliveryMethod.replace('_', ' ')}</span>
+                  <span>{deliveryMethodLabel(order.deliveryMethod)}</span>
                 </div>
               )}
             </div>
