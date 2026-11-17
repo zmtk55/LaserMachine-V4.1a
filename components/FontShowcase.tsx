@@ -62,7 +62,6 @@ export const FontShowcase: React.FC<FontShowcaseProps> = ({ fonts = [], onSelect
   };
 
   // Debug - verificar si hay fonts
-  console.log('FontShowcase - fonts:', fonts?.length, fonts);
 
   // Mapeo de cssFamily a valores reales de font-family
   const fontFamilyMap: Record<string, string> = {

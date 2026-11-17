@@ -42,12 +42,10 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
 
   // Actions - Always navigate to section, regardless of whether there are issues
   const goToInventory = () => {
-    console.log('Going to INVENTORY');
     if (onNavigate) onNavigate('INVENTORY');
   };
 
   const goToOrders = () => {
-    console.log('Going to ORDERS');
     if (onNavigate) onNavigate('ORDERS');
   };
 
@@ -194,7 +192,6 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
                 ${hasIssue ? 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:bg-zinc-100 dark:active:bg-zinc-800' : ''}
               `}
               onClick={() => {
-                console.log('Alert clicked:', item.id);
                 if (item.action?.onClick) {
                   item.action.onClick();
                 }

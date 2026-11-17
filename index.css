@@ -230,16 +230,6 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
 }
 
-/* Diagnostic helper: reveal background by dimming full-screen overlays when ?debugbg=1 is set */
-body.debug-reveal .fixed.inset-0 {
-  background: transparent !important;
-  opacity: 0.12 !important;
-  pointer-events: none !important;
-}
-body.debug-reveal .fixed.inset-0 > * {
-  pointer-events: none !important;
-}
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }

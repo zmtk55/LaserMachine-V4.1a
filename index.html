@@ -18,12 +18,11 @@
     <link rel="stylesheet" href="/src/styles/design-tokens.css">
     <link rel="stylesheet" href="/index.css">
     <script>
-      // Polyfill crítico para evitar que process.env rompa la app en navegadores
+      // Polyfill mínimo: algunas dependencias referencian `process.env` y en
+      // el navegador `process` no existe. NUNCA fijar NODE_ENV aquí: Vite lo
+      // sustituye por 'production' en el build.
       window.process = window.process || { env: {} };
       window.process.env = window.process.env || {};
-      if (!window.process.env.NODE_ENV) {
-        window.process.env.NODE_ENV = 'development';
-      }
     </script>
     <style>
       html, body, #root {
@@ -252,29 +251,6 @@
         box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
       }
     </style>
-      <style>
-        /* Diagnostic helper: reveal background by dimming full-screen overlays when ?debugbg=1 is set */
-        body.debug-reveal .fixed.inset-0 {
-          background: transparent !important;
-          opacity: 0.12 !important;
-          pointer-events: none !important;
-        }
-        body.debug-reveal .fixed.inset-0 > * {
-          pointer-events: none !important;
-        }
-      </style>
-      <script>
-        try {
-          const params = new URLSearchParams(location.search);
-          if (params.get('debugbg') === '1') {
-            document.documentElement.classList.add('debug-reveal');
-            document.body.classList.add('debug-reveal');
-            console.info('Debug reveal enabled: full-screen overlays dimmed to reveal background');
-          }
-        } catch (e) {
-          // ignore
-        }
-      </script>
     <script type="importmap">
 {
   "imports": {

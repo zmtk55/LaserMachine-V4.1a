@@ -933,7 +933,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [fontSortBy, setFontSortBy] = useState<'name' | 'id' | 'category'>('id');
   const [fontSortOrder, setFontSortOrder] = useState<'asc' | 'desc'>('asc');
   const [fontStatusFilter, setFontStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
-  const [bankInfo, setBankInfo] = useState(storeConfig.bankInfo || '');
   const [clientCouponData, setClientCouponData] = useState({ code: '', discount: 10 });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -4221,11 +4220,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <Wallet size={20} className="text-zinc-500"/>
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold uppercase text-zinc-900 dark:text-white">Datos Bancarios para el Cliente</h4>
-                                            <p className="text-xs text-zinc-500">Esta información aparecerá al elegir "Transferencia"</p>
+                                            <h4 className="text-sm font-bold uppercase text-zinc-900 dark:text-white">Datos de pago por transferencia</h4>
+                                            <p className="text-xs text-zinc-500">Por seguridad, los datos bancarios no se guardan en la app</p>
                                         </div>
                                     </div>
-                                    <textarea value={bankInfo} onChange={e => { setBankInfo(e.target.value); onUpdateStoreConfig({...storeConfig, bankInfo: e.target.value}); }} className="w-full h-40 bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 p-4 rounded-xl text-sm font-mono focus:border-amber-500 outline-none" placeholder="Ej: Banco: BBVA - Cuenta: 1234567890"/>
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-300">Te compartimos los datos de pago por WhatsApp al confirmar tu pedido. No escribas aquí cuentas, CLABEs ni datos bancarios.</p>
                                 </div>
                             </div>
                         </div>
@@ -4259,7 +4258,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       {/* Modals */}
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
-      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { console.log('FontFormModal onSave:', font); if (editingFont) { console.log('Calling onUpdateFont:', editingFont.id, font); onUpdateFont(editingFont.id, font); } else onAddFont(font); setIsFontModalOpen(false); }} existingFonts={fonts} />
+      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) { onUpdateFont(editingFont.id, font); } else onAddFont(font); setIsFontModalOpen(false); }} existingFonts={fonts} />
       <BulkDistributorModal isOpen={isBulkDistributorOpen} onClose={() => setIsBulkDistributorOpen(false)} products={products} onApplyChanges={handleBulkUpdateProducts} globalColors={storeConfig.globalColors}/>
       <BulkFontModal isOpen={isBulkFontModalOpen} onClose={() => setIsBulkFontModalOpen(false)} onAddFonts={onAddFonts || ((fonts) => fonts.forEach(f => onAddFont(f)))} existingFonts={fonts}/>
       {/* Image Cropper for Gallery */}
