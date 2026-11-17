@@ -1,3 +1,6 @@
+import {FontIdentification} from './components/FontIdentification';
+import {useModalFocus} from './utils/useModalFocus';
+import{ShopProductCard}from'./components/ShopProductCard';
 import {usePersistentCart} from './services/usePersistentCart';
 import {commitCartItem} from './utils/cartEditing';
 import {checkoutCouponError} from './utils/couponValidation';
@@ -106,36 +109,6 @@ const DEFAULT_STORE: StoreConfig = {
 
 const formatMXN = (n: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n);
 
-const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () => void, key?: React.Key }) => {
-    const [loaded, setLoaded] = useState(false);
-    return (
-        <div onClick={onClick} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onClick();}}} aria-label={`Diseñar ${product.name}`} className="group cursor-pointer rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1">
-            <div className="aspect-square bg-white dark:bg-zinc-950 relative overflow-hidden flex items-center justify-center p-2">
-                {!loaded && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 z-10 animate-pulse">
-                        <Loader2 className="animate-spin text-zinc-400 w-5 h-5"/>
-                    </div>
-                )}
-                {product.illustrativeImage && (
-                    <span className="absolute bottom-2 left-2 z-10 text-[9px] font-black uppercase tracking-widest bg-zinc-950/80 text-white px-2 py-1 rounded-md">Foto de referencia</span>
-                )}
-                <img alt={product.name}
-                    src={productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO')}
-                    onLoad={() => setLoaded(true)}
-                    className={`max-w-[94%] max-h-[94%] object-contain group-hover:scale-105 transition-transform duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-                />
-            </div>
-            <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{product.brand}</span>
-                <h3 className="font-bold text-sm uppercase tracking-tight leading-snug mt-1 text-zinc-900 dark:text-white">{product.name}</h3>
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mt-3">
-                    <p className="font-black text-base text-zinc-900 dark:text-white">{formatMXN(product.price)}</p>
-                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Diseñar</span>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const App = () => {
   const [view, setView] = useState<ViewState>('LANDING');
@@ -269,6 +242,8 @@ const App = () => {
   const [customizerDraft,setCustomizerDraft]=useState<OrderItem|null>(null);
   useEffect(()=>{if(view!=='CUSTOMIZER')setCustomizerDraft(null);},[view]);
   const [previewItem, setPreviewItem] = useState<OrderItem | null>(null); // For Modal Preview
+  const finalPreviewRef=useRef<HTMLDivElement>(null);
+  useModalFocus(!!previewItem,finalPreviewRef,()=>setPreviewItem(null));
 
   // New state for font flow
   const [preSelectedFontId, setPreSelectedFontId] = useState<number | null>(null);
@@ -346,7 +321,8 @@ const App = () => {
     const viewParam = urlParams.get('view');
     const orderIdParam = urlParams.get('id');
 
-    if (viewParam === 'TRACKING' && orderIdParam) {
+    if (viewParam === 'SHOP') setView('SHOP');
+    if (viewParam === 'TRACKING') {
       setView('PUBLIC_TRACKING');
       setPreSelectedOrderId(orderIdParam);
     }
@@ -592,16 +568,19 @@ const App = () => {
             {preSelectedFontId && (
                 <div className="lm-shop-font-notice mb-8 p-4 bg-amber-500/10 border border-amber-500 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
                     <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                        <Zap size={14}/> Tipografía #{preSelectedFontId} seleccionada.
+                        <Zap size={14}/> Letra seleccionada.
                     </span>
                     <button aria-label="Quitar fuente seleccionada" onClick={() => setPreSelectedFontId(null)} className="text-[10px] font-black uppercase underline hover:text-black dark:hover:text-white">Cancelar</button>
                 </div>
             )}
             {/* Título removido - ahora en NavBar */}
 
+            {trackingLoad==='loading'&&<div role="status" className="lm-catalog-state"><Loader2 className="animate-spin" size={22}/><h1>Cargando catálogo</h1></div>}
+            {trackingLoad==='error'&&<div role="alert" className="lm-catalog-state"><h1>No se pudo cargar el catálogo</h1><p>Revisa tu conexión y vuelve a intentar. No se añadieron productos al pedido.</p><button onClick={()=>window.location.reload()}>Volver a intentar</button></div>}
+            {trackingLoad==='ready'&&!products.length&&<div role="status" className="lm-catalog-state"><h1>No hay productos disponibles</h1><p>El taller aún no tiene productos publicados.</p></div>}
             {/* CATALOG GRID */}
             <div className={`lm-shop-grid grid gap-5 ${products.length === 1 ? 'grid-cols-1 max-w-[240px] mx-auto' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
-              {products.map(p => (
+              {trackingLoad==='ready'&&products.map(p => (
                 <ShopProductCard
                     key={p.id}
                     product={p}
@@ -734,7 +713,7 @@ const App = () => {
         {view === 'CART' && (
           <div className="lm-checkout w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-10 min-h-screen bg-white/90 dark:bg-black/80 backdrop-blur-sm">
             <h2 className="text-2xl md:text-3xl font-extrabold mb-6 text-zinc-900 dark:text-white uppercase tracking-tighter">Tu pedido</h2>
-            {!cartStorageError&&cart.length>0&&<p className="lm-cart-local-note">Carrito conservado en este navegador. No es un pedido enviado. Revisa precios y disponibilidad antes de continuar.</p>}
+            {!cartStorageError&&cart.length>0&&<p className="lm-cart-local-note">Carrito conservado en este navegador. No es un pedido enviado. Las fuentes incluidas no tienen número de taller asignado. Revisa precios y disponibilidad antes de continuar.</p>}
             {import.meta.env.VITE_CHECKOUT_ENABLED!=='true'&&<aside className="lm-intake-notice" role="status"><strong>Recepción de pedidos cerrada por ahora</strong><p>Puedes probar tu diseño y revisar el precio. Todavía no se envían pedidos ni se hacen cobros.</p></aside>}
             {cart.length === 0 ? (
                <div className="py-40 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/10 rounded-3xl">
@@ -783,11 +762,11 @@ const App = () => {
                                    </button>
                               </div>
 
+                              <div className="mt-3"><span className="text-xs font-bold">Frente</span><FontIdentification fonts={fonts} text={item.frontText} text2={item.frontText2} fontId={item.frontFontId} fontId2={item.frontFontId2} logos={item.frontLogos}/>{(item.backText||item.backText2||item.backLogos.length>0)&&<><span className="text-xs font-bold">Posterior</span><FontIdentification fonts={fonts} text={item.backText} text2={item.backText2} fontId={item.backFontId} fontId2={item.backFontId2} logos={item.backLogos}/></>}</div>
                               {/* Price Breakdown Mini */}
                               <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-4 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase">
-                                  <span>Base: <b className="text-zinc-900 dark:text-white">{formatMXN(basePrice)}</b></span>
-                                  <span>+</span>
-                                  <span>Personalización: <b className="text-zinc-900 dark:text-white">{formatMXN(unitCustomPrice)}</b></span>
+                                  {!item.isClientItem&&<><span>Base: <b className="text-zinc-900 dark:text-white">{formatMXN(basePrice)}</b></span><span>+</span></>}
+                                  <span>{item.isClientItem?'Grabado:':'Personalización:'} <b className="text-zinc-900 dark:text-white">{formatMXN(unitCustomPrice)}</b></span>
                               </div>
                            </div>
                         </div>
@@ -958,9 +937,9 @@ const App = () => {
         {/* PREVIEW MODAL */}
         {previewItem && (
             <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in zoom-in-95">
-                <div className="bg-white dark:bg-zinc-950 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 relative shadow-2xl">
+                <div ref={finalPreviewRef} role="dialog" aria-modal="true" aria-labelledby="final-design-title" className="bg-white dark:bg-zinc-950 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 relative shadow-2xl">
                     <button aria-label="Cerrar ficha técnica" onClick={() => setPreviewItem(null)} className="absolute top-6 right-6 p-2 bg-zinc-100 dark:bg-zinc-900 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"><X size={20}/></button>
-                    <h3 className="text-xl sm:text-2xl pr-10 font-black text-zinc-900 dark:text-white uppercase mb-8">Vista previa de tu diseño</h3>
+                    <h3 id="final-design-title" className="text-xl sm:text-2xl pr-10 font-black text-zinc-900 dark:text-white uppercase mb-8">Vista previa de tu diseño</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <TechnicalPreview
@@ -970,7 +949,7 @@ const App = () => {
                             font2Css={fonts.find(f=>f.id===previewItem.frontFontId2)?.cssFamily}
                             imageUrl={productPreviewImage(products.find(p => p.id === previewItem.productId),previewItem.colorName,previewItem.customBackgroundImage)}
                             text={previewItem.frontText} text2={previewItem.frontText2}
-                            fontName={previewItem.frontFontName} fontId={previewItem.frontFontId} hideElementCounts fontCss={fonts.find(f => f.id === previewItem.frontFontId)?.cssFamily || ''}
+                            fonts={fonts} fontId2={previewItem.frontFontId2} fontName={previewItem.frontFontName} fontId={previewItem.frontFontId} hideElementCounts hideFontMetadata fontCss={fonts.find(f => f.id === previewItem.frontFontId)?.cssFamily || ''}
                             logos={previewItem.frontLogos}
                             designState={previewItem.frontDesignState} designState2={previewItem.frontDesignState2}
                             sideLabel="LADO A (FRENTE)"
@@ -982,7 +961,7 @@ const App = () => {
                             font2Css={fonts.find(f=>f.id===previewItem.backFontId2)?.cssFamily}
                             imageUrl={productPreviewImage(products.find(p => p.id === previewItem.productId),previewItem.colorName,previewItem.customBackgroundImage)}
                             text={previewItem.backText} text2={previewItem.backText2}
-                            fontName={previewItem.backFontName} fontId={previewItem.backFontId} hideElementCounts fontCss={fonts.find(f => f.id === previewItem.backFontId)?.cssFamily || ''}
+                            fonts={fonts} fontId2={previewItem.backFontId2} fontName={previewItem.backFontName} fontId={previewItem.backFontId} hideElementCounts hideFontMetadata fontCss={fonts.find(f => f.id === previewItem.backFontId)?.cssFamily || ''}
                             logos={previewItem.backLogos}
                             designState={previewItem.backDesignState} designState2={previewItem.backDesignState2}
                             sideLabel="LADO B (POSTERIOR)"
@@ -990,7 +969,7 @@ const App = () => {
                     </div>
 
                     <div className="mt-8 text-center">
-                        <p className="text-xs text-zinc-500 font-mono">Vista orientativa. El taller confirma los detalles antes de fabricar.</p>
+                        <p className="text-xs text-zinc-500 font-mono">Las fuentes incluidas se identifican por familia; no tienen número de taller asignado. Vista orientativa. El contraste en pantalla ayuda a revisar el diseño; el taller confirma el acabado antes de fabricar.</p>
                     </div>
                 </div>
             </div>
@@ -1039,6 +1018,7 @@ const App = () => {
               isDarkMode={isDarkMode}
               toggleTheme={() => setIsDarkMode(!isDarkMode)}
               onBackToAdmin={user?.role === UserRole.ADMIN ? () => setView('ADMIN_DASHBOARD') : undefined}
+              onBackToStore={() => setView('SHOP')}
               onProductSelect={(product) => {
                 setSelectedProduct(product);
                 setEditingItem(null);
@@ -1090,11 +1070,12 @@ const App = () => {
           <CartPanel
             cartItems={cart.map(item => ({
               id: item.id,
-              productName: item.isClientItem ? itemProductLabel(item) : (products.find(p=>p.id===item.productId)?.name ?? item.productId),
-              colorName: itemColorLabel(item),
+              fontDetails:<><FontIdentification fonts={fonts} text={item.frontText} text2={item.frontText2} fontId={item.frontFontId} fontId2={item.frontFontId2} logos={item.frontLogos}/><FontIdentification fonts={fonts} text={item.backText} text2={item.backText2} fontId={item.backFontId} fontId2={item.backFontId2} logos={item.backLogos}/></>,
+              productName: item.isClientItem ? itemProductLabel(item).replace('Producto propio','Grabado en tu termo') : (products.find(p=>p.id===item.productId)?.name ?? item.productId),
+              colorName: itemColorLabel(item)||(item.isClientItem?'Color sin especificar':''),
               quantity: item.quantity,
               price: item.unitPrice,
-              imageUrl: productPreviewImage(products.find(p=>p.id===item.productId), item.colorName) ?? products.find(p=>p.id===item.productId)?.imageUrl
+              imageUrl: productPreviewImage(products.find(p=>p.id===item.productId), item.colorName, item.customBackgroundImage) ?? products.find(p=>p.id===item.productId)?.imageUrl
             }))}
             onUpdateQuantity={(id, qty) => {
               if (qty === 0) {

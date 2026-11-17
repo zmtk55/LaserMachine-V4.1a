@@ -220,19 +220,19 @@ const ProductModal = ({
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Nombre del Producto</label>
-                <input className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white font-bold uppercase outline-none focus:border-amber-500 transition-colors" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre del Producto"/>
+                <input aria-label="Nombre del Producto" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white font-bold uppercase outline-none focus:border-amber-500 transition-colors" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre del Producto"/>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Precio</label>
                   <div className="relative">
                     <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"/>
-                    <input type="number" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 pl-8 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.price} onChange={e => setFormData({ ...formData, price: Number(e.target.value) })} placeholder="0"/>
+                    <input aria-label="Precio" type="number" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 pl-8 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.price} onChange={e => setFormData({ ...formData, price: Number(e.target.value) })} placeholder="0"/>
                   </div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Marca</label>
-                  <select className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value as ProductBrand })}>
+                  <select aria-label="Marca" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value as ProductBrand })}>
                     {Object.values(ProductBrand).map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
@@ -240,18 +240,18 @@ const ProductModal = ({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Categoría</label>
-                  <select className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                  <select aria-label="Categoría" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Stock Mínimo</label>
-                  <input type="number" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.stockThreshold} onChange={e => setFormData({ ...formData, stockThreshold: Number(e.target.value) })} placeholder="5"/>
+                  <input aria-label="Stock Mínimo" type="number" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-colors" value={formData.stockThreshold} onChange={e => setFormData({ ...formData, stockThreshold: Number(e.target.value) })} placeholder="5"/>
                 </div>
               </div>
               <div>
                 <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">SKU (Opcional)</label>
-                <input className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white font-mono outline-none focus:border-amber-500 transition-colors" value={formData.sku || ''} onChange={e => setFormData({ ...formData, sku: e.target.value })} placeholder="SKU-001"/>
+                <input aria-label="SKU (Opcional)" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-zinc-900 dark:text-white font-mono outline-none focus:border-amber-500 transition-colors" value={formData.sku || ''} onChange={e => setFormData({ ...formData, sku: e.target.value })} placeholder="SKU-001"/>
               </div>
             </div>
           </div>
@@ -290,21 +290,21 @@ const ProductModal = ({
                   <div className="flex-1 grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Nombre</label>
-                      <input className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs font-bold uppercase outline-none focus:border-amber-500 transition-colors" value={color.name} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c) })} placeholder="COLOR"/>
+                      <input aria-label="Nombre" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs font-bold uppercase outline-none focus:border-amber-500 transition-colors" value={color.name} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c) })} placeholder="COLOR"/>
                     </div>
                     <div>
                       <label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Hex</label>
                       <div className="flex items-center gap-2">
-                        <input type="color" className="w-8 h-8 rounded bg-transparent border-0 cursor-pointer" value={color.hex} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, hex: e.target.value } : c) })}/>
-                        <input className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs font-mono outline-none focus:border-amber-500 transition-colors" value={color.hex} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, hex: e.target.value } : c) })}/>
+                        <input aria-label={`Color de ${color.name||'variante'}`} type="color" className="w-8 h-8 rounded bg-transparent border-0 cursor-pointer" value={color.hex} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, hex: e.target.value } : c) })}/>
+                        <input aria-label={`Código de color de ${color.name||'variante'}`} className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs font-mono outline-none focus:border-amber-500 transition-colors" value={color.hex} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, hex: e.target.value } : c) })}/>
                       </div>
                     </div>
                     <div>
                       <label className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Stock</label>
-                      <input type="number" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs text-center font-bold outline-none focus:border-amber-500 transition-colors" value={color.stock} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, stock: Number(e.target.value) } : c) })}/>
+                      <input aria-label="Stock" type="number" className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-2 rounded text-zinc-900 dark:text-white text-xs text-center font-bold outline-none focus:border-amber-500 transition-colors" value={color.stock} onChange={e => setFormData({ ...formData, colors: formData.colors.map((c, i) => i === index ? { ...c, stock: Number(e.target.value) } : c) })}/>
                     </div>
                   </div>
-                  <button onClick={() => setFormData({ ...formData, colors: formData.colors.filter((_, i) => i !== index) })} className="text-zinc-400 hover:text-red-500 p-2 transition-colors"><Trash2 size={16}/></button>
+                  <button aria-label={`Eliminar variante ${color.name||index+1}`} onClick={() => setFormData({ ...formData, colors: formData.colors.filter((_, i) => i !== index) })} className="text-zinc-400 hover:text-red-500 p-2 transition-colors"><Trash2 size={16}/></button>
                 </div>
               ))}
               {formData.colors.length === 0 && (
@@ -495,7 +495,8 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({ products, categorie
               const displayImage = productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO');
               return (
                 <div 
-                  key={product.id} 
+                  key={product.id} role="button" tabIndex={0} aria-label={`Editar ${product.name}`}
+                  onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleEditProduct(product);}}}
                   onClick={() => handleEditProduct(product)}
                   className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:border-amber-500 dark:hover:border-amber-500 transition-all duration-300 hover:-translate-y-1 cursor-pointer"
                 >

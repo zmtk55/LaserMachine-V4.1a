@@ -20,3 +20,6 @@ describe('orderItemDisplay',()=>{
   expect(itemColorLabel({productId:'x',colorName:'NEGRO'})).toBe('NEGRO');
  });
 });
+
+it('does not expose an unknown-brand marker as a real brand or color',()=>{const item={productId:'x',isClientItem:true,clientItemBrand:'OTRO',colorName:'OTRO'};expect(itemProductLabel(item)).toBe('Producto propio');expect(itemColorLabel(item)).toBe('');});
+it('does not mistake a known own brand for its missing color',()=>{expect(itemColorLabel({productId:'x',isClientItem:true,clientItemBrand:'YETI',colorName:'YETI'})).toBe('');});

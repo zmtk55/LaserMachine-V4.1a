@@ -78,7 +78,7 @@ const Lightbox = ({
     <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm flex items-center justify-center">
       {/* Close button */}
       <button
-        onClick={onClose}
+        aria-label="Cerrar vista previa de imagen" onClick={onClose}
         className="absolute top-4 right-4 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-10"
       >
         <X size={24} />
@@ -86,13 +86,13 @@ const Lightbox = ({
 
       {/* Navigation */}
       <button
-        onClick={() => onNavigate('prev')}
+        aria-label="Imagen anterior" onClick={() => onNavigate('prev')}
         className="absolute left-4 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all"
       >
         <ChevronLeft size={32} />
       </button>
       <button
-        onClick={() => onNavigate('next')}
+        aria-label="Imagen siguiente" onClick={() => onNavigate('next')}
         className="absolute right-4 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all"
       >
         <ChevronRight size={32} />
@@ -325,7 +325,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   // View mode button
   const ViewButton = ({ mode, icon: Icon, title }: { mode: ViewMode; icon: React.ElementType; title: string }) => (
     <button
-      onClick={() => setViewMode(mode)}
+      aria-label={title} aria-pressed={viewMode===mode} onClick={() => setViewMode(mode)}
       title={title}
       className={`p-2 rounded-lg transition-all ${
         viewMode === mode 
@@ -419,7 +419,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               ? 'bg-yellow-500/10 border-yellow-500' 
               : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 hover:border-yellow-500/50'
           }`}
-          onClick={handleClick}
+          role="button" tabIndex={0} aria-label={`Seleccionar imagen ${asset.name}`} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e as any);}}} onClick={handleClick}
           onContextMenu={handleContextMenu}
         >
           {isMultiSelectMode && (
@@ -443,7 +443,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             </div>
           </div>
           <button
-            onClick={(e) => { e.stopPropagation(); openLightbox(index); }}
+            aria-label={`Ver imagen ${asset.name}`} onClick={(e) => { e.stopPropagation(); openLightbox(index); }}
             className="opacity-0 group-hover:opacity-100 p-2 text-zinc-400 hover:text-zinc-600 transition-all"
           >
             <Eye size={16} />
@@ -459,7 +459,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             ? 'border-yellow-500 ring-2 ring-yellow-500/20' 
             : 'border-zinc-200 dark:border-zinc-700 hover:border-yellow-500'
         } ${viewMode === 'masonry' ? 'break-inside-avoid mb-3' : ''}`}
-        onClick={handleClick}
+        role="button" tabIndex={0} aria-label={`Seleccionar imagen ${asset.name}`} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleClick(e as any);}}} onClick={handleClick}
         onContextMenu={handleContextMenu}
       >
         {/* Multi-select checkbox */}
@@ -487,13 +487,13 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         {/* Overlay actions */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
           <button
-            onClick={(e) => { e.stopPropagation(); openLightbox(index); }}
+            aria-label={`Ver imagen ${asset.name}`} onClick={(e) => { e.stopPropagation(); openLightbox(index); }}
             className="p-2 bg-white rounded-full shadow-lg hover:scale-110 transition-transform"
           >
             <Eye size={16} className="text-zinc-900" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onSelectImage(asset.url); }}
+            aria-label={`Usar imagen ${asset.name}`} onClick={(e) => { e.stopPropagation(); onSelectImage(asset.url); }}
             className="p-2 bg-yellow-500 rounded-full shadow-lg hover:scale-110 transition-transform"
           >
             <Check size={16} className="text-zinc-900" />
@@ -563,11 +563,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Buscar imágenes"
               placeholder="Buscar por nombre o etiqueta..."
               className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 pl-10 pr-10 text-sm font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-yellow-500 transition-colors"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
+              <button aria-label="Limpiar búsqueda de imágenes" onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
                 <X size={16} />
               </button>
             )}

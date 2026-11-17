@@ -33,6 +33,7 @@ export const VintageRollInput: React.FC<VintageRollInputProps> = ({
                 </div>
                 <input 
                     type="text"
+                    aria-label={label}
                     value={value}
                     onChange={onChange}
                     placeholder={placeholder}

@@ -34,5 +34,5 @@ export function productPreviewLabel(product:Product|undefined,color:string,ownPh
  if(ownPhoto)return undefined;
  const reference=referencePhotoColor(product,color);
  if(!reference)return undefined;
- return `Muestra YETI 30 oz ${reference.toLowerCase()}${reference!==color?` · Solicitado: ${color.toLowerCase()}`:''}`;
+ return `Muestra YETI 30 oz ${reference.toLowerCase()}${color.trim()&&color.trim().toUpperCase()!=='OTRO'&&reference!==color?` · Solicitado: ${color.toLowerCase()}`:''}`;
 }

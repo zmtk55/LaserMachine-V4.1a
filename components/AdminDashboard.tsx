@@ -779,7 +779,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
                 <div className="bg-zinc-100 dark:bg-zinc-800 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{font ? 'Editar Fuente' : 'Nueva Fuente'}</h3>
-                        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={22}/></button>
+                        <button aria-label="Cerrar fuente" onClick={onClose} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={22}/></button>
                     </div>
                 </div>
                 
@@ -788,6 +788,8 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
                         <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Archivo de Fuente</label>
                         <div 
                             className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${isUploading ? 'border-amber-500 bg-amber-500/10' : fontFile ? 'border-green-500 bg-green-500/10' : 'border-zinc-300 dark:border-zinc-700 hover:border-amber-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                            role="button" tabIndex={0} aria-label="Subir archivo de fuente" aria-disabled={isUploading}
+                            onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==='Enter'||e.key===' ')){e.preventDefault();if(!isUploading)fileInputRef.current?.click();}}}
                             onClick={() => !isUploading && fileInputRef.current?.click()}
                         >
                             <input type="file" ref={fileInputRef} className="hidden" accept=".ttf,.otf" onChange={handleFileUpload}/>
@@ -807,13 +809,13 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">ID de Fuente</label>
-                            <input type="number" value={data.id} onChange={handleIdChange} min={1} max={999}
+                            <input aria-label="ID de fuente" type="number" value={data.id} onChange={handleIdChange} min={1} max={999}
                                 className={`w-full bg-zinc-100 dark:bg-zinc-800 border ${fontIdError ? 'border-red-500' : 'border-zinc-300 dark:border-zinc-700'} rounded-xl px-4 py-3 text-zinc-900 dark:text-white font-mono text-lg focus:border-amber-500 focus:outline-none transition-colors`}/>
                             {fontIdError && <p className="text-red-500 text-xs flex items-center gap-1"><AlertCircle size={12}/>{fontIdError}</p>}
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Nombre</label>
-                            <input type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} placeholder="Nombre de la fuente"
+                            <input aria-label="Nombre de la fuente" type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} placeholder="Nombre de la fuente"
                                 className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:border-amber-500 focus:outline-none transition-colors"/>
                         </div>
                     </div>
@@ -822,7 +824,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
                         <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Categorías</label>
                         <div className="lm-font-categories grid grid-cols-5 gap-2">
                             {ALL_CATEGORIES.map(cat => (
-                                <button key={cat} onClick={() => toggleCategory(cat)}
+                                <button key={cat} aria-pressed={selectedCategories.includes(cat)} onClick={() => toggleCategory(cat)}
                                     className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-amber-500 text-zinc-900' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-700'}`}>
                                     {cat}
                                 </button>
@@ -832,7 +834,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
                     
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Texto de Preview</label>
-                        <input type="text" value={previewText} onChange={e => setPreviewText(e.target.value)} placeholder="Escribe tu texto..."
+                        <input aria-label="Texto de muestra de fuente" type="text" value={previewText} onChange={e => setPreviewText(e.target.value)} placeholder="Escribe tu texto..."
                             className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:border-amber-500 focus:outline-none transition-colors"/>
                     </div>
                     
@@ -1492,6 +1494,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           fonts,
           orders,
           pricing,
+          scope: 'Respaldo parcial: configuración, productos, fuentes, pedidos y precios. No incluye archivos subidos, perfiles de clientes, contenido ni notas privadas.',
           exportedAt: new Date().toISOString()
       };
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -1911,7 +1914,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     {/* Previews: tabs Frente/Reverso, una sola vista grande */}
                                                     <div className="p-3 lg:p-5 bg-zinc-50/50 dark:bg-zinc-900/50">
                                                         <SidePreviewTabs
-                                                            front={<TechnicalPreview fontId={item.frontFontId} hideElementCounts
+                                                            front={<TechnicalPreview workshopMetadata fonts={fonts} fontId2={item.frontFontId2} fontId={item.frontFontId} hideElementCounts
                             imageScale={previewImageScale(products.find(p=>p.id===item.productId)?.illustrativeImage,item.customBackgroundImage)}
                             inkColor={previewInk(productColorHex(products.find(p=>p.id===item.productId),item.colorName))}
                             font2Css={fonts.find(f=>String(f.id)===String(item.frontFontId2))?.cssFamily} 
@@ -1924,7 +1927,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             allowExpand
                                                             referencePhoto={!item.customBackgroundImage && referencePhotoColor(products.find(p => p.id === item.productId), item.colorName) !== undefined}
                                                         />}
-                                                            back={<TechnicalPreview fontId={item.backFontId} hideElementCounts
+                                                            back={<TechnicalPreview workshopMetadata fonts={fonts} fontId2={item.backFontId2} fontId={item.backFontId} hideElementCounts
                             imageScale={previewImageScale(products.find(p=>p.id===item.productId)?.illustrativeImage,item.customBackgroundImage)}
                             inkColor={previewInk(productColorHex(products.find(p=>p.id===item.productId),item.colorName))}
                             font2Css={fonts.find(f=>String(f.id)===String(item.backFontId2))?.cssFamily} 
@@ -2298,6 +2301,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <button 
                                     onClick={() => setFontSortOrder(fontSortOrder === 'asc' ? 'desc' : 'asc')}
                                     className={`p-1.5 rounded-lg transition-colors ${fontSortOrder === 'asc' ? 'bg-amber-500 text-black' : 'bg-zinc-400 text-white'}`}
+                                    aria-label={fontSortOrder === 'asc' ? 'Orden ascendente de fuentes' : 'Orden descendente de fuentes'}
                                     title={fontSortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
                                 >
                                     {fontSortOrder === 'asc' ? <ArrowUp size={14}/> : <ArrowDown size={14}/>}
@@ -2345,6 +2349,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         key={mode}
                                         onClick={() => setFontViewMode(mode as any)}
                                         className={`p-2 rounded-lg transition-all ${fontViewMode === mode ? 'bg-white dark:bg-zinc-700 text-amber-500 shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+                                        aria-label={mode==='GRID'?'Ver fuentes en galería':'Ver fuentes en lista'} aria-pressed={fontViewMode===mode}
                                         title={mode}
                                     >
                                         <Icon size={14}/>
@@ -2850,7 +2855,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                                     <div className="flex gap-4">
                                         <button onClick={handleDownloadBackup} className="flex-1 py-5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-3 backdrop-blur-sm">
-                                            <FileJson size={20}/> Descargar Backup JSON
+                                            <FileJson size={20}/> Descargar respaldo parcial JSON
                                         </button>
                                         <button onClick={handleCloudMigration} disabled={isMigrating} className="flex-[2] py-5 bg-color-info-50 dark:bg-color-info-900/30 text-color-info-900 dark:text-color-info-200 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-color-info-50 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-70 disabled:cursor-wait">
                                             {isMigrating ? (<><RefreshCw className="animate-spin" size={20}/> Procesando Lotes...</>) : (<><Database size={20}/> Guardar cambios en Supabase</>)}

@@ -8,3 +8,5 @@ it('keeps unsupported requested colors as requests, never recolors a photo',()=>
 import {productPreviewLabel} from '../../utils/productColorPreview';
 it('names the visible model and colour separately from an unsupported request',()=>{expect(productPreviewLabel(product,'ROJO')).toBe('Muestra YETI 30 oz negro · Solicitado: rojo');expect(productPreviewLabel(product,'BLANCO')).toBe('Muestra YETI 30 oz blanco');});
 it('does not label actual product or own photographs as YETI references',()=>{expect(productPreviewLabel({...product,colors:[{name:'ROJO',hex:'#f00',imageUrl:'/actual-red.jpg'}]},'ROJO')).toBeUndefined();expect(productPreviewLabel(product,'ROJO','data:own')).toBeUndefined();});
+
+it('does not display the unknown-brand marker as a requested colour',()=>{expect(productPreviewLabel(product,'OTRO')).toBe('Muestra YETI 30 oz negro');});

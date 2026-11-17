@@ -1,3 +1,6 @@
+import {FontIdentification} from './FontIdentification';
+import type {FontOption} from '../types';
+import {useOwnPhotoInk,monogramPreviewUrl} from '../utils/photoPreviewInk';
 import {EngravingText} from './EngravingText';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,7 +18,11 @@ interface TechnicalPreviewProps {
   fontCss: string;
   fontId?: number | string;
   hideElementCounts?: boolean;
+  hideFontMetadata?: boolean;
   font2Css?: string;
+  fontId2?: number|string;
+  fonts?: FontOption[];
+  workshopMetadata?:boolean;
   logos: LogoItem[];
   designState: DesignState;
   designState2?: DesignState;
@@ -30,9 +37,10 @@ const STAGE_WIDTH = 500;
 const STAGE_HEIGHT = 600;
 
 export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({ 
-  imageUrl, compact=false, imageScale=1.45,inkColor='#e4e4e7', text, text2, fontName, fontId, hideElementCounts=false, fontCss, font2Css, logos, designState, designState2, sideLabel, referencePhoto=false, referenceLabel, allowExpand=false
+  workshopMetadata=false, fontId2, fonts=[], imageUrl, compact=false, imageScale=1.45,inkColor='#e4e4e7', text, text2, fontName, fontId, hideElementCounts=false, hideFontMetadata=false, fontCss, font2Css, logos, designState, designState2, sideLabel, referencePhoto=false, referenceLabel, allowExpand=false
 }) => {
-  const [showGuides, setShowGuides] = useState(!compact);
+  const [showGuides, setShowGuides] = useState(false);
+  const visibleInk=useOwnPhotoInk(imageScale===1?imageUrl:null,inkColor);
   const [expanded, setExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scaleFactor, setScaleFactor] = useState(1);
@@ -82,7 +90,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
            {!compact&&<button 
              onClick={() => setShowGuides(!showGuides)} 
              className={`p-1.5 rounded-md transition-colors ${showGuides ? 'bg-amber-500 text-white' : 'text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} 
-             title="Alternar Guías"
+             title="Alternar Guías" aria-label={`Guías ${displayLabel}`} aria-pressed={showGuides}
            >
              <Ruler size={12}/>
            </button>}
@@ -153,7 +161,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                             transform: `translate(-50%, -50%) rotate(${safeDesign.rotate}deg) scale(${safeDesign.scale})`,
                                         }}
                                     >
-                                        <EngravingText text={text} fontCss={fontCss} baseSize={48} color={inkColor} lineHeight={safeDesign.textLineHeight} lineSizes={safeDesign.textLineSizes}/>
+                                        <EngravingText text={text} fontCss={fontCss} baseSize={48} color={visibleInk} lineHeight={safeDesign.textLineHeight} lineSizes={safeDesign.textLineSizes}/>
                                         {showGuides && <div className="absolute -inset-2 border border-blue-400/50"></div>}
                                     </div>
                                 )}
@@ -168,7 +176,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                             transform: `translate(-50%, -50%) rotate(${safeDesign2.rotate}deg) scale(${safeDesign2.scale})`,
                                         }}
                                     >
-                                        <EngravingText text={text2} fontCss={font2Css||fontCss} color={inkColor} lineHeight={safeDesign2.textLineHeight} lineSizes={safeDesign2.textLineSizes}/>
+                                        <EngravingText text={text2} fontCss={font2Css||fontCss} color={visibleInk} lineHeight={safeDesign2.textLineHeight} lineSizes={safeDesign2.textLineSizes}/>
                                         {showGuides && <div className="absolute -inset-2 border border-blue-400/50"></div>}
                                     </div>
                                 )}
@@ -185,7 +193,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                         }}
                                     >
                                         <img 
-                                            src={logo.url} 
+                                            src={monogramPreviewUrl(logo.url,visibleInk)}
                                             style={{ width: '160px' }} // MATCHES VISUALIZER FIXED PX
                                             className="h-auto"
                                             alt="Logo Overlay"
@@ -204,11 +212,8 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
        </div>
        
        {/* FOOTER METADATA */}
-       {!compact&&<div className="bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-[10px] font-mono text-zinc-500 uppercase shrink-0">
-           <div>
-               <span className="block font-bold text-zinc-400">Tipografía</span>
-               <span className="block font-black text-zinc-900 dark:text-white break-words leading-tight">{fontId != null ? `#${fontId}${fontName ? ' · ' + fontName : ''}` : fontName || '-'}</span>
-           </div>
+       {!compact&&(text||text2||logos.length>0)&&<div className="bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 p-3 grid grid-cols-1 gap-x-2 gap-y-1 text-[10px] font-mono text-zinc-500 uppercase shrink-0">
+           <FontIdentification detailed={workshopMetadata} fonts={fonts} text={text} text2={text2} fontId={fontId} fontId2={fontId2} fontName={fontName} logos={logos}/>
            {!hideElementCounts&&<div className="sm:text-right">
                <span className="block font-bold text-zinc-400">Elementos</span>
                <span>Textos: {(text ? 1 : 0) + (text2 ? 1 : 0)} · Imágenes: {logos.length}</span>
@@ -223,7 +228,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
           </button>
           <TechnicalPreview
             referenceLabel={referenceLabel} referencePhoto={referencePhoto} imageUrl={imageUrl} imageScale={imageScale} inkColor={inkColor}
-            text={text} text2={text2} fontName={fontName} fontId={fontId} hideElementCounts={hideElementCounts} fontCss={fontCss} font2Css={font2Css}
+            workshopMetadata={workshopMetadata} fonts={fonts} fontId2={fontId2} text={text} text2={text2} fontName={fontName} fontId={fontId} hideElementCounts={hideElementCounts} hideFontMetadata={hideFontMetadata} fontCss={fontCss} font2Css={font2Css}
             logos={logos} designState={designState} designState2={designState2}
             sideLabel={sideLabel}
           />

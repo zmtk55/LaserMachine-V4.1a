@@ -1,3 +1,4 @@
+import{localCalendarDate}from'../utils/calendarDate';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Plus, Image as ImageIcon, Trash2, Save, Eye, EyeOff, 
@@ -558,7 +559,7 @@ const PromotionsSection: React.FC<{
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
               <div className="flex gap-2">
                 <button
-                  onClick={() => onToggle(promo.id)}
+                  aria-label={`${promo.active?'Desactivar':'Activar'} ${promo.title}`} onClick={() => onToggle(promo.id)}
                   className={`p-2 rounded-xl transition-colors ${
                     promo.active ? 'bg-green-100 text-green-600' : 'bg-zinc-100 text-zinc-400'
                   }`}
@@ -566,13 +567,13 @@ const PromotionsSection: React.FC<{
                   {promo.active ? <Eye size={18} /> : <EyeOff size={18} />}
                 </button>
                 <button
-                  onClick={() => onEdit(promo)}
+                  aria-label={`Editar ${promo.title}`} onClick={() => onEdit(promo)}
                   className="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200 transition-colors"
                 >
                   <Type size={18} />
                 </button>
                 <button
-                  onClick={() => onDelete(promo.id)}
+                  aria-label={`Eliminar ${promo.title}`} onClick={() => onDelete(promo.id)}
                   className="p-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-colors"
                 >
                   <Trash2 size={18} />
@@ -582,7 +583,7 @@ const PromotionsSection: React.FC<{
               {promo.validUntil && (
                 <span className="text-xs text-zinc-400 flex items-center gap-1">
                   <Calendar size={12} />
-                  {new Date(promo.validUntil).toLocaleDateString('es-MX')}
+                  {localCalendarDate(promo.validUntil).toLocaleDateString('es-MX')}
                 </span>
               )}
             </div>
@@ -666,7 +667,7 @@ const TestimonialsSection: React.FC<{
           <div className="flex items-center justify-between mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <div className="flex gap-2">
               <button
-                onClick={() => onToggle(testimonial.id)}
+                aria-label={`${testimonial.active?'Desactivar':'Activar'} ${testimonial.name}`} onClick={() => onToggle(testimonial.id)}
                 className={`p-2 rounded-xl transition-colors ${
                   testimonial.active ? 'bg-green-100 text-green-600' : 'bg-zinc-100 text-zinc-400'
                 }`}
@@ -674,13 +675,13 @@ const TestimonialsSection: React.FC<{
                 {testimonial.active ? <Eye size={18} /> : <EyeOff size={18} />}
               </button>
               <button
-                onClick={() => onEdit(testimonial)}
+                aria-label={`Editar ${testimonial.name}`} onClick={() => onEdit(testimonial)}
                 className="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200"
               >
                 <Type size={18} />
               </button>
               <button
-                onClick={() => onDelete(testimonial.id)}
+                aria-label={`Eliminar ${testimonial.name}`} onClick={() => onDelete(testimonial.id)}
                 className="p-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200"
               >
                 <Trash2 size={18} />
@@ -755,7 +756,7 @@ const FAQsSection: React.FC<{
               
               <div className="flex gap-2 flex-shrink-0">
                 <button
-                  onClick={() => onToggle(faq.id)}
+                  aria-label={`${faq.active?'Desactivar':'Activar'} ${faq.question}`} onClick={() => onToggle(faq.id)}
                   className={`p-3 rounded-xl transition-colors ${
                     faq.active ? 'bg-green-100 text-green-600' : 'bg-zinc-100 text-zinc-400'
                   }`}
@@ -763,13 +764,13 @@ const FAQsSection: React.FC<{
                   {faq.active ? <Eye size={18} /> : <EyeOff size={18} />}
                 </button>
                 <button
-                  onClick={() => onEdit(faq)}
+                  aria-label={`Editar ${faq.question}`} onClick={() => onEdit(faq)}
                   className="p-3 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200"
                 >
                   <Type size={18} />
                 </button>
                 <button
-                  onClick={() => onDelete(faq.id)}
+                  aria-label={`Eliminar ${faq.question}`} onClick={() => onDelete(faq.id)}
                   className="p-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-200"
                 >
                   <Trash2 size={18} />
@@ -856,7 +857,7 @@ const FeaturedProductsSection: React.FC<{
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
               <div className="flex gap-1">
                 <button
-                  onClick={() => onToggle(product.id)}
+                  aria-label={`${product.active?'Desactivar':'Activar'} ${product.productName}`} onClick={() => onToggle(product.id)}
                   className={`p-2 rounded-xl transition-colors ${
                     product.active ? 'bg-green-100 text-green-600' : 'bg-zinc-100 text-zinc-400'
                   }`}
@@ -864,13 +865,13 @@ const FeaturedProductsSection: React.FC<{
                   {product.active ? <Eye size={16} /> : <EyeOff size={16} />}
                 </button>
                 <button
-                  onClick={() => onEdit(product)}
+                  aria-label={`Editar ${product.productName}`} onClick={() => onEdit(product)}
                   className="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200"
                 >
                   <Type size={16} />
                 </button>
                 <button
-                  onClick={() => onDelete(product.id)}
+                  aria-label={`Eliminar ${product.productName}`} onClick={() => onDelete(product.id)}
                   className="p-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200"
                 >
                   <Trash2 size={16} />
@@ -932,16 +933,16 @@ const ModernCard: React.FC<{
             {(startDate || endDate) && (
               <div className="flex items-center gap-2 mt-2 text-xs text-zinc-400">
                 <Clock size={12} />
-                {startDate && `${new Date(startDate).toLocaleDateString('es-MX')}`}
+                {startDate && `${localCalendarDate(startDate).toLocaleDateString('es-MX')}`}
                 {startDate && endDate && ' - '}
-                {endDate && `${new Date(endDate).toLocaleDateString('es-MX')}`}
+                {endDate && `${localCalendarDate(endDate).toLocaleDateString('es-MX')}`}
               </div>
             )}
           </div>
           
           <div className="flex items-center gap-2 mt-3">
             <button
-              onClick={onToggle}
+              aria-label={`${active?'Desactivar':'Activar'} ${title}`} onClick={onToggle}
               className={`p-2 rounded-xl transition-colors ${
                 active ? 'bg-green-100 text-green-600' : 'bg-zinc-100 text-zinc-400'
               }`}
@@ -949,13 +950,13 @@ const ModernCard: React.FC<{
               {active ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
             <button
-              onClick={onEdit}
+              aria-label={`Editar ${title}`} onClick={onEdit}
               className="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200"
             >
               <Type size={16} />
             </button>
             <button
-              onClick={onDelete}
+              aria-label={`Eliminar ${title}`} onClick={onDelete}
               className="p-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200"
             >
               <Trash2 size={16} />
@@ -987,7 +988,7 @@ const BannerForm: React.FC<{
     <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-2xl border border-zinc-100 dark:border-zinc-800">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-2xl text-zinc-900 dark:text-white">{banner.id ? 'Editar Banner' : 'Nuevo Banner'}</h3>
-        <button type="button" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
+        <button type="button" aria-label="Cerrar formulario" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
           <X size={24} className="text-zinc-400" />
         </button>
       </div>
@@ -995,7 +996,7 @@ const BannerForm: React.FC<{
       <div className="grid md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">URL de imagen</label>
-          <input
+          <input aria-label="URL de imagen"
             type="text"
             value={formData.image}
             onChange={(e) => setFormData({ ...formData, image: e.target.value })}
@@ -1006,7 +1007,7 @@ const BannerForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Título</label>
-          <input
+          <input aria-label="Título"
             type="text"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -1017,7 +1018,7 @@ const BannerForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Subtítulo</label>
-          <input
+          <input aria-label="Subtítulo"
             type="text"
             value={formData.subtitle}
             onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
@@ -1028,7 +1029,7 @@ const BannerForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Link</label>
-          <input
+          <input aria-label="Link"
             type="text"
             value={formData.link}
             onChange={(e) => setFormData({ ...formData, link: e.target.value })}
@@ -1039,7 +1040,7 @@ const BannerForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha inicio</label>
-          <input
+          <input aria-label="Fecha inicio"
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -1049,7 +1050,7 @@ const BannerForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha fin</label>
-          <input
+          <input aria-label="Fecha fin"
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -1114,7 +1115,7 @@ const PromotionForm: React.FC<{
     <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-2xl border border-zinc-100 dark:border-zinc-800">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-2xl text-zinc-900 dark:text-white">{promotion.id ? 'Editar Promoción' : 'Nueva Promoción'}</h3>
-        <button type="button" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
+        <button type="button" aria-label="Cerrar formulario" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
           <X size={24} className="text-zinc-400" />
         </button>
       </div>
@@ -1122,7 +1123,7 @@ const PromotionForm: React.FC<{
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">URL de imagen</label>
-          <input
+          <input aria-label="URL de imagen"
             type="text"
             value={formData.image}
             onChange={(e) => setFormData({ ...formData, image: e.target.value })}
@@ -1133,7 +1134,7 @@ const PromotionForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Título</label>
-          <input
+          <input aria-label="Título"
             type="text"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -1144,7 +1145,7 @@ const PromotionForm: React.FC<{
 
         <div className="md:col-span-2">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Descripción</label>
-          <textarea
+          <textarea aria-label="Descripción"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="Ej: Compra un termo y el segundo grabado es Gratis"
@@ -1155,7 +1156,7 @@ const PromotionForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Descuento</label>
-          <input
+          <input aria-label="Descuento"
             type="text"
             value={formData.discount}
             onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
@@ -1166,7 +1167,7 @@ const PromotionForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Código de cupón</label>
-          <input
+          <input aria-label="Código de cupón"
             type="text"
             value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value })}
@@ -1177,7 +1178,7 @@ const PromotionForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Válido hasta</label>
-          <input
+          <input aria-label="Válido hasta"
             type="date"
             value={formData.validUntil}
             onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
@@ -1187,7 +1188,7 @@ const PromotionForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha inicio</label>
-          <input
+          <input aria-label="Fecha inicio"
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -1197,7 +1198,7 @@ const PromotionForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha fin</label>
-          <input
+          <input aria-label="Fecha fin"
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -1262,7 +1263,7 @@ const TestimonialForm: React.FC<{
     <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-2xl border border-zinc-100 dark:border-zinc-800">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-2xl text-zinc-900 dark:text-white">{testimonial.id ? 'Editar Testimonio' : 'Nuevo Testimonio'}</h3>
-        <button type="button" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
+        <button type="button" aria-label="Cerrar formulario" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
           <X size={24} className="text-zinc-400" />
         </button>
       </div>
@@ -1270,7 +1271,7 @@ const TestimonialForm: React.FC<{
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Nombre del cliente</label>
-          <input
+          <input aria-label="Nombre del cliente"
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -1285,6 +1286,7 @@ const TestimonialForm: React.FC<{
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
+                aria-label={`${star} ${star===1?'estrella':'estrellas'}`} aria-pressed={formData.rating===star}
                 type="button"
                 onClick={() => setFormData({ ...formData, rating: star })}
                 className="p-2 transition-transform hover:scale-110"
@@ -1300,7 +1302,7 @@ const TestimonialForm: React.FC<{
 
         <div className="md:col-span-2">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Testimonio</label>
-          <textarea
+          <textarea aria-label="Testimonio"
             value={formData.text}
             onChange={(e) => setFormData({ ...formData, text: e.target.value })}
             placeholder="Escribe el testimonio del cliente..."
@@ -1311,7 +1313,7 @@ const TestimonialForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha inicio</label>
-          <input
+          <input aria-label="Fecha inicio"
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -1321,7 +1323,7 @@ const TestimonialForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha fin</label>
-          <input
+          <input aria-label="Fecha fin"
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -1379,7 +1381,7 @@ const FAQForm: React.FC<{
     <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-2xl border border-zinc-100 dark:border-zinc-800">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-2xl text-zinc-900 dark:text-white">{faq.id ? 'Editar Pregunta' : 'Nueva Pregunta FAQ'}</h3>
-        <button type="button" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
+        <button type="button" aria-label="Cerrar formulario" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
           <X size={24} className="text-zinc-400" />
         </button>
       </div>
@@ -1387,7 +1389,7 @@ const FAQForm: React.FC<{
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Categoría</label>
-          <select
+          <select aria-label="Categoría"
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             className="w-full px-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-yellow-400"
@@ -1400,7 +1402,7 @@ const FAQForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha inicio</label>
-          <input
+          <input aria-label="Fecha inicio"
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -1410,7 +1412,7 @@ const FAQForm: React.FC<{
 
         <div className="md:col-span-2">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Pregunta</label>
-          <input
+          <input aria-label="Pregunta"
             type="text"
             value={formData.question}
             onChange={(e) => setFormData({ ...formData, question: e.target.value })}
@@ -1421,7 +1423,7 @@ const FAQForm: React.FC<{
 
         <div className="md:col-span-2">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Respuesta</label>
-          <textarea
+          <textarea aria-label="Respuesta"
             value={formData.answer}
             onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
             placeholder="Escribe la respuesta..."
@@ -1432,7 +1434,7 @@ const FAQForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha fin</label>
-          <input
+          <input aria-label="Fecha fin"
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -1488,7 +1490,7 @@ const FeaturedProductForm: React.FC<{
     <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-2xl border border-zinc-100 dark:border-zinc-800">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-2xl text-zinc-900 dark:text-white">{product.id ? 'Editar Producto' : 'Nuevo Producto Destacado'}</h3>
-        <button type="button" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
+        <button type="button" aria-label="Cerrar formulario" onClick={onCancel} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl">
           <X size={24} className="text-zinc-400" />
         </button>
       </div>
@@ -1496,7 +1498,7 @@ const FeaturedProductForm: React.FC<{
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">ID del producto</label>
-          <input
+          <input aria-label="ID del producto"
             type="text"
             value={formData.productId}
             onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
@@ -1507,7 +1509,7 @@ const FeaturedProductForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Nombre del producto</label>
-          <input
+          <input aria-label="Nombre del producto"
             type="text"
             value={formData.productName}
             onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
@@ -1518,7 +1520,7 @@ const FeaturedProductForm: React.FC<{
 
         <div className="md:col-span-2">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">URL de imagen</label>
-          <input
+          <input aria-label="URL de imagen"
             type="text"
             value={formData.image}
             onChange={(e) => setFormData({ ...formData, image: e.target.value })}
@@ -1529,7 +1531,7 @@ const FeaturedProductForm: React.FC<{
 
         <div className="md:col-span-2">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Mensaje personalizado</label>
-          <textarea
+          <textarea aria-label="Mensaje personalizado"
             value={formData.customMessage}
             onChange={(e) => setFormData({ ...formData, customMessage: e.target.value })}
             placeholder="Ej: ¡El más vendido del mes!"
@@ -1540,7 +1542,7 @@ const FeaturedProductForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha inicio</label>
-          <input
+          <input aria-label="Fecha inicio"
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -1550,7 +1552,7 @@ const FeaturedProductForm: React.FC<{
 
         <div>
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Fecha fin</label>
-          <input
+          <input aria-label="Fecha fin"
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}

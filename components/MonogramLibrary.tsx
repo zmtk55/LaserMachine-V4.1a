@@ -1,3 +1,4 @@
+import {fontReference,fontReferenceBrief,identifyMonogram,fontFileDigest} from '../utils/fontReference';
 import React, { useState,useEffect } from 'react';
 import { Sparkles, Type, Wand2, Loader, Copy, Check, X, Crown, Star, Shield, Heart, Diamond, Hexagon, Circle, Square, Mountain, PawPrint, Skull, Flame, Anchor,  } from 'lucide-react';
 
@@ -6,6 +7,7 @@ import {productionFont} from '../utils/fontProvenance';
 import {loadOwnFont,outlineSvgText} from '../utils/outlineOwnFont';
 interface MonogramLibraryProps {
   fonts?:FontOption[];
+  initial?:{font:{id:number|string;sha256?:string};text:string;template:string};
   onSelectMonogram: (monogram: { text: string; style: string; svg: string; preview: React.ReactNode }) => void;
   onGenerateAI?: (prompt: string) => Promise<string>;
 }
@@ -66,7 +68,7 @@ const MONOGRAM_TEMPLATES: MonogramTemplate[] = [
 /** Same drawing in thumbnail, preview and export; fit pairs instead of overflowing borders. */
 export function monogramSvg(template: {id?:string;svg:(letter:string)=>string},initials:string){
  const clean=Array.from(initials.normalize('NFC').replace(/[^\p{L}\p{N}]/gu,'').toUpperCase()).slice(0,2).join('')||'A';
- let svg=template.svg(clean).replace(/font-family="Arial Black"/g,'font-family="Arial, sans-serif" font-weight="700"').replace(/font-size="(\d+)"/g,(all,n)=>Number(n)>=20?`font-size="${clean.length===2?Math.round(Number(n)*.8):n}"`:all);
+ let svg=template.svg(clean).replace(/<text[^>]*>♛<\/text>/g,'<path d="M37 25 L35 13 L43 18 L50 10 L57 18 L65 13 L63 25 Z" fill="black"/>').replace(/font-family="Arial Black"/g,'font-family="Arial, sans-serif" font-weight="700"').replace(/font-size="(\d+)"/g,(all,n)=>Number(n)>=20?`font-size="${clean.length===2?Math.round(Number(n)*.8):n}"`:all);
  // Narrow pictograms get their own top area; initials are never laid across their strokes.
  if(template.id&&/^(crown-|star-(?!6)|mountain-|anchor-|skull-|wings-|flame-)/.test(template.id)){
   const view=svg.match(/viewBox="([^"]+)"/)?.[1]||'0 0 100 100';
@@ -89,20 +91,20 @@ const TEMPLATES_BY_CATEGORY = MONOGRAM_TEMPLATES.reduce((acc, template) => {
   return acc;
 }, {} as Record<string, MonogramTemplate[]>);
 
-export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogram, onGenerateAI,fonts=[] }) => {
-  const [text, setText] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState(MONOGRAM_TEMPLATES[0]);
+export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogram, onGenerateAI,fonts=[],initial }) => {
+  const [text, setText] = useState(initial?.text||'');
+  const [selectedTemplate, setSelectedTemplate] = useState(MONOGRAM_TEMPLATES.find(t=>t.id===initial?.template)||MONOGRAM_TEMPLATES[0]);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   
   const ownFonts=fonts.filter(productionFont);
-  const [fontId,setFontId]=useState(ownFonts[0]?.id??0);
-  const selectedFont=ownFonts.find(f=>f.id===fontId)||ownFonts[0];
+  const [fontId,setFontId]=useState(initial?Number(initial.font.id):(ownFonts[0]?.id??0));
+  const selectedFont=ownFonts.find(f=>String(f.id)===String(fontId));
   const [outlines,setOutlines]=useState<Record<string,string>>({});
   const [fontError,setFontError]=useState('');
-  useEffect(()=>{let active=true;setOutlines({});setFontError('');if(!selectedFont){setFontError('No hay tipografías propias activas. Los monogramas con iniciales quedan pendientes; tus diseños anteriores se conservan.');return;}loadOwnFont(selectedFont).then(font=>{const result:Record<string,string>={};for(const template of MONOGRAM_TEMPLATES){try{result[template.id]=outlineSvgText(monogramSvg(template,text||'A'),font);}catch{}}if(active){setOutlines(result);if(!result[selectedTemplate.id])setFontError('La tipografía seleccionada no incluye los caracteres necesarios para este monograma.');}}).catch(()=>{if(active)setFontError('No se pudo leer la tipografía propia. No se usa una sustituta.');});return()=>{active=false;};},[selectedFont?.id,selectedFont?.fileData,text,selectedTemplate.id]);
+  useEffect(()=>{let active=true;setOutlines({});setFontError('');if(!selectedFont){setFontError('No hay tipografías propias activas. Los monogramas con iniciales quedan pendientes; tus diseños anteriores se conservan.');return;}Promise.all([loadOwnFont(selectedFont),fontFileDigest(selectedFont)]).then(([font,digest])=>{if(String(initial?.font.id)===String(selectedFont.id)&&initial?.font.sha256&&initial.font.sha256!==digest){if(active)setFontError('El archivo de la fuente original cambió. No se sustituye al editar. Conserva el dibujo o elige otra fuente.');return;}const result:Record<string,string>={};for(const template of MONOGRAM_TEMPLATES){try{result[template.id]=outlineSvgText(monogramSvg(template,text||'A'),font);}catch{}}if(active){setOutlines(result);if(!result[selectedTemplate.id])setFontError('La tipografía seleccionada no incluye los caracteres necesarios para este monograma.');}}).catch(()=>{if(active)setFontError('No se pudo leer la tipografía propia. No se usa una sustituta.');});return()=>{active=false;};},[selectedFont?.id,selectedFont?.fileData,text,selectedTemplate.id]);
   const rendered=(template:MonogramTemplate)=>outlines[template.id]||monogramSvg(template,'').replace(/<text[\s\S]*?<\/text>/g,'');
   const categories = ['Todos', ...Object.keys(TEMPLATES_BY_CATEGORY)];
   
@@ -110,13 +112,14 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
     ? MONOGRAM_TEMPLATES 
     : TEMPLATES_BY_CATEGORY[activeCategory] || [];
   
-  const handleSelect = () => {
+  const handleSelect = async () => {
     const letter = text.trim() || 'A';
-    const svg = outlines[selectedTemplate.id];if(!svg)return;
+    const svg = outlines[selectedTemplate.id];if(!svg||!selectedFont)return;
+    let digest:string;try{digest=await fontFileDigest(selectedFont);}catch{setFontError('No se pudo comprobar el archivo de fuente.');return;}
     onSelectMonogram({ 
       text: letter, 
       style: selectedTemplate.id, 
-      svg,
+      svg: selectedFont ? identifyMonogram(svg,{...fontReference(selectedFont)!,sha256:digest},letter,selectedTemplate.id) : svg,
       preview: selectedTemplate.icon
     });
   };
@@ -151,7 +154,7 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
       
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4">
-        <div className="mb-4 text-sm space-y-2"><p>Geometrías integradas. Las iniciales se convierten a contornos con un archivo propio del taller, sin fuentes del navegador.</p>{ownFonts.length>0&&<label className="block">Tipografía propia<select aria-label="Tipografía del monograma" value={selectedFont?.id} onChange={e=>setFontId(Number(e.target.value))} className="block w-full p-2 rounded border bg-transparent">{ownFonts.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}{fontError&&<p role="status" className="text-amber-600 dark:text-amber-400">{fontError}</p>}</div>
+        <div className="mb-4 text-sm space-y-2"><p>Elige una figura y escribe tus iniciales.</p>{ownFonts.length>0&&<div><span className="block mb-1">Letra de las iniciales</span><details className="relative" onKeyDown={e=>{if(e.key==='Escape'&&e.currentTarget.open){e.preventDefault();e.stopPropagation();e.currentTarget.open=false;e.currentTarget.querySelector('summary')?.focus();}}}><summary aria-label="Cambiar letra de las iniciales" className="block w-full p-2 rounded border cursor-pointer bg-transparent list-none"><span className={selectedFont?.cssFamily} style={{fontFamily:selectedFont?.cssFamily,fontSize:24}}>{text||'AB'}</span><span aria-hidden="true" className="float-right">⌄</span></summary><div role="group" aria-label="Muestras de letra para iniciales" className="absolute top-full left-0 right-0 z-20 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">{ownFonts.map((f,index)=><button key={f.id} type="button" aria-label={`Elegir muestra ${index+1}`} aria-pressed={selectedFont?.id===f.id} onClick={e=>{setFontId(f.id);e.currentTarget.closest('details')?.removeAttribute('open');e.currentTarget.closest('details')?.querySelector('summary')?.focus();}} className={`block w-full min-h-11 p-2 text-left border-b border-zinc-200 dark:border-zinc-700 ${f.cssFamily} ${selectedFont?.id===f.id?'bg-yellow-400/20':''}`} style={{fontFamily:f.cssFamily,fontSize:24}}>{text||'AB'}</button>)}</div></details>{selectedFont&&<p className="mt-1 text-xs text-zinc-700 dark:text-zinc-200">{fontReferenceBrief(fontReference(selectedFont))}</p>}</div>}{selectedFont?.bundled&&<p className="text-xs text-zinc-500">Fuente incluida, sin número de taller asignado.</p>}{fontError&&<p role="status" className="text-amber-600 dark:text-amber-400">{fontError}</p>}</div>
         {/* Text Input */}
         <div className="mb-4">
           <label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Tus iniciales (1-2 letras)</label>
@@ -159,6 +162,7 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value.replace(/[^\p{L}\p{N}]/gu,'').slice(0, 2).toUpperCase())}
+            aria-label="Tus iniciales"
             placeholder="AB"
             maxLength={2}
             className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-center text-2xl font-bold tracking-widest uppercase"
@@ -170,7 +174,7 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(cat)}
+              aria-pressed={activeCategory===cat} onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1.5 rounded-lg font-bold text-xs uppercase whitespace-nowrap transition-all ${
                 activeCategory === cat
                   ? 'bg-yellow-400 text-black'
@@ -199,7 +203,7 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
                   <span className="block w-full h-full [&_svg]:w-full [&_svg]:h-full" dangerouslySetInnerHTML={{__html:rendered(template)}}/>
                 </div>
               </div>
-              <p className="text-[10px] text-zinc-500 truncate">{template.name}</p>
+              <p className="text-[10px] leading-tight text-zinc-500 whitespace-normal min-h-6">{template.name}</p>
             </button>
           ))}
         </div>
@@ -226,11 +230,12 @@ export const MonogramLibrary: React.FC<MonogramLibraryProps> = ({ onSelectMonogr
                 type="text"
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
+                aria-label="Describe tu diseño"
                 placeholder="Describe tu diseño..."
                 className="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm"
               />
               <button
-                onClick={handleAIGenerate}
+                aria-label="Generar monograma con IA" onClick={handleAIGenerate}
                 disabled={!aiPrompt.trim() || isGenerating}
                 className="px-4 py-2 bg-yellow-400 disabled:bg-zinc-300 text-black font-bold rounded-lg"
               >

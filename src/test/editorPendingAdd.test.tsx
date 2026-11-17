@@ -31,5 +31,5 @@ for(const kind of ['simple','detailed'] as const){
  it(`${kind}: discards pending add after stock changes`,async()=>{const t=setup(kind);t.click();t.view.rerender(t.node({...t.props,product:{...product,colors:[{...product.colors[0],stock:0}]}}));await act(async()=>resolve());expect(t.save).not.toHaveBeenCalled();});
  it(`${kind}: discards pending add after catalogue price changes`,async()=>{const t=setup(kind);t.click();expect(checkFontFile).toHaveBeenCalledOnce();t.view.rerender(t.node({...t.props,product:{...product,price:400}}));await act(async()=>resolve());expect(t.save).not.toHaveBeenCalled();});
  it(`${kind}: discards pending add after route unmounts`,async()=>{const t=setup(kind);t.click();t.view.unmount();await act(async()=>resolve());expect(t.save).not.toHaveBeenCalled();});
- it(`${kind}: discards pending add after quantity changes`,async()=>{const t=setup(kind);t.click();fireEvent.click(screen.getByRole('button',{name:kind==='simple'?'+':'Aumentar cantidad de termos'}));await act(async()=>resolve());expect(t.save).not.toHaveBeenCalled();});
+ it(`${kind}: discards pending add after quantity changes`,async()=>{const t=setup(kind);t.click();fireEvent.click(screen.getByRole('button',{name:kind==='simple'?'Aumentar cantidad':'Aumentar cantidad de termos'}));await act(async()=>resolve());expect(t.save).not.toHaveBeenCalled();});
 }

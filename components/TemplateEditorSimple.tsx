@@ -152,7 +152,7 @@ export const TemplateEditorSimple: React.FC<TemplateEditorSimpleProps> = ({
 
             <div>
               <label className="text-zinc-500 text-xs uppercase block mb-1">Ocasión</label>
-              <select
+              <select aria-label="Ocasión de la plantilla"
                 value={occasion}
                 onChange={(e) => setOccasion(e.target.value as any)}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white"
@@ -203,6 +203,8 @@ export const TemplateEditorSimple: React.FC<TemplateEditorSimpleProps> = ({
               {texts.map((text, idx) => (
                 <div
                   key={text.id}
+                  role="button" tabIndex={0} aria-label={`Seleccionar texto ${idx+1}`} aria-pressed={selectedId===text.id}
+                  onKeyDown={e=>{if(e.target===e.currentTarget&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setSelectedId(text.id);}}}
                   onClick={() => setSelectedId(text.id)}
                   className={`p-3 rounded-xl border cursor-pointer transition-all ${
                     selectedId === text.id
@@ -215,19 +217,19 @@ export const TemplateEditorSimple: React.FC<TemplateEditorSimpleProps> = ({
                     <span className="flex-1 text-white font-medium truncate">{text.content}</span>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => { e.stopPropagation(); moveText(text.id, 'up'); }}
+                        aria-label={`Subir texto ${idx+1}`} onClick={(e) => { e.stopPropagation(); moveText(text.id, 'up'); }}
                         className="p-1 text-zinc-500 hover:text-white"
                       >
                         <ChevronUp size={16} />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); moveText(text.id, 'down'); }}
+                        aria-label={`Bajar texto ${idx+1}`} onClick={(e) => { e.stopPropagation(); moveText(text.id, 'down'); }}
                         className="p-1 text-zinc-500 hover:text-white"
                       >
                         <ChevronDown size={16} />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); deleteText(text.id); }}
+                        aria-label={`Eliminar texto ${idx+1}`} onClick={(e) => { e.stopPropagation(); deleteText(text.id); }}
                         className="p-1 text-zinc-500 hover:text-red-400"
                       >
                         <Trash2 size={16} />
@@ -301,7 +303,7 @@ export const TemplateEditorSimple: React.FC<TemplateEditorSimpleProps> = ({
                 <div className="flex flex-wrap gap-2">
                   {TEMPLATE_TEXT_COLORS.map(color => (
                     <button
-                      key={color}
+                      key={color} aria-label={`Color de texto ${color}`} aria-pressed={selectedText.color===color}
                       onClick={() => updateText(selectedText.id, { color })}
                       className={`w-8 h-8 rounded-lg border-2 ${
                         selectedText.color === color ? 'border-yellow-400' : 'border-transparent'
@@ -311,7 +313,7 @@ export const TemplateEditorSimple: React.FC<TemplateEditorSimpleProps> = ({
                   ))}
                 </div>
                 <input
-                  type="color"
+                  type="color" aria-label="Color personalizado del texto"
                   value={selectedText.color}
                   onChange={(e) => updateText(selectedText.id, { color: e.target.value })}
                   className="w-full mt-2 h-10 rounded-xl"
