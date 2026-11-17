@@ -1,3 +1,4 @@
+import {useUserCloudState} from '../services/useUserCloudState';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface Order {
@@ -20,18 +21,7 @@ interface OrderHistoryContextType {
 const OrderHistoryContext = createContext<OrderHistoryContextType | null>(null);
 
 export const OrderHistoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [orderHistory, setOrderHistory] = useState<Order[]>([]);
-
-  useEffect(() => {
-    const savedHistory = localStorage.getItem('lm_order_history');
-    if (savedHistory) {
-      setOrderHistory(JSON.parse(savedHistory));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('lm_order_history', JSON.stringify(orderHistory));
-  }, [orderHistory]);
+  const [orderHistory,setOrderHistory] = useUserCloudState<Order[]>('order_history',[]);
 
   const addToHistory = (order: Order) => {
     setOrderHistory(prev => {

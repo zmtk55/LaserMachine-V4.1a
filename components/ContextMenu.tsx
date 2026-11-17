@@ -274,16 +274,6 @@ const ContextMenu: React.FC = () => {
     setActiveSubmenu({ items, position });
   };
 
-  // Hover state management for items
-  const handleItemHover = (e: React.MouseEvent<HTMLDivElement>, isHovering: boolean) => {
-    const target = e.currentTarget;
-    if (isHovering) {
-      target.style.backgroundColor = item.danger ? colors.statusErrorBg : colors.bgTertiary;
-    } else {
-      target.style.backgroundColor = 'transparent';
-    }
-  };
-
   if (!state.isOpen) return null;
 
   const menuStyles: React.CSSProperties = {

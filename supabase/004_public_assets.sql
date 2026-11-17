@@ -1,0 +1,10 @@
+BEGIN;
+CREATE FUNCTION public.lm_assets(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT coalesce(jsonb_agg(public.lm_pick(x,'id name url type fileType tags')),'[]') FROM jsonb_array_elements(coalesce(j,'[]')) x$$;
+CREATE FUNCTION public.lm_template_texts(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT coalesce(jsonb_agg(public.lm_pick(x,'content fontFamily size color xPosition yPosition rotation')),'[]') FROM jsonb_array_elements(coalesce(j,'[]')) x$$;
+CREATE FUNCTION public.lm_template(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT public.lm_pick(j,'id name occasion preview previewImage previewColor isActive tags order collection')||jsonb_build_object('texts',public.lm_template_texts(j->'texts'))$$;
+CREATE FUNCTION public.lm_templates(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT coalesce(jsonb_agg(public.lm_template(x)),'[]') FROM jsonb_array_elements(coalesce(j,'[]')) x WHERE coalesce(x->>'isActive','true')='true'$$;
+CREATE FUNCTION public.lm_colors(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT coalesce(jsonb_agg(public.lm_pick(x,'name hex')),'[]') FROM jsonb_array_elements(coalesce(j,'[]')) x$$;
+CREATE FUNCTION public.lm_store_assets(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT jsonb_build_object('galleryAssets',public.lm_assets(j->'galleryAssets'),'brandingAssets',public.lm_assets(j->'brandingAssets'),'designTemplates',public.lm_templates(j->'designTemplates'),'globalColors',public.lm_colors(j->'globalColors'))$$;
+CREATE FUNCTION public.lm_store_base(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT public.lm_pick(j,'businessName slogan logoUrl logoFont customLogoFontData bannerUrl faviconUrl productCategories accentColor themeDarkModeBg bgPattern shippingInfo')$$;
+CREATE OR REPLACE VIEW public.lm_storefront AS SELECT id,revision,public.lm_store_base(data)||public.lm_store_assets(data) AS data FROM public.lm_store_private WHERE id='main';
+COMMIT;

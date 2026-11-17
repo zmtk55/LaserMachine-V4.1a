@@ -1,0 +1,13 @@
+import React from 'react';
+import {render,screen,fireEvent,cleanup} from '@testing-library/react';
+import {it,expect,vi,afterEach} from 'vitest';
+import {CouponManager} from '../../components/CouponManager';
+afterEach(cleanup);
+const coupon={code:'VERANO',discountPercent:10,maxUses:100,active:true,usedCount:0,createdAt:'2026-11-01T12:00:00Z'};
+function open(coupons:any[]=[]){const update=vi.fn();render(<CouponManager coupons={coupons} onUpdateStoreConfig={update}/>);fireEvent.click(screen.getByRole('button',{name:'Nuevo Cupón'}));fireEvent.change(screen.getByPlaceholderText('CODIGO2024'),{target:{value:'NUEVO'}});return update;}
+it.each([-5,101])('rejects discount outside advertised 1-100 range: %s',value=>{const update=open();fireEvent.change(screen.getAllByRole('spinbutton')[0],{target:{value:String(value)}});fireEvent.click(screen.getByRole('button',{name:'Crear Cupón'}));expect(update).not.toHaveBeenCalled();expect(screen.getByRole('alert')).toBeTruthy();});
+it('rejects normalized duplicate codes',()=>{const update=open([coupon]);fireEvent.change(screen.getByPlaceholderText('CODIGO2024'),{target:{value:' verano '}});fireEvent.click(screen.getByRole('button',{name:'Crear Cupón'}));expect(update).not.toHaveBeenCalled();});
+it('does not turn an unassigned personal coupon into a global coupon',()=>{const update=open();fireEvent.click(screen.getByRole('button',{name:'Personal'}));fireEvent.click(screen.getByRole('button',{name:'Crear Cupón'}));expect(update).not.toHaveBeenCalled();});
+it('duplicates with a distinct code even when COPY already exists',()=>{const update=vi.fn();render(<CouponManager coupons={[coupon,{...coupon,code:'VERANO-COPY'}]} onUpdateStoreConfig={update}/>);fireEvent.click(screen.getAllByTitle('Duplicar')[0]);const rows=update.mock.calls[0][0].coupons;expect(new Set(rows.map((c:any)=>c.code)).size).toBe(3);});
+it.each([-2,1.5])('rejects invalid use count %s',value=>{const update=open();fireEvent.change(screen.getAllByRole('spinbutton')[1],{target:{value:String(value)}});fireEvent.click(screen.getByRole('button',{name:'Crear Cupón'}));expect(update).not.toHaveBeenCalled();expect(screen.getByRole('alert')).toBeTruthy();});
+it('normalizes a new code and permits the existing unlimited-use option',()=>{const update=open();fireEvent.change(screen.getByPlaceholderText('CODIGO2024'),{target:{value:' nuevo '}});fireEvent.change(screen.getAllByRole('spinbutton')[1],{target:{value:'-1'}});fireEvent.click(screen.getByRole('button',{name:'Crear Cupón'}));expect(update.mock.calls[0][0].coupons[0]).toMatchObject({code:'NUEVO',maxUses:-1,discountPercent:10});});

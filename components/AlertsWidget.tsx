@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
-import { Product, Order } from '../types';
+import { Product, Order, OrderStatus } from '../types';
 import { 
   AlertTriangle, AlertCircle, Package, ShoppingCart, 
-  TrendingDown, CheckCircle, Bell, ArrowRight,
+  TrendingDown, CheckCircle, Bell, ArrowRight, Info,
   ExternalLink, Plus, Eye, Zap
 } from 'lucide-react';
 
@@ -34,18 +34,22 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
 
   const outOfStockProducts = products.filter(p => {
     const totalStock = p.colors?.reduce((sum, c) => sum + (c.stock || 0), 0) || 0;
-    return totalStock === 0;
+    return (p.colors || []).length > 0 && totalStock === 0;
   });
 
-  const pendingOrders = orders.filter(o => o.status === 'PENDING');
-  const inProductionOrders = orders.filter(o => o.status === 'IN_PROGRESS');
+  const pendingConfirmProducts = products.filter(p => (p.colors || []).length === 0);
+
+  const pendingOrders = orders.filter(o => (o.status === OrderStatus.RECEIVED || o.status === OrderStatus.WAITING_APPROVAL));
+  const inProductionOrders = orders.filter(o => o.status === OrderStatus.IN_PRODUCTION);
 
   // Actions - Always navigate to section, regardless of whether there are issues
   const goToInventory = () => {
+    console.log('Going to INVENTORY');
     if (onNavigate) onNavigate('INVENTORY');
   };
 
   const goToOrders = () => {
+    console.log('Going to ORDERS');
     if (onNavigate) onNavigate('ORDERS');
   };
 
@@ -83,10 +87,27 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
       label: 'Sin stock',
       message: outOfStockProducts.length > 0 
         ? `${outOfStockProducts.slice(0, 2).map(p => p.name).join(', ')}${outOfStockProducts.length > 2 ? ` y ${outOfStockProducts.length - 2} más` : ''}`
-        : 'Todo en orden',
+        : pendingConfirmProducts.length?'Sin agotados registrados; hay existencias por confirmar':'Sin agotados registrados',
       priority: outOfStockProducts.length > 0 ? 'high' : 'low',
       action: {
         label: outOfStockProducts.length > 0 ? 'Reabastecer' : 'Ver inventario',
+        onClick: () => goToInventory()
+      }
+    },
+    {
+      id: 'inventory-pending-confirm',
+      icon: Package,
+      color: 'text-zinc-500',
+      bgColor: 'bg-zinc-50 dark:bg-zinc-800/40',
+      borderColor: 'border-zinc-200 dark:border-zinc-700',
+      count: pendingConfirmProducts.length,
+      label: 'Inventario por confirmar',
+      message: pendingConfirmProducts.length > 0
+        ? `${pendingConfirmProducts.slice(0, 2).map(p => p.name).join(', ')}${pendingConfirmProducts.length > 2 ? ` y ${pendingConfirmProducts.length - 2} más` : ''}`
+        : products.length?'Sin productos pendientes de confirmar':'Sin productos registrados',
+      priority: pendingConfirmProducts.length > 0 ? 'medium' : 'low',
+      action: {
+        label: 'Ver inventario',
         onClick: () => goToInventory()
       }
     },
@@ -100,7 +121,7 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
       label: 'Stock bajo',
       message: lowStockProducts.length > 0
         ? `${lowStockProducts.slice(0, 2).map(p => p.name).join(', ')}${lowStockProducts.length > 2 ? ` y ${lowStockProducts.length - 2} más` : ''}`
-        : 'Niveles óptimos',
+        : pendingConfirmProducts.length?'Sin stock bajo registrado; hay existencias por confirmar':'Sin stock bajo registrado',
       priority: lowStockProducts.length > 0 ? 'medium' : 'low',
       action: {
         label: 'Ver inventario',
@@ -158,13 +179,7 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
             <div>
               <h3 className="font-bold text-zinc-900 dark:text-white">Alertas del Sistema</h3>
               <p className="text-xs text-zinc-500">
-                {highPriorityCount > 0 ? (
-                  <span className="text-red-500 font-medium">{highPriorityCount} requieren atención</span>
-                ) : mediumPriorityCount > 0 ? (
-                  <span className="text-amber-500 font-medium">{mediumPriorityCount} advertencias</span>
-                ) : (
-                  'Todo funcionando correctamente'
-                )}
+                {alertItems.filter(item=>item.count>0&&item.id!=='in-production').length?`${alertItems.filter(item=>item.count>0&&item.id!=='in-production').length} ${alertItems.filter(item=>item.count>0&&item.id!=='in-production').length===1?'categoría con pendientes':'categorías con pendientes'}`:'Sin alertas registradas'}
               </p>
             </div>
           </div>
@@ -183,15 +198,17 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
         {alertItems.map((item) => {
           const Icon = item.icon;
           const hasIssue = item.count > 0;
+          const stockUnknown=!!pendingConfirmProducts.length&&['out-of-stock','low-stock'].includes(item.id);
           
           return (
             <div 
-              key={item.id}
+              key={item.id} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();item.action?.onClick();}}}
               className={`
                 p-4 flex items-center gap-3 transition-all cursor-pointer
                 ${hasIssue ? 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:bg-zinc-100 dark:active:bg-zinc-800' : ''}
               `}
               onClick={() => {
+                console.log('Alert clicked:', item.id);
                 if (item.action?.onClick) {
                   item.action.onClick();
                 }
@@ -225,7 +242,7 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-zinc-500 truncate">
+                <p className="text-xs text-zinc-500">
                   {item.message}
                 </p>
                 
@@ -251,7 +268,7 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
               {hasIssue ? (
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
               ) : (
-                <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                stockUnknown?<Info className="w-4 h-4 text-zinc-500 shrink-0"/>:<CheckCircle className="w-4 h-4 text-zinc-500 shrink-0" />
               )}
             </div>
           );
@@ -276,7 +293,7 @@ export const AlertsWidget: React.FC<AlertsWidgetProps> = ({
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors"
             >
               <Eye className="w-3.5 h-3.5" />
-              Revisar {pendingOrders.length} pedidos
+              Revisar {pendingOrders.length} {pendingOrders.length===1?'pedido':'pedidos'}
             </button>
           )}
           {inProductionOrders.length > 0 && (

@@ -1,4 +1,26 @@
+import{OrderAssetGallery}from'./OrderAssetGallery';
+import {couponIdentityError} from '../utils/couponValidation';
+import{FilterDisclosure}from'./FilterDisclosure';
+import{RowActions}from'./RowActions';
+import{DeliveryCalendar}from'./DeliveryCalendar';
+import{useNotifications}from'../contexts/NotificationContext';
+import{OperationsOverview}from'./OperationsOverview';
+import{hasFontFile,fontSourceLabel,checkFontFile}from'../utils/fontProvenance';
+import{itemProductLabel,itemColorLabel}from'../utils/orderItemDisplay';
+import{useModalFocus}from'../utils/useModalFocus';
+import {CloudSaveStatus} from './CloudSaveStatus';
+import {AdminNavigation,ADMIN_SECTIONS} from './AdminNavigation';
+import {previewImageScale,previewInk} from '../utils/designPreview';
+import {productPreviewImage,productColorHex,referencePhotoColor} from '../utils/productColorPreview';
+import {supabase} from '../services/supabaseClient';
+import {hydrateOrderAssets} from '../services/orderAssets';
+import {localCalendarDate,localDateKey} from '../utils/calendarDate';
+import {customerSummaries} from '../utils/customerProfiles';
+import {CustomerProfile} from '../types';
+import {useCloudRecord} from '../services/useCloudRecord';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+
+
 import { 
   Order, OrderStatus, Product, FontOption, ProductBrand, 
   PricingConfig, StoreConfig, OrderItem, Coupon, BrandingAsset,
@@ -8,7 +30,7 @@ import { notificationService } from '../services/notificationService';
 import { AdvancedStats } from './AdvancedStats';
 import { KPICard, Sparkline } from './dashboard';
 import { 
-  Settings, Search, Trash2, Edit, X, Plus, Package, Minus,
+  Menu, Settings, Search, Trash2, Edit, X, Plus, Package, Minus,
   Type, LayoutDashboard, Users, Upload, Clock, 
   Save, DollarSign, RefreshCw, ChevronRight, Download, UserCircle, 
   CreditCard, Calendar, MessageCircle, Palette, MessageSquare, AlertTriangle, 
@@ -21,7 +43,7 @@ import {
   Flame, Ban, CheckCheck, Timer, CheckCircle, Play, MoreHorizontal, ChevronLeft, StickyNote,
   Layers, Forward, CheckSquare, Square, FileJson, EyeOff, ChevronUp, ImagePlus, Pencil, Crop,
   Paperclip, Lock, PhoneCall, Bell, CalendarClock, ShoppingBag, TrendingDown, PanelRight,
-  History, Banknote, QrCode, Grid3X3, AlignLeft, Edit2,
+  History, Banknote, QrCode, Grid3X3, Edit2,
   LayoutTemplate
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
@@ -31,20 +53,45 @@ import { BackgroundSettings } from './BackgroundSettings';
 import InventoryManager from './InventoryManager';
 import { TemplateManagerPro } from './TemplateManagerPro';
 import { AlertsWidget } from './AlertsWidget';
-import { migrateProductsToCloud, migrateFontsToCloud, migrateConfigToCloud, migrateOrdersToCloud } from '../services/firebaseService';
+
 import { ClientDashboard } from './ClientDashboard';
 import { CouponManager } from './CouponManager';
 import { ContentManager } from './ContentManager';
 import { Sparkles } from 'lucide-react';
 
+// Tabbed single-view preview: one large canvas, switch Frente/Reverso without doubling space.
+const SidePreviewTabs: React.FC<{ front: React.ReactNode; back: React.ReactNode }> = ({ front, back }) => {
+    const [side, setSide] = useState<'front' | 'back'>('front');
+    const tabCls = (active: boolean) =>
+        `flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors min-h-[44px] ${
+            active ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+        }`;
+    return (
+        <div>
+            <div role="tablist" aria-label="Cara del diseño" className="flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                <button role="tab" aria-selected={side === 'front'} onClick={() => setSide('front')} className={tabCls(side === 'front')}>Frente</button>
+                <button role="tab" aria-selected={side === 'back'} onClick={() => setSide('back')} className={tabCls(side === 'back')}>Reverso</button>
+            </div>
+            <div className="mt-3 w-full max-w-md mx-auto">
+                {side === 'front' ? front : back}
+            </div>
+        </div>
+    );
+};
+
+
 interface AdminDashboardProps {
   orders: Order[];
+  customers?: CustomerProfile[];
   products: Product[];
   fonts: FontOption[];
   pricing: PricingConfig;
   storeConfig: StoreConfig;
   user: User | null;
   setUser: (user: User | null) => void;
+  cloudStatus?: React.ReactNode;
+  shellActions?:{label:string;onClick:()=>void}[];
+  onSaveCloud?: () => Promise<void>;
   onUpdatePricing: (config: PricingConfig) => void;
   onUpdateStoreConfig: (config: StoreConfig) => void;
   onUpdateOrder: (order: Order) => void;
@@ -66,8 +113,8 @@ interface AdminDashboardProps {
   // Navigation Control for Assistant
   activeTab?: 'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT';
   onTabChange?: (tab: 'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'CONTENT') => void;
-  settingsTab?: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM';
-  onSettingsTabChange?: (tab: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM') => void;
+  settingsTab?: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM' | 'ASSISTANT';
+  onSettingsTabChange?: (tab: 'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM' | 'ASSISTANT') => void;
 }
 
 // --- UTILS ---
@@ -78,6 +125,7 @@ const formatDateSimple = (dateStr: string) => new Date(dateStr).toLocaleDateStri
 // Helper para normalizar fechas a formato YYYY-MM-DD (para comparación correcta en calendario)
 const normalizeDate = (date: Date | string | undefined): string => {
     if (!date) return '';
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
     const d = typeof date === 'string' ? new Date(date) : date;
     if (isNaN(d.getTime())) return '';
     const year = d.getFullYear();
@@ -166,10 +214,12 @@ const TIME_SLOTS = generateTimeSlots();
 
 const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { isOpen: boolean, onClose: () => void, onAddFonts: (fonts: FontOption[]) => void, existingFonts?: FontOption[] }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const active=useRef(true);useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
+    const panelRef=useRef<HTMLDivElement>(null);useModalFocus(isOpen,panelRef,onClose);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [defaultCategory, setDefaultCategory] = useState<FontCategory>('FONTS 2026');
-    const [startFontNumber, setStartFontNumber] = useState<number>(Math.max(0, ...existingFonts.map(f => f.id)) + 1);
+    const [startFontNumber, setStartFontNumber] = useState<number>(Array.from({length:999},(_,i)=>i+1).find(id=>!existingFonts.some(f=>f.id===id))??1);
     const [isDragOver, setIsDragOver] = useState(false);
     const [processedFonts, setProcessedFonts] = useState<FontOption[]>([]);
     const [previewText, setPreviewText] = useState('AaBbCc 123');
@@ -201,7 +251,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
     };
 
     const handleFiles = (files: FileList | null) => {
-        if (!files) return;
+        if (!files||isProcessing) return;
         const newFiles = Array.from(files);
         const validFiles: File[] = [];
         const errors: string[] = [];
@@ -244,80 +294,49 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
 
     const processUpload = async () => {
         setIsProcessing(true);
-        const newFonts: FontOption[] = [];
-        
-        for (let i = 0; i < selectedFiles.length; i++) {
-            const file = selectedFiles[i];
-            const reader = new FileReader();
-            await new Promise<void>((resolve) => {
-                reader.onload = (e) => {
-                    const result = e.target?.result as string;
-                    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").toUpperCase();
-                    const fontNumber = startFontNumber + i;
-                    newFonts.push({
-                        id: fontNumber,
-                        name: cleanName,
-                        category: defaultCategory,
-                        cssFamily: `font-custom-${fontNumber}`,
-                        isCustom: true,
-                        fileData: result,
-                        active: false
-                    });
-                    resolve();
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-        
-        setProcessedFonts(newFonts);
-        onAddFonts(newFonts);
-        setIsProcessing(false);
-        setSelectedFiles([]);
+        try{
+          if(!selectedFiles.length)throw Error('Selecciona archivos de tipografía.');
+          if(!Number.isInteger(startFontNumber)||startFontNumber<1||startFontNumber+selectedFiles.length-1>999||selectedFiles.some((_,i)=>existingFonts.some(f=>f.id===startFontNumber+i)))throw Error('El rango de IDs debe estar entre 1 y 999, sin números ocupados.');
+          const newFonts:FontOption[]=[];
+          for(let i=0;i<selectedFiles.length;i++){
+            const file=selectedFiles[i];
+            const result=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(Error('No se pudo leer '+file.name));reader.readAsDataURL(file);});
+            if(!active.current)return;
+            await checkFontFile(result);
+            if(!active.current)return;
+            const id=startFontNumber+i;
+            newFonts.push({id,name:file.name.replace(/\.[^/.]+$/,'').replace(/[-_]/g,' ').toUpperCase(),category:defaultCategory,categories:[defaultCategory],cssFamily:`font-custom-${id}`,isCustom:true,fileData:result,active:false});
+          }
+          if(!active.current)return;
+          onAddFonts(newFonts);setSelectedFiles([]);setProcessedFonts([]);onClose();
+          alert(`${newFonts.length} archivos comprobados y preparados. Guarda los cambios en nube para confirmar. Se agregan inactivos.`);
+        }catch(error){if(!active.current)return;alert(error instanceof Error?error.message:'No se pudieron comprobar los archivos. No se agregó el lote.');}
+        finally{if(active.current)setIsProcessing(false);}
+    };
+
+    useEffect(()=>{
+        let cancelled=false;
         setProcessedFonts([]);
-        onClose();
-        alert(`${newFonts.length} fuentes cargadas.`);
-    };
-
-    // Generar previsualización de fuentes
-    const previewFonts = async () => {
-        const fonts: FontOption[] = [];
-        for (let i = 0; i < selectedFiles.length; i++) {
-            const file = selectedFiles[i];
-            const reader = new FileReader();
-            await new Promise<void>((resolve) => {
-                reader.onload = (e) => {
-                    const result = e.target?.result as string;
-                    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").toUpperCase();
-                    const timestampId = Date.now() + i;
-                    fonts.push({
-                        id: timestampId,
-                        name: cleanName,
-                        category: defaultCategory,
-                        cssFamily: `font-preview-${timestampId}`,
-                        isCustom: true,
-                        fileData: result,
-                        active: true
-                    });
-                    resolve();
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-        setProcessedFonts(fonts);
-    };
-
-    useEffect(() => {
-        if (selectedFiles.length > 0 && processedFonts.length === 0) {
-            previewFonts();
-        }
-    }, [selectedFiles]);
+        (async()=>{
+          const result:FontOption[]=[];
+          for(let i=0;i<selectedFiles.length;i++){
+            const file=selectedFiles[i];
+            const data=await new Promise<string|null>(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reader.onabort=()=>resolve(null);reader.readAsDataURL(file);});
+            if(cancelled||!active.current)return;
+            if(!data)continue;
+            result.push({id:Date.now()+i,name:file.name.replace(/\.[^/.]+$/,'').replace(/[-_]/g,' ').toUpperCase(),category:defaultCategory,cssFamily:`font-preview-${i}`,isCustom:true,fileData:data,active:true});
+          }
+          if(!cancelled&&active.current)setProcessedFonts(result);
+        })();
+        return()=>{cancelled=true;};
+    },[selectedFiles,defaultCategory]);
 
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-            <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-                <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><X size={20}/></button>
-                <h3 className="text-xl font-bold text-white mb-4">Carga Masiva de Fuentes</h3>
+            <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Carga por lotes de fuentes" className="lm-bulk-font-dialog bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <button aria-label="Cerrar carga de fuentes" onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><X size={20}/></button>
+                <h3 className="text-xl font-bold text-white mb-4 pr-8">Carga Masiva de Fuentes</h3>
                 
                 {/* Zona de arrastrar y soltar */}
                 <div 
@@ -329,7 +348,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => !isProcessing&&fileInputRef.current?.click()}
                 >
                     <UploadCloud size={48} className={`mx-auto mb-4 ${isDragOver ? 'text-yellow-400' : 'text-zinc-400'}`} />
                     <p className="text-zinc-300 font-medium mb-2">Arrastra archivos aquí o haz clic para seleccionar</p>
@@ -339,7 +358,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                     type="file" 
                     ref={fileInputRef} 
                     className="hidden" 
-                    multiple 
+                    multiple disabled={isProcessing}
                     accept=".ttf,.otf" 
                     onChange={(e) => handleFiles(e.target.files)}
                 />
@@ -350,7 +369,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                         <div className="flex justify-between items-center mb-2">
                             <p className="text-sm text-zinc-400">{selectedFiles.length} archivos seleccionados</p>
                             <button 
-                                onClick={() => { setSelectedFiles([]); setProcessedFonts([]); }}
+                                disabled={isProcessing} onClick={() => { setSelectedFiles([]); setProcessedFonts([]); }}
                                 className="text-xs text-red-400 hover:text-red-300"
                             >
                                 Limpiar todo
@@ -364,7 +383,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                                         <span className="text-zinc-300 truncate max-w-[200px]">{file.name}</span>
                                         <span className="text-zinc-500 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
                                     </div>
-                                    <button onClick={() => removeFile(index)} className="text-zinc-500 hover:text-red-400">
+                                    <button disabled={isProcessing} aria-label={`Quitar ${file.name}`} onClick={() => removeFile(index)} className="text-zinc-500 hover:text-red-400">
                                         <X size={14} />
                                     </button>
                                 </div>
@@ -378,7 +397,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                     <div>
                         <label className="text-sm text-zinc-400 mb-2 block">Categoría por defecto</label>
                         <select 
-                            value={defaultCategory} 
+                            disabled={isProcessing} value={defaultCategory} 
                             onChange={(e) => setDefaultCategory(e.target.value as any)} 
                             className="w-full bg-black border border-zinc-700 p-3 rounded-xl text-white text-sm"
                         >
@@ -389,7 +408,7 @@ const BulkFontModal = ({ isOpen, onClose, onAddFonts, existingFonts = [] }: { is
                         <label className="text-sm text-zinc-400 mb-2 block">Número de fuente inicial</label>
                         <input 
                             type="number" 
-                            value={startFontNumber} 
+                            disabled={isProcessing} value={startFontNumber} 
                             onChange={(e) => setStartFontNumber(parseInt(e.target.value) || 1)} 
                             className="w-full bg-black border border-zinc-700 p-3 rounded-xl text-white text-sm font-mono"
                             min={1}
@@ -620,6 +639,9 @@ const ALL_CATEGORIES = ['BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'];
 
 const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { isOpen: boolean; onClose: () => void; font?: FontOption; onSave: (font: FontOption) => void; existingFonts?: FontOption[] }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const uploadActive=useRef(true);
+    const uploadInterval=useRef<ReturnType<typeof setInterval>|null>(null);
+    useEffect(()=>{uploadActive.current=true;return()=>{uploadActive.current=false;if(uploadInterval.current)clearInterval(uploadInterval.current);};},[]);
     const [data, setData] = useState<FontOption>(font || { id: 0, name: '', cssFamily: '', category: 'BASICAS' });
     const [fontFile, setFontFile] = useState<string | null>(font?.fileData || null);
     const [isUploading, setIsUploading] = useState(false);
@@ -665,7 +687,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
             setData(font);
             setFontFile(font.fileData || null);
             setFontIdError('');
-            setSelectedCategories(font.category ? [font.category] : ['BASICAS']);
+            setSelectedCategories(font.categories?.length?font.categories:font.category ? [font.category] : ['BASICAS']);
             setPreviewText('Laser Machine México 2026');
         }
     }, [isOpen, font, existingFonts]);
@@ -679,27 +701,31 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
             alert('Solo se aceptan archivos .ttf y .otf');
             return;
         }
+        if(file.size>5*1024*1024){alert('La fuente no puede superar 5 MB.');return;}
         setIsUploading(true);
         setUploadProgress(0);
-        const progressInterval = setInterval(() => {
+        const progressInterval = uploadInterval.current = setInterval(() => {
             setUploadProgress(prev => {
                 if (prev >= 90) { clearInterval(progressInterval); return prev; }
                 return prev + 20;
             });
         }, 100);
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
+            if(!uploadActive.current)return;
             const result = ev.target?.result as string;
+            try{await checkFontFile(result);}catch{if(!uploadActive.current)return;setIsUploading(false);clearInterval(progressInterval);alert('El archivo no se pudo cargar como tipografía. El anterior se conserva.');return;}
+            if(!uploadActive.current)return;
             setFontFile(result);
             setUploadProgress(100);
             setIsUploading(false);
             clearInterval(progressInterval);
-            if (!data.name) {
+            {
                 const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').toUpperCase();
-                setData({ ...data, name: cleanName });
+                setData(prev=>prev.name?prev:{ ...prev, name: cleanName });
             }
         };
-        reader.onerror = () => { setIsUploading(false); clearInterval(progressInterval); alert('Error al leer el archivo'); };
+        reader.onerror = () => { if(!uploadActive.current)return;setIsUploading(false); clearInterval(progressInterval); alert('Error al leer el archivo'); };
         reader.readAsDataURL(file);
     };
     
@@ -719,35 +745,37 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
     };
     
     const handleSave = () => {
-        if (fontIdError) { alert('Corrige el número de fuente antes de guardar'); return; }
+        if (!validateFontId(data.id,font?.id)) { alert('Corrige el número de fuente antes de guardar'); return; }
+        if (isUploading) {alert('Espera la comprobación del archivo.');return;}
         if (!data.name.trim()) { alert('Ingresa un nombre para la fuente'); return; }
         
         const existingFileData = font?.fileData;
         const newFileData = fontFile;
         const hasFile = existingFileData || newFileData;
         
-        if (!font && !hasFile) { alert('Sube un archivo de fuente (.ttf o .otf)'); return; }
+        if (!hasFile) { alert('Este registro conserva una referencia sin archivo. Sube su tipografía real antes de guardarlo.'); return; }
         
         const cssFamily = hasFile ? `font-custom-${data.id}` : (data.cssFamily || `font-system-${data.id}`);
         
         const fontData = {
             ...data,
             category: selectedCategories[0] as any,
-            categories: selectedCategories,
+            categories: selectedCategories as FontCategory[],
             cssFamily: cssFamily,
             isCustom: !!hasFile,
             fileData: newFileData || existingFileData || null,
             active: true
         };
         onSave(fontData);
-        alert(font ? `Fuente #${fontData.id} actualizada correctamente` : `Fuente #${data.id} guardada`);
+        alert(`Fuente #${fontData.id} preparada. Pulsa Guardar cambios en nube para confirmar.`);
     };
     
+    const fontDialogRef=useRef<HTMLDivElement>(null);useModalFocus(isOpen,fontDialogRef,onClose);
     if (!isOpen) return null;
     
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+            <div ref={fontDialogRef} role="dialog" aria-modal="true" aria-label={font?"Editar fuente":"Nueva fuente"} className="lm-font-dialog bg-white dark:bg-zinc-900 w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
                 <div className="bg-zinc-100 dark:bg-zinc-800 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{font ? 'Editar Fuente' : 'Nueva Fuente'}</h3>
@@ -792,7 +820,7 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
                     
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Categorías</label>
-                        <div className="grid grid-cols-5 gap-2">
+                        <div className="lm-font-categories grid grid-cols-5 gap-2">
                             {ALL_CATEGORIES.map(cat => (
                                 <button key={cat} onClick={() => toggleCategory(cat)}
                                     className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${selectedCategories.includes(cat) ? 'bg-amber-500 text-zinc-900' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-700'}`}>
@@ -838,34 +866,34 @@ const FontFormModal = ({ isOpen, onClose, font, onSave, existingFonts = [] }: { 
     );
 };
 
-const BulkDistributorModal = ({ isOpen, onClose, products, onApplyChanges, globalColors }: any) => {
-    // Demo implementation for response brevity
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 p-4">
-            <div className="bg-zinc-900 p-8 rounded-xl text-center border border-zinc-800">
-                <h3 className="text-white font-bold mb-4">Distribución Masiva (Demo)</h3>
-                <p className="text-zinc-400 text-sm mb-6">Esta función requiere lógica compleja de servidor.</p>
-                <button onClick={onClose} className="btn-system btn-system-error px-6 py-2 rounded-lg">Cerrar</button>
-            </div>
-        </div>
-    );
+export const BulkDistributorModal = ({isOpen,onClose,products,onApplyChanges}:{isOpen:boolean;onClose:()=>void;products:Product[];onApplyChanges:(products:Product[])=>void;globalColors?:unknown}) => {
+ const [draft,setDraft]=useState<Product[]>([]),[error,setError]=useState('');const panel=useRef<HTMLDivElement>(null);useModalFocus(isOpen,panel,onClose);
+ useEffect(()=>{if(isOpen){setDraft(structuredClone(products));setError('');}},[isOpen]);
+ if(!isOpen)return null;
+ const count=draft.reduce((n,p)=>n+p.colors.length,0);
+ const apply=()=>{if(draft.some(p=>p.colors.some(c=>!Number.isInteger(c.stock)||c.stock<0))){setError('Usa existencias enteras de cero en adelante.');return;}const changed=draft.filter(p=>JSON.stringify(p)!==JSON.stringify(products.find(o=>o.id===p.id)));if(!changed.length){setError('No hay cambios para preparar.');return;}onApplyChanges(changed);onClose();};
+ return <div className="fixed inset-0 z-[300] bg-black/70 p-4 flex items-center justify-center"><div ref={panel} role="dialog" aria-modal="true" aria-label="Editar existencias" className="lm-stock-dialog w-full max-w-2xl rounded-xl border bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white flex flex-col max-h-[calc(100dvh-32px)]"><header className="p-4 flex items-center justify-between border-b"><h3 className="font-bold">Editar existencias</h3><button aria-label="Cerrar existencias" onClick={onClose} className="p-2"><X size={22}/></button></header><div className="p-4 overflow-y-auto space-y-4"><p className="text-sm">Sólo colores existentes. No modifica precios ni crea inventario. Guarda los cambios en nube después de aplicar.</p>{draft.map(p=><section key={p.id} className="space-y-2 border rounded-lg p-3"><h4 className="font-semibold">{p.name}</h4>{!p.colors.length?<p className="text-sm text-zinc-500">Sin colores confirmados. Añádelos desde Editar producto.</p>:p.colors.map(c=><label key={c.id} className="flex justify-between items-center gap-3 text-sm">{c.name}<input aria-label={`${p.name} - ${c.name}`} type="number" min="0" step="1" value={Number.isNaN(c.stock)?'':c.stock} className="w-24 p-2 border rounded bg-transparent" onChange={e=>setDraft(prev=>prev.map(row=>row.id!==p.id?row:{...row,colors:row.colors.map(color=>color.id!==c.id?color:{...color,stock:e.target.value===''?NaN:Number(e.target.value)})}))}/></label>)}</section>)}{error&&<p role="alert" className="text-red-600">{error}</p>}</div><footer className="p-4 border-t flex justify-end gap-3"><button onClick={onClose} className="p-3">Cancelar</button><button disabled={!count} onClick={apply} className="p-3 rounded-lg bg-yellow-400 text-black font-bold disabled:opacity-50">Aplicar cambios</button></footer></div></div>;
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
-  orders, products, fonts, pricing, storeConfig, user, setUser,
+  orders, customers=[], products, fonts, pricing, storeConfig, user, setUser,
   onUpdatePricing, onUpdateStoreConfig, onUpdateOrder,
   onAddOrder, onUpdateOrderPriority,
   onAddProduct, onUpdateProduct, onDeleteProduct,
-  onAddFont, onDeleteFont, onUpdateFont,
+  cloudStatus,shellActions, onSaveCloud, onAddFont, onDeleteFont, onUpdateFont,
   onUpdateClient, onDeleteClient,
   onResetOrdersAndClients, onResetInventoryCounts,
   onResetProducts, onAddFonts, onOpenAssistant,
   activeTab: propActiveTab, onTabChange,
   settingsTab: propSettingsTab, onSettingsTabChange
 }) => {
-  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'TEMPLATES'>('DASHBOARD');
-  const [internalSettingsTab, setInternalSettingsTab] = useState<'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM'>('BRANDING');
+  const{unreadCount,setIsPanelOpen}=useNotifications();
+  const latestStoreConfig=useRef(storeConfig);latestStoreConfig.current=storeConfig;
+  const applyAssetConfig=(next:StoreConfig)=>{latestStoreConfig.current=next;onUpdateStoreConfig(next);};
+  const[galleryUploadType,setGalleryUploadType]=useState('LOGO');
+  const [navigationOpen,setNavigationOpen]=useState(false);
+  const [internalActiveTab, setInternalActiveTab] = useState<'DASHBOARD' | 'ORDERS' | 'INVENTORY' | 'SETTINGS' | 'FONTS' | 'CLIENTS' | 'FINANCE' | 'GALERIA' | 'CALENDAR' | 'TEMPLATES' | 'NOTES'>('DASHBOARD');
+  const [internalSettingsTab, setInternalSettingsTab] = useState<'BRANDING' | 'COLORS' | 'MESSAGES' | 'FINANCE' | 'PRICING' | 'COUPONS' | 'INVENTORY_CATS' | 'SYSTEM' | 'ASSISTANT'>('BRANDING');
   
   // Gallery state
   const [gallerySearch, setGallerySearch] = useState('');
@@ -875,14 +903,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
 
   // Content config for client dashboard
-  const [contentConfig, setContentConfig] = useState<{ banners: any[], promotions: any[] }>(() => {
-    const saved = localStorage.getItem('lm_content_config');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return { banners: [], promotions: [] };
-  });
-
+  const contentCloud=useCloudRecord<{banners:any[],promotions:any[],testimonials:any[],faqs:any[],featuredProducts:any[]}>('lm_content','main',{banners:[],promotions:[],testimonials:[],faqs:[],featuredProducts:[]});
+  const contentConfig=contentCloud.value;
+  const setContentConfig=contentCloud.setValue;
   const activeTab = propActiveTab || internalActiveTab;
   const setActiveTab = (tab: any) => {
       setInternalActiveTab(tab);
@@ -910,6 +933,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return () => window.removeEventListener('navigateToTab', handleNavigateToTab);
   }, [onTabChange]);
 
+  useEffect(()=>{const navigate=(e:Event)=>{const d=(e as CustomEvent).detail;if(!d)return;setActiveTab(d.tab);if(d.settingsTab)setSettingsTab(d.settingsTab);if(d.orderId){const o=orders.find(o=>o.id===d.orderId);if(o)setSelectedOrder(o);}};window.addEventListener('adminNavigate',navigate);return()=>window.removeEventListener('adminNavigate',navigate);},[orders]);
   const [rabInputValue, setRabInputValue] = useState('');
   
   // States
@@ -919,32 +943,52 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isBulkDistributorOpen, setIsBulkDistributorOpen] = useState(false); 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingFont, setEditingFont] = useState<FontOption | null>(null);
+  const [orderDetailTab, setOrderDetailTab] = useState<'design'|'client'|'assets'|'payment'>('design');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [paidAmountError,setPaidAmountError]=useState('');
+  useEffect(() => { setOrderDetailTab('design'); setShowWhatsAppMenu(false); setShowActionsMenu(false);setFinanceDrawerOpen(false);setPaidAmountError(''); }, [selectedOrder?.id]);
+  useEffect(()=>{
+    if(!selectedOrder)return;
+    const current=orders.find(order=>order.id===selectedOrder.id);
+    if(!current){setSelectedOrder(null);return;}
+    let active=true;
+    setSelectedOrder(current);
+    hydrateOrderAssets([structuredClone(current)]).then(rows=>{
+      if(active&&rows[0])setSelectedOrder(prev=>prev?.id===current.id?{...prev,items:rows[0].items}:prev);
+    }).catch(()=>{/* Keep the current order visible when an attachment cannot load. */});
+    return()=>{active=false;};
+  },[orders,selectedOrder?.id]);
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [newColorPreset, setNewColorPreset] = useState({ name: '', hex: '#000000' });
   const [newCoupon, setNewCoupon] = useState({ code: '', discountPercent: 10, maxUses: 100, expiryDate: '', assignedToPhone: '' });
   const [newCategory, setNewCategory] = useState(''); 
-  const [newPricing, setNewPricing] = useState(pricing);
-  const [messages, setMessages] = useState(storeConfig.messageTemplates);
+  const newPricing=pricing;
+  const messages={confirmation:'',production:'',ready:'',...storeConfig.messageTemplates};
   const [activeFontCategory, setActiveFontCategory] = useState<FontCategory | 'TODAS'>('TODAS');
-  const [fontViewMode, setFontViewMode] = useState<'GRID' | 'LIST' | 'COMPACT'>('GRID');
+  const [fontViewMode, setFontViewMode] = useState<'GRID' | 'LIST'>('LIST');
   const [fontSearchQuery, setFontSearchQuery] = useState('');
   const [fontSortBy, setFontSortBy] = useState<'name' | 'id' | 'category'>('id');
   const [fontSortOrder, setFontSortOrder] = useState<'asc' | 'desc'>('asc');
   const [fontStatusFilter, setFontStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const bankInfo=storeConfig.bankInfo||'';
   const [clientCouponData, setClientCouponData] = useState({ code: '', discount: 10 });
+  const [clientCouponError,setClientCouponError]=useState('');
+  useEffect(()=>{setClientCouponData({code:'',discount:10});setClientCouponError('');setEditingClient(false);},[selectedClient?.phone]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(localDateKey(new Date()));
   const [calendarViewMode, setCalendarViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
   const [weekOffset, setWeekOffset] = useState(0);
-  const [notes, setNotes] = useState<string>(() => localStorage.getItem('admin_dashboard_notes') || '');
+  const notesCloud=useCloudRecord<{text:string}>('lm_admin_notes','main',{text:''});
+  const notes=notesCloud.value.text;
+  const setNotes=(text:string)=>notesCloud.setValue({text});
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAsset, setUploadingAsset] = useState<'LOGO' | 'FAVICON' | 'BANNER' | null>(null);
   const [isMigrating, setIsMigrating] = useState(false);
   const [fontPreviewText, setFontPreviewText] = useState('');
+  const [fontPreviewSize,setFontPreviewSize]=useState(32);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [croppingTarget, setCroppingTarget] = useState<string>('MAIN');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'TODOS'>('TODOS');
@@ -952,6 +996,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [orderNoteInput, setOrderNoteInput] = useState('');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
+  const [chartDate,setChartDate]=useState<string|null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showWhatsAppMenu, setShowWhatsAppMenu] = useState(false);
 
@@ -992,7 +1037,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const next7Days = useMemo(() => {
       const days = [];
-      const baseDate = new Date(selectedCalendarDate);
+      const baseDate = localCalendarDate(selectedCalendarDate);
       for (let i = 0; i < 7; i++) {
           const d = new Date(baseDate);
           d.setDate(baseDate.getDate() + i);
@@ -1007,7 +1052,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           [OrderStatus.WAITING_APPROVAL]: 0,
           [OrderStatus.IN_PRODUCTION]: 0,
           [OrderStatus.READY]: 0,
-          [OrderStatus.COMPLETED]: 0
+          [OrderStatus.COMPLETED]: 0,
+          [OrderStatus.CANCELLED]:0
       };
       orders.forEach(o => {
           if (counts[o.status] !== undefined) counts[o.status]++;
@@ -1034,7 +1080,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const lowStockProducts = useMemo(() => {
       return products.filter(p => {
           const totalStock = (p.colors || []).reduce((sum, c) => sum + c.stock, 0);
-          return totalStock <= p.stockThreshold;
+          return (p.colors||[]).length > 0 && totalStock <= p.stockThreshold;
       });
   }, [products]);
 
@@ -1075,7 +1121,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return orders.filter(o => new Date(o.createdAt).toDateString() === today && o.status !== OrderStatus.CANCELLED).length;
   }, [orders]);
 
-  // Estimated profit assuming 40% margin (industry standard for laser engraving)
+  // Illustrative scenario only. No real cost ledger or validated margin is available.
   const PROFIT_MARGIN = 0.4;
   const todaysProfit = todaysRevenue * PROFIT_MARGIN;
   const weeklyProfit = weeklyRevenue * PROFIT_MARGIN;
@@ -1110,6 +1156,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return matchesTerm && matchesStatus;
     });
     
+    if(chartDate)filtered=filtered.filter(o=>new Date(o.createdAt).toDateString()===chartDate);
     // Apply date filter
     if (dateFilter !== 'ALL') {
       const now = new Date();
@@ -1136,7 +1183,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (!a.isPriority && b.isPriority) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [orders, searchQuery, statusFilter, dateFilter]);
+  }, [orders, searchQuery, statusFilter, dateFilter,chartDate]);
 
   const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())), [products, searchQuery]);
   const filteredFonts = useMemo(() => { 
@@ -1180,37 +1227,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return result;
   }, [fonts, activeFontCategory, fontStatusFilter, fontSearchQuery, fontSortBy, fontSortOrder]);
   
-  const filteredClients = useMemo(() => {
-      const clientMap = new Map();
-      orders.forEach(o => {
-          const key = o.customerPhone;
-          if (!clientMap.has(key)) {
-              clientMap.set(key, {
-                  name: o.customerName,
-                  phone: o.customerPhone,
-                  email: o.customerEmail || '-',
-                  totalOrders: 0,
-                  totalSpent: 0,
-                  lastOrderDate: o.createdAt,
-                  orders: [],
-                  pointsEarned: 0,
-                  pointsRedeemed: 0
-              });
-          }
-          const c = clientMap.get(key);
-          c.totalOrders++;
-          c.totalSpent += o.total;
-          c.orders.push(o);
-          // Sumar puntos ganados (vienen en cada orden al pagar)
-          if (o.pointsEarned) c.pointsEarned += o.pointsEarned;
-          if (o.pointsRedeemed) c.pointsRedeemed += o.pointsRedeemed;
-          // Mantener el email más reciente no-vacío
-          if (o.customerEmail && o.customerEmail !== '-') c.email = o.customerEmail;
-      });
-      return Array.from(clientMap.values())
-          .map(c => ({ ...c, currentPoints: Math.max(0, c.pointsEarned - c.pointsRedeemed) }))
-          .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [orders, searchQuery]);
+  const clientSummaries = useMemo(()=>customerSummaries(orders,customers),[orders,customers]);
+  const filteredClients = useMemo(()=>clientSummaries.filter(c=>c.name.toLowerCase().includes(searchQuery.toLowerCase())),[clientSummaries,searchQuery]);
+  useEffect(()=>{
+    if(selectedClient)setSelectedClient(clientSummaries.find(client=>client.phone===selectedClient.phone)||null);
+  },[clientSummaries,selectedClient?.phone]);
 
   // Exportar lista de clientes a CSV
   const handleExportClientsCSV = () => {
@@ -1238,7 +1259,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `clientes-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `clientes-${localDateKey(new Date())}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1279,16 +1300,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setUploadingAsset('LOGO');
     const reader = new FileReader();
     reader.onload = ev => {
+      const current=latestStoreConfig.current;
       const url = ev.target?.result as string;
       const newAsset: BrandingAsset = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: file.name.split('.')[0].toUpperCase(),
         url,
         type: 'LOGO'
       };
-      onUpdateStoreConfig({
-        ...storeConfig,
-        brandingAssets: [...(storeConfig.brandingAssets || []), newAsset],
+      applyAssetConfig({
+        ...current,
+        brandingAssets: [...(current.brandingAssets || []), newAsset],
         logoUrl: url
       });
       setUploadingAsset(null);
@@ -1307,17 +1329,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setUploadingAsset('FAVICON');
     const reader = new FileReader();
     reader.onload = ev => {
+      const current=latestStoreConfig.current;
       const url = ev.target?.result as string;
       const newAsset: BrandingAsset = {
-        id: 'fav-' + Date.now().toString(),
+        id: 'fav-' + crypto.randomUUID(),
         name: file.name.split('.')[0].toUpperCase(),
         url,
         type: 'ICON'
       };
-      onUpdateStoreConfig({
-        ...storeConfig,
+      applyAssetConfig({
+        ...current,
         faviconUrl: url,
-        brandingAssets: [...(storeConfig.brandingAssets || []), newAsset]
+        brandingAssets: [...(current.brandingAssets || []), newAsset]
       });
       setUploadingAsset(null);
     };
@@ -1335,17 +1358,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setUploadingAsset('BANNER');
     const reader = new FileReader();
     reader.onload = ev => {
+      const current=latestStoreConfig.current;
       const url = ev.target?.result as string;
       const newAsset: BrandingAsset = {
-        id: 'ban-' + Date.now().toString(),
+        id: 'ban-' + crypto.randomUUID(),
         name: file.name.split('.')[0].toUpperCase(),
         url,
         type: 'ILUSTRACION'
       };
-      onUpdateStoreConfig({
-        ...storeConfig,
+      applyAssetConfig({
+        ...current,
         bannerUrl: url,
-        brandingAssets: [...(storeConfig.brandingAssets || []), newAsset]
+        brandingAssets: [...(current.brandingAssets || []), newAsset]
       });
       setUploadingAsset(null);
     };
@@ -1362,48 +1386,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => {
+        const current=latestStoreConfig.current;
         const newAsset: BrandingAsset = { 
-          id: 'gal-' + Date.now().toString(), 
+          id: 'gal-' + crypto.randomUUID(), 
           name: file.name.split('.')[0].toUpperCase(), 
           url: ev.target?.result as string, 
           type: category as 'LOGO' | 'ICON' | 'ILUSTRACION' | 'FORMS' | 'OTHER'
         };
-        onUpdateStoreConfig({ 
-          ...storeConfig, 
-          galleryAssets: [...(storeConfig.galleryAssets || []), newAsset]
+        applyAssetConfig({ 
+          ...current, 
+          galleryAssets: [...(current.galleryAssets || []), newAsset]
         });
       };
       reader.readAsDataURL(file);
       e.target.value = '';
     }
   };
-  const handleDeleteGlobalColor = (name: string) => { onUpdateStoreConfig({ ...storeConfig, globalColors: storeConfig.globalColors.filter(c => c.name !== name) }); };
-  const toggleFontActive = (font: FontOption) => { onUpdateFont(font.id, { ...font, active: !font.active }); };
-  const createClientCoupon = () => { if(!selectedClient || !clientCouponData.code) return; const newCpn: Coupon = { code: clientCouponData.code.toUpperCase(), discountPercent: clientCouponData.discount, active: true, assignedToPhone: selectedClient.phone, createdAt: new Date().toISOString(), maxUses: 1, usedCount: 0 }; onUpdateStoreConfig({ ...storeConfig, coupons: [...storeConfig.coupons, newCpn] }); setClientCouponData({ code: '', discount: 10 }); alert("Cupón personal creado."); };
+  const handleDeleteGlobalColor = (name: string) => { onUpdateStoreConfig({ ...storeConfig, globalColors: (storeConfig.globalColors||[]).filter(c => c.name !== name) }); };
+  const toggleFontActive = (font: FontOption) => { if(!hasFontFile(font)){alert('Este registro no tiene archivo propio. Sube su tipografía antes de activarlo.');return;}onUpdateFont(font.id, { ...font, active: !font.active }); };
+  const createClientCoupon = () => {
+    if(!selectedClient)return;
+    const error=couponIdentityError(clientCouponData.code,clientCouponData.discount,storeConfig.coupons||[]);
+    if(error){setClientCouponError(error);return;}
+    if(!selectedClient.phone?.trim()){setClientCouponError('El cliente necesita un teléfono para recibir un cupón personal.');return;}
+    const newCpn:Coupon={code:clientCouponData.code.trim().toUpperCase(),discountPercent:clientCouponData.discount,active:true,assignedToPhone:selectedClient.phone,createdAt:new Date().toISOString(),maxUses:1,usedCount:0};
+    onUpdateStoreConfig({...storeConfig,coupons:[...(storeConfig.coupons||[]),newCpn]});
+    setClientCouponData({code:'',discount:10});setClientCouponError('');
+    alert('Cupón personal añadido a los cambios. Guarda los cambios para confirmarlo.');
+  };
   const handleAddGlobalColor = () => { if(!newColorPreset.name) return; onUpdateStoreConfig({ ...storeConfig, globalColors: [...(storeConfig.globalColors || []), { name: newColorPreset.name.toUpperCase(), hex: newColorPreset.hex }] }); setNewColorPreset({ name: '', hex: '#000000' }); };
   
-  const creditPointsToUser = (order: Order) => {
-    if (!user || !order.pointsEarned || order.pointsEarned <= 0) return;
-    
-    const newBalance = (user.laserPoints || 0) + order.pointsEarned;
-    const newHistory = [...(user.pointsHistory || []), {
-      id: Date.now().toString() + '-earn',
-      type: 'EARNED' as const,
-      amount: order.pointsEarned,
-      date: new Date().toISOString(),
-      orderId: order.id,
-      description: `Premio compra #${order.id}`
-    }];
-    
-    setUser({ ...user, laserPoints: newBalance, pointsHistory: newHistory });
-  };
-
+  // Server payment trigger owns the customer points ledger. Never credit the
+  // currently signed-in operator or infer points from a pending order.
   const handleUpdateOrderField = (field: keyof Order, value: any) => { 
     if (!selectedOrder) return; 
+    if(field==='amountPaid'&&(!Number.isFinite(value)||value<0)){setPaidAmountError('Escribe un monto válido de cero o más.');return;}
+    if(field==='amountPaid')setPaidAmountError('');
     let updated = { ...selectedOrder, [field]: value }; 
-    if (field === 'paymentStatus' && value === 'PAGADO') { 
+    if (field === 'paymentStatus' && value === 'PAGADO') {
+      if(selectedOrder.reviewRequired&&!selectedOrder.totalConfirmed){alert('Revisa y confirma el total antes de registrar pago');return;} 
       updated.amountPaid = updated.total;
-      creditPointsToUser(updated);
+      updated.pointsEarned = selectedOrder.pointsEarned || 0;
     } 
     setSelectedOrder(updated); 
     onUpdateOrder(updated); 
@@ -1413,11 +1436,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const updated = { 
       ...order, 
       status: newStatus, 
-      history: [...order.history, { timestamp: new Date().toISOString(), status: newStatus, operator: 'ADMIN' }] 
+      history: [...(Array.isArray(order.history)?order.history:[]), { timestamp: new Date().toISOString(), status: newStatus, operator: 'ADMIN' }] 
     }; 
-    if (newStatus === OrderStatus.COMPLETED && order.paymentStatus === 'PAGADO' && !order.pointsEarned) {
-      creditPointsToUser(updated);
-    }
+
     setSelectedOrder(updated); 
     onUpdateOrder(updated); 
     
@@ -1440,7 +1461,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleAddOrderNote = (order: Order, note: string) => {
     const updated = { 
       ...order, 
-      internalNotes: [...(order.internalNotes || []), { 
+      internalNotes: [...(Array.isArray(order.internalNotes)?order.internalNotes:[]), { 
         id: Date.now().toString(), 
         text: note, 
         timestamp: new Date().toISOString(), 
@@ -1454,15 +1475,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleDeleteOrderNote = (order: Order, noteId: string) => {
     const updated = { 
       ...order, 
-      internalNotes: (order.internalNotes || []).filter(n => n.id !== noteId)
+      internalNotes: (Array.isArray(order.internalNotes)?order.internalNotes:[]).filter(n => n.id !== noteId)
     };
     setSelectedOrder(updated);
     onUpdateOrder(updated);
   };
    
   const handleQuickStatusUpdate = (orderId: string, newStatus: OrderStatus) => { const order = orders.find(o => o.id === orderId); if(order) handleStatusChange(order, newStatus); };
-  const handleBulkUpdateProducts = (updatedProducts: Product[]) => { updatedProducts.forEach(p => onUpdateProduct(p)); alert(`Se actualizaron ${updatedProducts.length} productos correctamente.`); };
-  const handleCloudMigration = async () => { if (!confirm("Esto subirá TODOS tus datos locales a Firebase. ¿Continuar?")) return; setIsMigrating(true); try { await migrateConfigToCloud(storeConfig); await migrateFontsToCloud(fonts); await migrateProductsToCloud(products); await migrateOrdersToCloud(orders); alert("¡Migración Completada! Recarga la página."); window.location.reload(); } catch (error) { console.error(error); alert("Error durante la migración."); } finally { setIsMigrating(false); } };
+  const handleBulkUpdateProducts = (updatedProducts: Product[]) => { updatedProducts.forEach(p => onUpdateProduct(p)); alert(`Cambios de ${updatedProducts.length} productos preparados. Guarda en nube para confirmar.`); };
+  const handleCloudMigration = async () => {if(!onSaveCloud)return;setIsMigrating(true);try{await onSaveCloud();}finally{setIsMigrating(false);}};
   
   const handleDownloadBackup = () => {
       const backup = {
@@ -1477,12 +1498,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `lasermachine-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `lasermachine-backup-${localDateKey(new Date())}.json`;
       a.click();
       URL.revokeObjectURL(url);
   };
     // ...existing code...
-  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { setNotes(e.target.value); localStorage.setItem('admin_dashboard_notes', e.target.value); };
+  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { setNotes(e.target.value); };
 
   // Calendar Helpers
   const getDaysInMonth = (date: Date) => {
@@ -1498,559 +1519,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-        <div className="flex flex-col md:flex-row h-full bg-zinc-100 dark:bg-black font-sans overflow-hidden">
-            {/* Sidebar glassmorphism */}
-            <aside className="flex w-24 flex-col shrink-0 h-full items-center py-6 gap-4 bg-zinc-200 dark:bg-zinc-900 border-r border-zinc-300 dark:border-zinc-800 rounded-3xl m-4 shadow-xl">
-                <div className="flex flex-col items-center gap-8 w-full">
-                    {/* Menu Items */}
-                    {[ 
-                        { id: 'DASHBOARD', label: 'Dashboard', icon: BarChart3 },
-                        { id: 'ORDERS', label: 'Producción', icon: LayoutDashboard },
-                        { id: 'CALENDAR', label: 'Calendario', icon: CalendarDays },
-                        { id: 'INVENTORY', label: 'Inventario', icon: Package },
-                        { id: 'CLIENTS', label: 'CRM Clientes', icon: Users },
-                        { id: 'FONTS', label: 'Fonts', icon: Type },
-                        { id: 'TEMPLATES', label: 'Templates', icon: LayoutTemplate },
-                        { id: 'GALERIA', label: 'Galería', icon: Images },
-                        { id: 'CONTENT', label: 'Contenido', icon: LayoutGrid },
-                        { id: 'SETTINGS', label: 'Ajustes', icon: Settings },
-                    ].map(item => (
-                        <button key={item.id} onClick={() => setActiveTab(item.id as any)}
-                            className={`w-14 h-14 flex items-center justify-center rounded-2xl mb-2 transition-all ${activeTab === item.id ? 'bg-amber-500 text-white shadow-lg shadow-black/20 scale-110' : 'text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-white'}`}
-                            title={item.label}
-                        >
-                            <item.icon size={28} />
-                        </button>
-                    ))}
-                </div>
-                <div className="flex-1"></div>
-                
-                {/* RAB Button in Sidebar - Improved */}
-                {onOpenAssistant && (
-                    <button 
-                        onClick={() => onOpenAssistant()}
-                        className="w-14 h-14 flex items-center justify-center rounded-2xl mb-2 transition-all bg-gradient-to-br from-amber-400 to-amber-500 text-zinc-900 shadow-lg shadow-amber-500/25 hover:scale-110 hover:shadow-amber-500/40 group relative"
-                        title="RAB (Cmd+K)"
-                    >
-                        <img src="/assets/icons/2svgagenticon.svg" alt="RAB" className="w-8 h-8" />
-                    </button>
-                )}
-            </aside>
+        <div className="lm-admin admin-workspace" data-section={activeTab}>
+            <AdminNavigation open={navigationOpen} onOpenChange={setNavigationOpen} actions={[{label:`Notificaciones${unreadCount?' ('+unreadCount+')':''}`,onClick:()=>setIsPanelOpen(true)},...(shellActions||[])]} active={activeTab} onChange={id=>{setActiveTab(id as any);setSelectedOrder(null);setSearchQuery('');}} onAssistant={onOpenAssistant?()=>onOpenAssistant():undefined}/>
 
-      <main className="flex-1 overflow-hidden flex flex-col relative bg-zinc-50 dark:bg-zinc-950 w-full">
-        <header className="h-14 md:h-16 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between px-6 md:px-12 z-10 shrink-0">
-           <div className="flex items-center gap-8 overflow-hidden w-full md:w-auto">
-                {activeTab === 'ORDERS' && (
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade">
-                        <button 
-                            onClick={() => setStatusFilter('TODOS')}
-                            className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold uppercase border transition-all flex items-center gap-2 ${statusFilter === 'TODOS' ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-sm' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500 hover:border-zinc-300 dark:border-zinc-700'}`}
-                         >
-                            Todos <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white px-1.5 py-0.5 rounded text-[10px] font-bold">{orders.length}</span>
-                         </button>
-                        {Object.values(OrderStatus).map(status => (
-                            <button 
-                                key={status}
-                                onClick={() => setStatusFilter(status)}
-                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold uppercase border transition-all flex items-center gap-2 ${statusFilter === status ? getStatusBadgeColor(status) + ' ring-2 ring-offset-1 dark:ring-offset-black' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500 hover:border-zinc-300 dark:border-zinc-700'}`}
-                            >
-                                {status.replace('_', ' ')} 
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${statusFilter === status ? 'bg-white/20 dark:bg-zinc-900/20' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
-                                    {ordersByStatus[status] || 0}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                )}
-           </div>
-        </header>
+      <main className="min-w-0 min-h-0 flex-1 overflow-hidden flex flex-col relative bg-zinc-50 dark:bg-zinc-950 w-full">
+        <div className="admin-section-heading"><button className="admin-menu-trigger" aria-label="Abrir navegación de administración" aria-expanded={navigationOpen} onClick={()=>setNavigationOpen(true)}><Menu size={22}/></button><div><p>Administración / {ADMIN_SECTIONS.find(s=>s.id===activeTab)?.group??'Operación'}</p><h1>{ADMIN_SECTIONS.find(s=>s.id===activeTab)?.label??'Administración'}</h1><span>{ADMIN_SECTIONS.find(s=>s.id===activeTab)?.description}</span></div>{activeTab==='NOTES'?<CloudSaveStatus onRetryLoad={notesCloud.reload} ready={notesCloud.ready} dirty={notesCloud.dirty} saving={notesCloud.saving} status={notesCloud.status} onSave={()=>{void notesCloud.save().catch(()=>{});}}/>:activeTab==='CONTENT'?<span className="admin-independent-save">Guardado de contenido en esta sección</span>:cloudStatus}</div>
 
-        <div className={`flex-1 overflow-y-auto custom-scrollbar ${activeTab === 'ORDERS' ? 'p-0' : 'p-6 md:p-12'}`}>
-            {activeTab === 'DASHBOARD' && (
-                <div className="space-y-4">
-                    {/* Compact KPI Cards Row */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {/* Ventas Hoy - Compact */}
-                        <button 
-                            onClick={() => { setStatusFilter('TODOS'); setActiveTab('ORDERS'); }}
-                            className="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left hover:border-amber-500/50 transition-all"
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                    <DollarSign size={14} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"/>
-                                </div>
-                                <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase">Ventas Hoy</p>
-                            </div>
-                            <p className="text-lg font-black text-zinc-900 dark:text-white">{formatCurrency(todaysRevenue)}</p>
-                        </button>
 
-                        {/* Por Aprobar - Compact */}
-                        <button 
-                            onClick={() => { setStatusFilter(OrderStatus.WAITING_APPROVAL); setActiveTab('ORDERS'); }}
-                            className="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left hover:border-amber-500/50 transition-all"
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                    <Eye size={14} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"/>
-                                </div>
-                                <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase">Por Aprobar</p>
-                                {ordersByStatus[OrderStatus.WAITING_APPROVAL] > 0 && (
-                                    <span className="ml-auto w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"/>
-                                )}
-                            </div>
-                            <p className="text-lg font-black text-zinc-900 dark:text-white">{ordersByStatus[OrderStatus.WAITING_APPROVAL] || 0}</p>
-                        </button>
+        <div className={`lm-admin-content flex-1 overflow-y-auto custom-scrollbar ${activeTab === 'ORDERS' ? 'p-0' : 'p-4 md:p-8'}`}>
+            {activeTab==='DASHBOARD'&&<OperationsOverview orders={orders} products={products} fonts={fonts} onOrder={o=>{setSelectedOrder(o);setActiveTab('ORDERS');}} onOrders={()=>{setStatusFilter('TODOS');setChartDate(null);setDateFilter('ALL');setSearchQuery('');setActiveTab('ORDERS');}} onNavigate={tab=>setActiveTab(tab as any)} onAssistant={()=>onOpenAssistant?.()} onDay={d=>{setChartDate(d.toDateString());setDateFilter('ALL');setSearchQuery('');setStatusFilter('TODOS');setActiveTab('ORDERS');}}/>}
 
-                        {/* En Producción - Compact */}
-                        <button 
-                            onClick={() => { setStatusFilter(OrderStatus.IN_PRODUCTION); setActiveTab('ORDERS'); }}
-                            className="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-left hover:border-amber-500/50 transition-all"
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                    <Zap size={14} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400"/>
-                                </div>
-                                <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase">Producción</p>
-                            </div>
-                            <p className="text-lg font-black text-zinc-900 dark:text-white">{ordersByStatus[OrderStatus.IN_PRODUCTION] || 0}</p>
-                        </button>
-
-                        {/* Stock Crítico - Compact */}
-                        <button 
-                            onClick={() => setActiveTab('INVENTORY')}
-                            className={`group relative overflow-hidden rounded-xl p-3 text-left transition-all ${lowStockProducts.length > 0 ? 'bg-amber-500 border-amber-500' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50'}`}
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className={`p-1.5 rounded-lg transition-colors ${lowStockProducts.length > 0 ? 'bg-white/20' : 'bg-zinc-100 dark:bg-zinc-800 group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20'}`}>
-                                    <Package size={14} className={lowStockProducts.length > 0 ? 'text-white' : 'text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400'}/>
-                                </div>
-                                <p className={`text-[10px] font-medium uppercase ${lowStockProducts.length > 0 ? 'text-white/80' : 'text-zinc-500 dark:text-zinc-400'}`}>Stock Bajo</p>
-                            </div>
-                            <p className={`text-lg font-black ${lowStockProducts.length > 0 ? 'text-white' : 'text-zinc-900 dark:text-white'}`}>{lowStockProducts.length}</p>
-                        </button>
-                    </div>
-
-                    {/* RAB Widget */}
-                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                        <div className="flex flex-col sm:flex-row items-stretch">
-                            {/* LEFT — branding */}
-                            <div className="flex items-center gap-3 px-4 py-3 sm:border-r border-b sm:border-b-0 border-zinc-200 dark:border-zinc-800 shrink-0">
-                                <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center">
-                                    <img src="/assets/icons/2svgagenticon.svg" alt="RAB" className="w-5 h-5"/>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Asistente IA</p>
-                                    <p className="text-sm font-bold text-zinc-900 dark:text-white">RAB</p>
-                                </div>
-                            </div>
-
-                            {/* RIGHT — input + suggestions */}
-                            <div className="flex-1 flex flex-col px-4 py-3 gap-2">
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        if (rabInputValue.trim()) {
-                                            onOpenAssistant?.(rabInputValue.trim());
-                                            setRabInputValue('');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 focus-within:border-amber-500 transition-all"
-                                >
-                                    <input
-                                        type="text"
-                                        value={rabInputValue}
-                                        onChange={(e) => setRabInputValue(e.target.value)}
-                                        placeholder="Pregúntale algo a RAB…"
-                                        className="flex-1 bg-transparent text-sm text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 outline-none"
-                                    />
-                                    {rabInputValue.trim() ? (
-                                        <button type="submit" className="text-xs bg-amber-500 hover:bg-amber-400 text-white font-bold px-3 py-1.5 rounded-md transition-colors shrink-0">
-                                            Enviar
-                                        </button>
-                                    ) : (
-                                        <kbd className="text-[10px] bg-zinc-200 dark:bg-zinc-700 px-2 py-1 rounded font-mono text-zinc-500 shrink-0">
-                                            ⌘K
-                                        </kbd>
-                                    )}
-                                </form>
-                                
-                                {/* Quick actions */}
-                                <div className="flex flex-wrap gap-1.5">
-                                    {[
-                                        { label: 'Ventas hoy', icon: TrendingUp },
-                                        { label: 'Pedidos pendientes', icon: Clock },
-                                        { label: 'Stock bajo', icon: Package },
-                                    ].map(({ label, icon: Icon }) => (
-                                        <button
-                                            key={label}
-                                            onClick={() => onOpenAssistant?.(label.toLowerCase())}
-                                            className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-100 dark:hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-zinc-200 dark:border-zinc-700"
-                                        >
-                                            <Icon size={10}/>
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Alerts Widget - Compact with Actions */}
-                    <AlertsWidget
-                      products={products}
-                      orders={orders}
-                      className="mb-4"
-                      onNavigate={(view, filter) => {
-                        setActiveTab(view as any);
-                        if (filter) setStatusFilter(filter);
-                      }}
-                      onViewProduct={(productId) => {
-                        setActiveTab('INVENTORY');
-                        // Could add logic to scroll to product or open edit modal
-                      }}
-                    />
-
-                    {/* Financial KPIs - Today/Week/Month (40% margin) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                      <KPICard
-                        title="Utilidad Hoy"
-                        value={formatCurrency(todaysProfit)}
-                        subtitle={`${formatCurrency(todaysRevenue)} en ventas · ${todaysOrders} ${todaysOrders === 1 ? 'orden' : 'órdenes'}`}
-                        icon={<TrendingUp size={18} className="text-emerald-500" />}
-                        trend={todaysRevenue > 0 ? { value: 40, label: 'margen', direction: 'up' } : undefined}
-                        accent="success"
-                      />
-                      <KPICard
-                        title="Utilidad Semana"
-                        value={formatCurrency(weeklyProfit)}
-                        subtitle={`${formatCurrency(weeklyRevenue)} en ventas`}
-                        icon={<TrendingUp size={18} className="text-emerald-500" />}
-                        trend={weeklyRevenue > 0 ? { value: 40, label: 'margen', direction: 'up' } : undefined}
-                        accent="success"
-                      />
-                      <KPICard
-                        title="Utilidad Mes"
-                        value={formatCurrency(monthlyProfit)}
-                        subtitle={`${formatCurrency(monthlyRevenue)} en ventas`}
-                        icon={<TrendingUp size={18} className="text-emerald-500" />}
-                        trend={monthlyRevenue > 0 ? { value: 40, label: 'margen', direction: 'up' } : undefined}
-                        accent="success"
-                      />
-                    </div>
-
-                    {/* Main Content - Orders List + Weekly Summary */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        {/* Weekly Sales - Functional: Click day to see orders */}
-                        <div className="lg:col-span-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-sm font-bold text-zinc-900 dark:text-white uppercase">Ventas Semanales</h4>
-                                <span className="text-lg font-black text-amber-500">{formatCurrency(weeklyRevenue)}</span>
-                            </div>
-                            
-                            <div className="space-y-3">
-                                {dailySales.map((day, i) => {
-                                    const maxVal = Math.max(...dailySales.map(d => d.amount), 1);
-                                    const percentage = (day.amount / maxVal) * 100;
-                                    const isToday = i === dailySales.length - 1;
-                                    const hasOrders = day.orders > 0;
-                                    
-                                    return (
-                                        <button 
-                                            key={i} 
-                                            onClick={() => {
-                                                // Filter orders for this specific day
-                                                const dayDate = new Date();
-                                                dayDate.setDate(dayDate.getDate() - (6 - i));
-                                                const dayStart = new Date(dayDate);
-                                                dayStart.setHours(0,0,0,0);
-                                                const dayEnd = new Date(dayDate);
-                                                dayEnd.setHours(23,59,59,999);
-                                                
-                                                // Set date filter and go to orders
-                                                setStatusFilter('TODOS');
-                                                setActiveTab('ORDERS');
-                                            }}
-                                            className="w-full flex items-center gap-3 group"
-                                        >
-                                            <span className={`text-xs font-bold w-8 ${isToday ? 'text-amber-500' : 'text-zinc-500'}`}>{day.day}</span>
-                                            <div className="flex-1 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-lg overflow-hidden relative">
-                                                <div 
-                                                    className={`h-full transition-all duration-500 ${isToday ? 'bg-amber-500' : hasOrders ? 'bg-zinc-400 dark:bg-zinc-600' : 'bg-zinc-200 dark:bg-zinc-700'}`}
-                                                    style={{ width: `${Math.max(percentage, hasOrders ? 4 : 0)}%` }}
-                                                />
-                                                {hasOrders && (
-                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
-                                                        {day.orders}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 w-16 text-right">
-                                                {formatCurrency(day.amount)}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Recent Orders - Full width functional list */}
-                        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
-                            <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                                <h4 className="text-sm font-bold text-zinc-900 dark:text-white uppercase">Órdenes Recientes</h4>
-                                <button 
-                                    onClick={() => setActiveTab('ORDERS')}
-                                    className="text-xs font-bold text-amber-500 hover:text-amber-600 uppercase"
-                                >
-                                    Ver todas →
-                                </button>
-                            </div>
-                            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                {recentOrders.slice(0, 6).map((order) => (
-                                    <button 
-                                        key={order.id}
-                                        onClick={() => { setSelectedOrder(order); setActiveTab('ORDERS'); }}
-                                        className="w-full flex items-center gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left"
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                            <span className="text-xs font-black text-zinc-600 dark:text-zinc-400">
-                                                {order.customerName.charAt(0).toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-zinc-900 dark:text-white truncate">{order.customerName}</span>
-                                                <span className="text-xs text-zinc-500">#{order.id.slice(-4)}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-zinc-500">
-                                                <span>{order.items.length} producto{order.items.length !== 1 ? 's' : ''}</span>
-                                                <span>•</span>
-                                                <span>{formatTimeAgo(order.createdAt)}</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-zinc-900 dark:text-white">{formatCurrency(order.total)}</p>
-                                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${getStatusBadgeColor(order.status)}`}>
-                                                {order.status.replace('_', ' ')}
-                                            </span>
-                                        </div>
-                                    </button>
-                                ))}
-                                {recentOrders.length === 0 && (
-                                    <div className="p-8 text-center text-zinc-500">
-                                        <ClipboardList size={32} className="mx-auto mb-2 opacity-30"/>
-                                        <p className="text-sm">No hay órdenes aún</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            )}
-
-            {/* Advanced Stats - Only show on DASHBOARD tab */}
-            {activeTab === 'DASHBOARD' && (
-            <div className="p-6 md:p-12 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
-                <AdvancedStats orders={orders} products={products} />
-            </div>
-            )}
-
-            {activeTab === 'CALENDAR' && (
-                <div className="h-full flex flex-col font-sans relative overflow-hidden">
-                    
-                    {/* TOP NAV & TIMELINE */}
-                    <div className="shrink-0 pb-8">
-                        <div className="flex justify-between items-center mb-8 px-2">
-                            <div className="flex items-center gap-6">
-                                <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-xl shadow-xl shadow-black/20">
-                                    {currentDate.getDate()}
-                                </div>
-                                <div>
-                                    <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white uppercase tracking-tighter leading-none">
-                                        Nivel: Producción
-                                    </h1>
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-[0.2em]">{currentDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</span>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))} className="p-1 hover:bg-zinc-200/20 dark:hover:bg-zinc-800/30 rounded text-zinc-500"><ChevronLeft size={14}/></button>
-                                            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))} className="p-1 hover:bg-zinc-200/20 dark:hover:bg-zinc-800/30 rounded text-zinc-500"><ChevronRight size={14}/></button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <button className="bg-amber-500 text-white px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-black/20 hover:scale-105 transition-transform flex items-center gap-2">
-                                <CalendarClock size={16}/> Agenda Global
-                            </button>
-                        </div>
-
-                        {/* HORIZONTAL TIMELINE */}
-                        <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-proximity scrollbar-hide px-2">
-                            {next7Days.map((day, idx) => {
-                                const dateStr = day.toISOString().split('T')[0];
-                                const isSelected = dateStr === selectedCalendarDate;
-                                const isToday = new Date().toISOString().split('T')[0] === dateStr;
-                                const hasOrders = orders.some(o => normalizeDate(o.deliveryDate) === dateStr);
-                                
-                                return (
-                                    <button 
-                                        key={dateStr}
-                                        onClick={() => setSelectedCalendarDate(dateStr)}
-                                        className={`flex flex-col items-center gap-3 min-w-[3rem] group transition-all duration-300 ${isSelected ? 'scale-110' : 'opacity-50 hover:opacity-100'}`}
-                                    >
-                                        <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-widest">{day.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '')}</span>
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm relative ${isSelected ? 'bg-amber-500 text-white shadow-black/20' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200/40 dark:border-zinc-700/40'}`}>
-                                            {day.getDate()}
-                                            {isToday && <div className="absolute -top-1 -right-1 w-3 h-3 bg-system-success rounded-full border-2 border-white dark:border-zinc-900"></div>}
-                                            {hasOrders && !isSelected && <div className="absolute -bottom-1 w-1 h-1 bg-system-accent rounded-full"></div>}
-                                        </div>
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    </div>
-
-                    {/* MAIN CONTENT AREA */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-12">
-                        
-                        {/* SECTION: OBJECTIVES (Daily Orders) */}
-                        <div>
-                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-3">
-                                Entregas del Día <span className="bg-zinc-200/20 dark:bg-zinc-800/30 text-zinc-500 text-[10px] px-2 py-1 rounded-full">{orders.filter(o => normalizeDate(o.deliveryDate) === selectedCalendarDate).length}</span>
-                            </h3>
-                            
-                            <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory">
-                                {orders.filter(o => normalizeDate(o.deliveryDate) === selectedCalendarDate).length === 0 ? (
-                                    <div className="w-full py-12 border-2 border-dashed border-zinc-200/40 dark:border-zinc-700/40 rounded-3xl flex flex-col items-center justify-center text-zinc-500">
-                                        <CalendarClock size={48} className="mb-4 opacity-20"/>
-                                        <p className="font-bold uppercase tracking-widest text-xs">Sin entregas programadas</p>
-                                    </div>
-                                ) : (
-                                    orders.filter(o => normalizeDate(o.deliveryDate) === selectedCalendarDate).map(order => (
-                                        <div 
-                                            key={order.id} 
-                                            onClick={() => { setSelectedOrder(order); setActiveTab('ORDERS'); }}
-                                            className="min-w-[320px] md:min-w-[400px] bg-zinc-100 dark:bg-zinc-800 rounded-[2rem] p-8 shadow-xl border border-zinc-200 dark:border-zinc-700 relative group cursor-pointer hover:-translate-y-2 transition-transform duration-500 snap-center"
-                                        >
-                                            <div className="absolute top-6 right-6">
-                                                <div className={`w-3 h-3 rounded-full ${order.status === OrderStatus.COMPLETED ? 'bg-system-success' : 'bg-white dark:bg-zinc-800'}`}></div>
-                                            </div>
-                                            
-                                            <div className="mb-8">
-                                                <span className="inline-block px-3 py-1 bg-zinc-200/20 dark:bg-zinc-800/30 rounded-lg text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Orden #{order.id}</span>
-                                                <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase leading-none">{order.customerName}</h4>
-                                                <p className="text-xs text-zinc-500 mt-2 font-medium">{order.items.length} productos • {order.deliveryTime || 'S/H'}</p>
-                                            </div>
-
-                                            <div className="flex gap-3 mt-auto">
-                                                <div className="h-12 w-full bg-zinc-200/20 dark:bg-zinc-800/30 rounded-xl border border-zinc-200/40 dark:border-zinc-700/40 flex items-center px-4">
-                                                    <div className="w-full h-1.5 bg-zinc-200/40 dark:bg-zinc-800/40 rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-amber-500" 
-                                                            style={{ width: order.status === OrderStatus.COMPLETED ? '100%' : order.status === OrderStatus.IN_PRODUCTION ? '60%' : '20%' }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                                <button className="h-12 w-12 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl flex items-center justify-center hover:scale-110 transition-transform">
-                                                    <ArrowRight size={18}/>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        {/* SECTION: PRACTICAL (Widgets) */}
-                        <div>
-                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight mb-6">Resumen Operativo</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                
-                                {/* Widget 1: Pendientes Aprobación */}
-                                <button 
-                                    onClick={() => { setStatusFilter(OrderStatus.WAITING_APPROVAL); setActiveTab('ORDERS'); }}
-                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl relative overflow-hidden shadow-sm group min-h-[200px] flex flex-col justify-between text-left hover:border-amber-500/50 transition-all"
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                            <AlertCircle size={20} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600"/>
-                                        </div>
-                                        {ordersByStatus[OrderStatus.WAITING_APPROVAL] > 0 && (
-                                            <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"/>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h4 className="text-3xl font-black text-zinc-900 dark:text-white">{ordersByStatus[OrderStatus.WAITING_APPROVAL]}</h4>
-                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">Por Aprobar</p>
-                                        <p className="text-[10px] text-zinc-500 mt-2">Requieren acción inmediata</p>
-                                    </div>
-                                </button>
-
-                                {/* Widget 2: Pagos Parciales */}
-                                <button 
-                                    onClick={() => { setStatusFilter('TODOS'); setActiveTab('ORDERS'); }}
-                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl relative overflow-hidden shadow-sm group min-h-[200px] flex flex-col justify-between text-left hover:border-amber-500/50 transition-all"
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                            <DollarSign size={20} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600"/>
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-500">Finanzas</span>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-xl font-bold uppercase leading-tight text-zinc-900 dark:text-white">Saldos<br/>Pendientes</h4>
-                                        <p className="text-xs font-medium text-zinc-500 mt-2">
-                                            {orders.filter(o => o.paymentStatus === 'PARCIAL').length} órdenes con pago parcial
-                                        </p>
-                                    </div>
-                                </button>
-
-                                {/* Widget 3: Stock */}
-                                <button 
-                                    onClick={() => setActiveTab('INVENTORY')}
-                                    className={`p-6 rounded-2xl flex flex-col justify-between relative group text-left transition-all ${lowStockProducts.length > 0 ? 'bg-amber-500' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-amber-500/50'}`}
-                                >
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${lowStockProducts.length > 0 ? 'bg-white/20 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600'}`}>
-                                        <Package size={24}/>
-                                    </div>
-                                    <div>
-                                        <h4 className={`font-bold uppercase text-sm ${lowStockProducts.length > 0 ? 'text-white' : 'text-zinc-900 dark:text-white'}`}>Alerta Stock</h4>
-                                        <p className={`text-xs mt-1 line-clamp-2 ${lowStockProducts.length > 0 ? 'text-white/80' : 'text-zinc-500'}`}>
-                                            {lowStockProducts.length > 0 
-                                                ? `${lowStockProducts.length} productos bajo mínimo.` 
-                                                : "Inventario saludable."}
-                                        </p>
-                                    </div>
-                                </button>
-
-                                {/* Widget 4: Producción */}
-                                <button 
-                                    onClick={() => { setStatusFilter(OrderStatus.IN_PRODUCTION); setActiveTab('ORDERS'); }}
-                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl flex flex-col justify-between text-left hover:border-amber-500/50 transition-all group"
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-500/20 transition-colors">
-                                            <Zap size={20} className="text-zinc-600 dark:text-zinc-400 group-hover:text-amber-600"/>
-                                        </div>
-                                        <span className="text-2xl font-black text-zinc-900 dark:text-white">{ordersByStatus[OrderStatus.IN_PRODUCTION] || 0}</span>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-zinc-900 dark:text-white uppercase text-sm">En Producción</h4>
-                                        <p className="text-xs text-zinc-500 mt-1">Órdenes activas</p>
-                                    </div>
-                                </button>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {activeTab==='CALENDAR'&&<DeliveryCalendar orders={orders} onOrder={o=>{setSelectedOrder(o);setActiveTab('ORDERS');}} onOrders={()=>{setStatusFilter('TODOS');setChartDate(null);setDateFilter('ALL');setSearchQuery('');setActiveTab('ORDERS');}}/>}
 
             {activeTab === 'ORDERS' && (
-                <div className="flex flex-col h-full overflow-hidden relative bg-zinc-50 dark:bg-zinc-950">
+                <div className={`admin-orders ${selectedOrder?'has-selection':''} flex flex-col h-full overflow-hidden relative bg-zinc-50 dark:bg-zinc-950`}>{chartDate&&!selectedOrder&&<div className="p-3 border-b text-sm flex items-center justify-between gap-3"><span>Pedidos del {new Date(chartDate).toLocaleDateString('es-MX')}</span><button className="underline" onClick={()=>setChartDate(null)}>Quitar filtro de día</button></div>}
                     {/* FINANCE DRAWER - Overlay from right */}
-                    <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${financeDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                    <div aria-hidden={!financeDrawerOpen} {...(!financeDrawerOpen?{inert:""} as any:{})} className={`fixed inset-0 z-50 transition-opacity duration-300 ${financeDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFinanceDrawerOpen(false)}/>
                         <div className={`absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl transform transition-transform duration-300 ${financeDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                             {selectedOrder && (
@@ -2061,7 +1545,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Resumen Financiero</h3>
                                             <p className="text-sm text-zinc-500">Orden #{selectedOrder.id.replace('LM-', '')}</p>
                                         </div>
-                                        <button onClick={() => setFinanceDrawerOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                                        <button aria-label="Cerrar pago y entrega" onClick={() => setFinanceDrawerOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
                                             <X size={20} className="text-zinc-500"/>
                                         </button>
                                     </div>
@@ -2070,6 +1554,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                         {/* Total Amount - Big Display */}
                                         <div className="bg-gradient-to-br from-amber-500 to-yellow-400 rounded-2xl p-6 text-center">
+                                            {selectedOrder.reviewRequired&&!selectedOrder.totalConfirmed&&<p className="text-xs font-bold mb-2">SOLICITUD EN REVISIÓN. Total estimado, entrega sin confirmar. Puntos y cupón solicitados no consumidos.</p>}
+                                            {selectedOrder.reviewRequired&&!selectedOrder.totalConfirmed&&<button className="underline text-xs font-bold" onClick={async()=>{
+                                              if(import.meta.env.VITE_CHECKOUT_ENABLED!=='true'){alert('Finalización aún en prueba local');return;}
+                                              const totalText=prompt('Total final acordado para este pedido (MXN):');if(totalText===null)return;
+                                              const note=prompt('Qué revisaste y qué incluye el total/entrega. Puntos y cupón siguen sin canjear:');if(note===null)return;
+                                              const total=Number(totalText);if(!Number.isFinite(total)||total<0||!note.trim()){alert('Revisa total y nota');return;}
+                                              const {error}=await supabase!.rpc('lm_finalize_order_review',{order_id:selectedOrder.id,confirmed_total:total,review_note:note});
+                                              if(error){alert('No confirmado: '+error.message);return;}alert('Revisión guardada. Pago sigue pendiente. Se recargará para evitar cambios administrativos obsoletos.');window.location.reload();
+                                            }}>Revisar y confirmar total/entrega</button>}
                                             <p className="text-amber-900/60 text-xs font-bold uppercase tracking-wider mb-1">Monto Total</p>
                                             <p className="text-4xl font-black text-amber-950 tracking-tight">{formatCurrency(selectedOrder.total)}</p>
                                         </div>
@@ -2081,8 +1574,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 {['PENDIENTE', 'PARCIAL', 'PAGADO', 'REEMBOLSADO'].map((status) => (
                                                     <button
                                                         key={status}
+                                                        aria-pressed={selectedOrder.paymentStatus===status} data-payment-state={status}
                                                         onClick={() => handleUpdateOrderField('paymentStatus', status)}
-                                                        className={`px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all ${
+                                                        className={`order-payment-status px-4 py-3 rounded-xl text-xs font-bold uppercase transition-all ${
                                                             selectedOrder.paymentStatus === status
                                                                 ? status === 'PAGADO' ? 'bg-system-success text-white shadow-lg shadow-success'
                                                                 : status === 'PENDIENTE' ? 'bg-system-error text-white shadow-lg shadow-danger'
@@ -2129,12 +1623,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <div className="relative">
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-lg">$</span>
                                                 <input 
-                                                    type="number" 
+                                                    aria-label="Monto abonado" type="number" min="0" step="0.01" aria-invalid={Boolean(paidAmountError)} aria-describedby={paidAmountError?'paid-amount-error':undefined} 
                                                     value={selectedOrder.amountPaid || 0} 
-                                                    onChange={(e) => handleUpdateOrderField('amountPaid', parseFloat(e.target.value))}
+                                                    onChange={(e) => {if(!e.target.value.trim()){setPaidAmountError('Escribe un monto válido de cero o más.');return;}handleUpdateOrderField('amountPaid',Number(e.target.value));}}
                                                     className="w-full bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-4 font-mono font-bold text-2xl text-zinc-900 dark:text-white outline-none focus:border-amber-500 transition-all"
                                                 />
                                             </div>
+                                            {paidAmountError&&<p id="paid-amount-error" role="alert" className="text-xs text-red-600 dark:text-red-400">{paidAmountError}</p>}
                                             {selectedOrder.paymentStatus === 'PARCIAL' && (
                                                 <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-800/50">
                                                     <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase">Restante</span>
@@ -2150,7 +1645,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 <div>
                                                     <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Fecha de Entrega</label>
                                                     <input 
-                                                        type="date" 
+                                                        aria-label="Fecha de entrega" type="date" 
                                                         value={selectedOrder.deliveryDate || ''} 
                                                         onChange={(e) => handleUpdateOrderField('deliveryDate', e.target.value)}
                                                         className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm font-bold text-zinc-900 dark:text-white outline-none focus:border-amber-500"
@@ -2158,7 +1653,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Hora</label>
-                                                    <select
+                                                    <select aria-label="Hora de entrega"
                                                         value={selectedOrder.deliveryTime || ''}
                                                         onChange={(e) => handleUpdateOrderField('deliveryTime', e.target.value)}
                                                         className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm font-bold text-zinc-900 dark:text-white outline-none focus:border-amber-500 appearance-none"
@@ -2194,13 +1689,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl border border-zinc-200 dark:border-zinc-800">
                                 <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Historial de Cambios</h3>
-                                    <button onClick={() => setShowHistoryModal(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
+                                    <button aria-label="Cerrar historial" onClick={() => setShowHistoryModal(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
                                         <X size={20} className="text-zinc-500"/>
                                     </button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-6">
                                     <div className="space-y-4">
-                                        {selectedOrder.history.map((event, idx) => (
+                                        {(selectedOrder.history??[]).map((event, idx) => (
                                             <div key={idx} className="flex gap-4">
                                                 <div className="flex flex-col items-center">
                                                     <div className="w-3 h-3 rounded-full bg-amber-500"/>
@@ -2220,10 +1715,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
 
                     {/* TOP SECTION: Order List */}
-                    <div className="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+                    <div className="admin-order-list shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
                         {/* Search Row - Simplificado */}
                         <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                            <div className="flex items-center gap-3">
+                            <div className="admin-order-search-controls flex items-center gap-3">
                                 <div className="relative flex-1 max-w-sm">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
                                     <input 
@@ -2233,14 +1728,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         onChange={e => setSearchQuery(e.target.value)}
                                     />
                                 </div>
-                                <span className="text-xs text-zinc-500">
-                                    <span className="font-bold text-zinc-900 dark:text-white">{filteredOrders.length}</span> órdenes
-                                </span>
+                                <label className="admin-order-state-filter"><span className="sr-only">Estado del pedido</span><select aria-label="Estado del pedido" value={statusFilter} onChange={e=>setStatusFilter(e.target.value as any)}><option value="TODOS">Todos ({orders.length})</option>{Object.values(OrderStatus).map(status=><option key={status} value={status}>{status.replaceAll('_',' ').toLocaleLowerCase('es-MX')} ({ordersByStatus[status]||0})</option>)}</select></label>
+                                <span className="admin-order-result-count">{filteredOrders.length} {filteredOrders.length===1?'pedido':'pedidos'}</span>
                             </div>
                         </div>
                         
                         {/* Orders Horizontal Scroll */}
-                        <div className="flex overflow-x-auto gap-3 px-4 py-3 no-scrollbar bg-white dark:bg-zinc-900">
+                        <div className="admin-order-cards flex gap-3 px-4 py-3 bg-white dark:bg-zinc-900">
                             {filteredOrders.length === 0 && (
                                 <div className="w-full flex items-center justify-center text-zinc-500 py-4">
                                     <Package size={20} className="mr-2"/>
@@ -2254,7 +1748,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     <button
                                         key={`${order.id}-${index}`}
                                         onClick={() => setSelectedOrder(order)}
-                                        className={`shrink-0 w-[280px] rounded-xl border text-left transition-all duration-200 overflow-hidden relative ${
+                                        className={`admin-order-card shrink-0 w-[280px] rounded-xl border text-left transition-all duration-200 overflow-hidden relative ${
                                             isSelected 
                                                 ? 'bg-amber-500 border-amber-500 shadow-lg shadow-amber-500/25 ring-2 ring-amber-500/20' 
                                                 : isPriority
@@ -2309,20 +1803,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                     
                     {/* MAIN CONTENT AREA */}
-                    <div className="flex-1 overflow-hidden">
+                    <div className="admin-order-main flex-1 overflow-hidden">
                         {selectedOrder ? (
-                            <div className="h-full flex flex-col lg:flex-row">
+                            <div className="admin-order-detail h-full flex flex-col">
                                 {/* LEFT: Order Details */}
-                                <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-zinc-50 dark:bg-zinc-950">
+                                <div className="admin-order-body flex-1 h-full overflow-y-auto custom-scrollbar bg-zinc-50 dark:bg-zinc-950">
+                                    <button className="admin-order-back" onClick={()=>setSelectedOrder(null)}><ArrowLeft size={18}/> Volver a pedidos</button>
                                     {/* Sticky Header */}
-                                    <div className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-6 py-4">
+                                    <div className="admin-order-heading sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 lg:px-6 lg:py-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
                                                 <div>
                                                     <div className="flex items-center gap-3">
-                                                        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight">
-                                                            {selectedOrder.customerName}
-                                                        </h1>
+                                                        <h2 className="text-lg lg:text-2xl font-bold text-zinc-900 dark:text-white leading-tight">
+                                                            Pedido #{selectedOrder.id.replace('LM-', '')}
+                                                        </h2>
                                                         {selectedOrder.isPriority && (
                                                             <span className="px-2 py-0.5 bg-system-error text-white text-[10px] font-bold uppercase rounded-full">
                                                                 Prioridad
@@ -2330,8 +1825,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-sm text-zinc-500 font-mono">#{selectedOrder.id.replace('LM-', '')}</span>
-                                                        <span className="w-1 h-1 rounded-full bg-zinc-300"/>
                                                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getStatusBadgeColor(selectedOrder.status)}`}>
                                                             {selectedOrder.status.replace('_', ' ')}
                                                         </span>
@@ -2354,82 +1847,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             ? 'bg-system-error text-white border-system-error'
                                                             : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:border-system-error'
                                                     }`}
-                                                    title={selectedOrder.isPriority ? 'Quitar prioridad' : 'Marcar como prioridad'}
+                                                    aria-label={selectedOrder.isPriority ? 'Quitar prioridad' : 'Marcar como prioridad'} title={selectedOrder.isPriority ? 'Quitar prioridad' : 'Marcar como prioridad'}
                                                 >
                                                     <AlertTriangle size={16}/>
                                                 </button>
                                                 
                                                 {/* WhatsApp Quick Actions */}
-                                                <div className="relative">
-                                                    <button 
-                                                        onClick={() => {setShowWhatsAppMenu(!showWhatsAppMenu); setShowActionsMenu(false);}}
-                                                        className="flex items-center gap-2 px-3 py-2 btn-system btn-system-success text-white rounded-xl text-sm font-bold transition-all"
-                                                    >
-                                                        <MessageCircle size={16}/>
-                                                        <span className="hidden sm:inline">WhatsApp</span>
-                                                        <ChevronDown size={14} className={`transition-transform ${showWhatsAppMenu ? 'rotate-180' : ''}`}/>
-                                                    </button>
-                                                    {showWhatsAppMenu && (
-                                                        <>
-                                                            <div className="fixed inset-0 z-20" onClick={() => setShowWhatsAppMenu(false)}/>
-                                                            <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 z-30">
-                                                                <p className="text-[10px] font-bold text-zinc-400 uppercase px-3 py-2">Mensajes Rápidos</p>
-                                                                <a 
-                                                                    href={getWhatsAppLink(selectedOrder.customerPhone, storeConfig.messageTemplates.confirmation, selectedOrder)}
-                                                                    target="_blank"
-                                                                    onClick={() => setShowWhatsAppMenu(false)}
-                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
-                                                                >
-                                                                    <CheckCircle size={16} className="text-blue-500"/>
-                                                                    Confirmación
-                                                                </a>
-                                                                <a 
-                                                                    href={getWhatsAppLink(selectedOrder.customerPhone, storeConfig.messageTemplates.production, selectedOrder)}
-                                                                    target="_blank"
-                                                                    onClick={() => setShowWhatsAppMenu(false)}
-                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
-                                                                >
-                                                                    <Zap size={16} className="text-amber-500"/>
-                                                                    En Producción
-                                                                </a>
-                                                                <a 
-                                                                    href={getWhatsAppLink(selectedOrder.customerPhone, storeConfig.messageTemplates.ready, selectedOrder)}
-                                                                    target="_blank"
-                                                                    onClick={() => setShowWhatsAppMenu(false)}
-                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
-                                                                >
-                                                                    <Check size={16} className="text-green-500"/>
-                                                                    Pedido Listo
-                                                                </a>
-                                                                <div className="border-t border-zinc-200 dark:border-zinc-700 my-1"/>
-                                                                <a 
-                                                                    href={getWhatsAppLink(selectedOrder.customerPhone, `Hola {NOMBRE}, sobre tu orden #{ID}: `, selectedOrder)}
-                                                                    target="_blank"
-                                                                    onClick={() => setShowWhatsAppMenu(false)}
-                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
-                                                                >
-                                                                    <MessageSquare size={16} className="text-zinc-400"/>
-                                                                    Personalizado
-                                                                </a>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                
-                                                {/* Primary Action: Finance Drawer */}
-                                                <button 
-                                                    onClick={() => setFinanceDrawerOpen(true)}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md"
-                                                >
-                                                    <DollarSign size={16}/>
-                                                    <span className="hidden sm:inline">Finanzas</span>
-                                                    <PanelRight size={16}/>
-                                                </button>
-                                                
                                                 {/* Secondary Actions Menu - Status Change */}
                                                 <div className="relative">
                                                     <button 
-                                                        onClick={() => {setShowActionsMenu(!showActionsMenu); setShowWhatsAppMenu(false);}}
+                                                        aria-label="Cambiar estado del pedido" aria-expanded={showActionsMenu} onClick={() => {setShowActionsMenu(!showActionsMenu); setShowWhatsAppMenu(false);}}
                                                         className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${showActionsMenu ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border-zinc-200 dark:border-zinc-700'}`}
                                                     >
                                                         <MoreVertical size={16}/>
@@ -2457,107 +1884,176 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         </div>
                                     </div>
                                     
-                                    {/* Content */}
-                                    <div className="p-6 space-y-6">
-                                        {/* Meta Info Bar */}
-                                        <div className="flex flex-wrap items-center gap-4 text-sm">
-                                            <div className="flex items-center gap-2 text-zinc-500">
-                                                <Clock size={14}/>
-                                                <span>{formatDateTime(selectedOrder.createdAt)}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-zinc-500">
-                                                <Phone size={14}/>
-                                                <span className="font-mono">{formatPhoneDisplay(selectedOrder.customerPhone)}</span>
-                                            </div>
-                                            {selectedOrder.deliveryDate && (
-                                                <div className="flex items-center gap-2 text-amber-600">
-                                                    <Calendar size={14}/>
-                                                    <span className="font-bold">Entrega: {new Date(selectedOrder.deliveryDate).toLocaleDateString('es-MX')}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        
+                                    <div className="order-detail-tabs" role="tablist" aria-label="Secciones del pedido">
+                                        {([['design','Diseño'],['client','Cliente'],['assets','Archivos'],['payment','Pago']] as const).map(([id,label]) => (
+                                            <button key={id} id={`order-tab-${id}`} role="tab" aria-selected={orderDetailTab===id} aria-controls={`order-panel-${id}`} tabIndex={orderDetailTab===id?0:-1} onClick={()=>setOrderDetailTab(id)} onKeyDown={e=>{const ids=['design','client','assets','payment'] as const;let next=ids.indexOf(id);if(e.key==='ArrowRight')next=(next+1)%4;else if(e.key==='ArrowLeft')next=(next+3)%4;else if(e.key==='Home')next=0;else if(e.key==='End')next=3;else return;e.preventDefault();setOrderDetailTab(ids[next]);document.getElementById(`order-tab-${ids[next]}`)?.focus();}}>{label}</button>
+                                        ))}
+                                    </div>
+                                    <div className="order-detail-panels p-4 lg:p-6">
+                                        <section role="tabpanel" id="order-panel-design" aria-labelledby="order-tab-design" hidden={orderDetailTab!=='design'} className="space-y-4">
                                         {/* Items */}
                                         <div className="space-y-4">
-                                            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Productos</h3>
                                             {selectedOrder.items.map((item, idx) => (
                                                 <div key={idx} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
                                                     {/* Item Header */}
-                                                    <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
+                                                    <div className="px-4 py-3 lg:px-5 lg:py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="w-9 h-9 lg:w-10 lg:h-10 shrink-0 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
                                                                 <Package size={18} className="text-amber-600"/>
                                                             </div>
-                                                            <div>
-                                                                <h4 className="font-bold text-zinc-900 dark:text-white">{item.productId}</h4>
-                                                                <p className="text-xs text-zinc-500">{item.colorName} • Cantidad: {item.quantity}</p>
+                                                            <div className="min-w-0">
+                                                                <h4 className="font-bold text-zinc-900 dark:text-white truncate">{itemProductLabel(item,products.find(p=>p.id===item.productId)?.name)}</h4>
+                                                                <p className="text-xs text-zinc-500">{(()=>{const c=itemColorLabel(item);return c?`${c} • `:''})()}Cantidad: {item.quantity}</p>
                                                             </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="text-right">
-                                                                <span className="text-[10px] text-zinc-400 uppercase block">Fuente Frente</span>
-                                                                <span className="font-mono font-bold text-zinc-900 dark:text-white">#{item.frontFontId}</span>
-                                                            </div>
-                                                            {item.backText && (
-                                                                <div className="text-right pl-3 border-l border-zinc-200 dark:border-zinc-700">
-                                                                    <span className="text-[10px] text-zinc-400 uppercase block">Fuente Dorso</span>
-                                                                    <span className="font-mono font-bold text-zinc-900 dark:text-white">#{item.backFontId}</span>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     </div>
                                                     
-                                                    {/* Previews */}
-                                                    <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-                                                        <TechnicalPreview 
-                                                            imageUrl={item.customBackgroundImage || products.find(p => p.id === item.productId)?.colors.find(c => c.name === item.colorName || c.name.toLowerCase() === item.colorName.toLowerCase())?.imageUrl || products.find(p => p.id === item.productId)?.imageUrl} 
+                                                    {/* Previews: tabs Frente/Reverso, una sola vista grande */}
+                                                    <div className="p-3 lg:p-5 bg-zinc-50/50 dark:bg-zinc-900/50">
+                                                        <SidePreviewTabs
+                                                            front={<TechnicalPreview fontId={item.frontFontId} hideElementCounts
+                            imageScale={previewImageScale(products.find(p=>p.id===item.productId)?.illustrativeImage,item.customBackgroundImage)}
+                            inkColor={previewInk(productColorHex(products.find(p=>p.id===item.productId),item.colorName))}
+                            font2Css={fonts.find(f=>String(f.id)===String(item.frontFontId2))?.cssFamily} 
+                                                            imageUrl={productPreviewImage(products.find(p => p.id === item.productId), item.colorName, item.customBackgroundImage)} 
                                                             text={item.frontText} text2={item.frontText2} 
-                                                            fontName={item.frontFontName} fontCss={fonts.find(f => f.id === item.frontFontId)?.cssFamily || ''} 
+                                                            fontName={item.frontFontName || fonts.find(f => String(f.id) === String(item.frontFontId))?.name} fontCss={fonts.find(f => String(f.id) === String(item.frontFontId))?.cssFamily || ''} 
                                                             logos={item.frontLogos} 
                                                             designState={item.frontDesignState} designState2={item.frontDesignState2} 
                                                             sideLabel="FRENTE"
-                                                        />
-                                                        <TechnicalPreview 
-                                                            imageUrl={item.customBackgroundImage || products.find(p => p.id === item.productId)?.colors.find(c => c.name === item.colorName || c.name.toLowerCase() === item.colorName.toLowerCase())?.imageUrl || products.find(p => p.id === item.productId)?.imageUrl} 
+                                                            allowExpand
+                                                            referencePhoto={!item.customBackgroundImage && referencePhotoColor(products.find(p => p.id === item.productId), item.colorName) !== undefined}
+                                                        />}
+                                                            back={<TechnicalPreview fontId={item.backFontId} hideElementCounts
+                            imageScale={previewImageScale(products.find(p=>p.id===item.productId)?.illustrativeImage,item.customBackgroundImage)}
+                            inkColor={previewInk(productColorHex(products.find(p=>p.id===item.productId),item.colorName))}
+                            font2Css={fonts.find(f=>String(f.id)===String(item.backFontId2))?.cssFamily} 
+                                                            imageUrl={productPreviewImage(products.find(p => p.id === item.productId), item.colorName, item.customBackgroundImage)} 
                                                             text={item.backText} text2={item.backText2} 
-                                                            fontName={item.backFontName} fontCss={fonts.find(f => f.id === item.backFontId)?.cssFamily || ''} 
+                                                            fontName={item.backFontName || fonts.find(f => String(f.id) === String(item.backFontId))?.name} fontCss={fonts.find(f => String(f.id) === String(item.backFontId))?.cssFamily || ''} 
                                                             logos={item.backLogos} 
                                                             designState={item.backDesignState} designState2={item.backDesignState2} 
-                                                            sideLabel="DORSO"
+                                                            sideLabel="REVERSO"
+                                                            allowExpand
+                                                            referencePhoto={!item.customBackgroundImage && referencePhotoColor(products.find(p => p.id === item.productId), item.colorName) !== undefined}
+                                                        />}
                                                         />
                                                     </div>
                                                     
-                                                    {/* Assets if any */}
-                                                    {(item.customBackgroundImage || item.frontLogos.length > 0 || item.backLogos.length > 0) && (
-                                                        <div className="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-                                                            <p className="text-[10px] font-bold text-zinc-400 uppercase mb-3 flex items-center gap-1">
-                                                                <Paperclip size={12}/> Archivos Adjuntos
-                                                            </p>
-                                                            <div className="flex gap-2 overflow-x-auto pb-1">
-                                                                {item.customBackgroundImage && (
-                                                                    <a href={item.customBackgroundImage} target="_blank" className="shrink-0 relative group">
-                                                                        <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
-                                                                            <img src={item.customBackgroundImage} className="w-full h-full object-cover" alt=""/>
-                                                                        </div>
-                                                                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-system-success rounded-full flex items-center justify-center">
-                                                                            <Download size={8} className="text-white"/>
-                                                                        </span>
-                                                                    </a>
-                                                                )}
-                                                                {[...item.frontLogos, ...item.backLogos].map((logo, i) => (
-                                                                    <a key={i} href={logo.originalUrl || logo.url} target="_blank" className="shrink-0 relative group">
-                                                                        <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white flex items-center justify-center p-1">
-                                                                            <img src={logo.url} className="w-full h-full object-contain" alt=""/>
-                                                                        </div>
-                                                                    </a>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
+
                                                 </div>
                                             ))}
                                         </div>
 
+
+                                        </section>
+                                        <section role="tabpanel" id="order-panel-client" aria-labelledby="order-tab-client" hidden={orderDetailTab!=='client'} className="space-y-4">
+                                            <div className="order-info-card">
+                                                <h3>Datos del cliente</h3>
+                                                <p className="font-bold">{selectedOrder.customerName}</p>
+                                                <p>{formatPhoneDisplay(selectedOrder.customerPhone) || 'Sin teléfono de contacto'}</p>
+                                            </div>
+
+                                            <div className="order-contact-actions flex flex-wrap items-center gap-3">
+                                                <div className="relative">
+                                                    <button 
+                                                        aria-expanded={showWhatsAppMenu} disabled={!selectedOrder.customerPhone} aria-label={selectedOrder.customerPhone?'Mensajes de WhatsApp':'Sin teléfono de contacto'} onClick={() => {setShowWhatsAppMenu(!showWhatsAppMenu); setShowActionsMenu(false);}}
+                                                        className="flex items-center gap-2 px-3 py-2 btn-system btn-system-success text-white rounded-xl text-sm font-bold transition-all"
+                                                    >
+                                                        <MessageCircle size={16}/>
+                                                        <span>{selectedOrder.customerPhone?'WhatsApp':'Sin teléfono'}</span>
+                                                        {selectedOrder.customerPhone&&<ChevronDown size={14} className={`transition-transform ${showWhatsAppMenu ? 'rotate-180' : ''}`}/>}
+                                                    </button>
+                                                    {showWhatsAppMenu && (
+                                                        <>
+                                                            <div className="fixed inset-0 z-20" onClick={() => setShowWhatsAppMenu(false)}/>
+                                                            <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 z-30">
+                                                                <p className="text-[10px] font-bold text-zinc-400 uppercase px-3 py-2">Mensajes Rápidos</p>{!storeConfig.messageTemplates&&<p className="text-xs px-3 py-2">Configura las plantillas en Ajustes &gt; Mensajes antes de usar estos atajos.</p>}
+                                                                <a 
+                                                                    aria-disabled={!storeConfig.messageTemplates?.confirmation} href={storeConfig.messageTemplates?.confirmation?getWhatsAppLink(selectedOrder.customerPhone,storeConfig.messageTemplates.confirmation,selectedOrder):undefined}
+                                                                    target="_blank"
+                                                                    onClick={() => setShowWhatsAppMenu(false)}
+                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
+                                                                >
+                                                                    <CheckCircle size={16} className="text-blue-500"/>
+                                                                    Confirmación
+                                                                </a>
+                                                                <a 
+                                                                    aria-disabled={!storeConfig.messageTemplates?.production} href={storeConfig.messageTemplates?.production?getWhatsAppLink(selectedOrder.customerPhone,storeConfig.messageTemplates.production,selectedOrder):undefined}
+                                                                    target="_blank"
+                                                                    onClick={() => setShowWhatsAppMenu(false)}
+                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
+                                                                >
+                                                                    <Zap size={16} className="text-amber-500"/>
+                                                                    En Producción
+                                                                </a>
+                                                                <a 
+                                                                    aria-disabled={!storeConfig.messageTemplates?.ready} href={storeConfig.messageTemplates?.ready?getWhatsAppLink(selectedOrder.customerPhone,storeConfig.messageTemplates.ready,selectedOrder):undefined}
+                                                                    target="_blank"
+                                                                    onClick={() => setShowWhatsAppMenu(false)}
+                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
+                                                                >
+                                                                    <Check size={16} className="text-green-500"/>
+                                                                    Pedido Listo
+                                                                </a>
+                                                                <div className="border-t border-zinc-200 dark:border-zinc-700 my-1"/>
+                                                                <a 
+                                                                    href={getWhatsAppLink(selectedOrder.customerPhone, `Hola {NOMBRE}, sobre tu orden #{ID}: `, selectedOrder)}
+                                                                    target="_blank"
+                                                                    onClick={() => setShowWhatsAppMenu(false)}
+                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-bold text-zinc-900 dark:text-white"
+                                                                >
+                                                                    <MessageSquare size={16} className="text-zinc-400"/>
+                                                                    Personalizado
+                                                                </a>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                
+                                                <button onClick={()=>handleGoToClient(selectedOrder.customerPhone)} className="px-4 py-2 border border-zinc-700 rounded-lg text-sm font-bold min-h-[44px]">Ver perfil del cliente</button>
+                                            </div>
+                                        {/* Meta Info Bar */}
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs lg:text-sm">
+                                            <div className="flex items-center gap-2 text-zinc-500">
+                                                <Clock size={14}/>
+                                                <span>Creado: {formatDateTime(selectedOrder.createdAt)}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Delivery Summary */}
+                                        {(selectedOrder.deliveryDate || selectedOrder.deliveryTime) && (
+                                            <div>
+                                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Entrega</h4>
+                                                <div className="space-y-2">
+                                                    {selectedOrder.deliveryDate && (
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <Calendar size={14} className="text-zinc-400"/>
+                                                            <span className="text-zinc-700 dark:text-zinc-300">
+                                                                {localCalendarDate(selectedOrder.deliveryDate).toLocaleDateString('es-MX', {weekday: 'short', day: 'numeric', month: 'short'})}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {selectedOrder.deliveryTime && (
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <Clock size={14} className="text-zinc-400"/>
+                                                            <span className="text-zinc-700 dark:text-zinc-300">{selectedOrder.deliveryTime}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Shipping Address */}
+                                        {selectedOrder.shippingAddress && (
+                                            <div>
+                                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Dirección / Notas</h4>
+                                                <p className="text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl">
+                                                    {selectedOrder.shippingAddress}
+                                                </p>
+                                            </div>
+                                        )}
+                                        
                                         {/* Internal Notes Section */}
                                         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5">
                                             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -2570,7 +2066,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     type="text"
                                                     value={orderNoteInput}
                                                     onChange={(e) => setOrderNoteInput(e.target.value)}
-                                                    placeholder="Agregar nota interna..."
+                                                    aria-label="Nueva nota interna" placeholder="Agregar nota interna..."
                                                     className="flex-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-amber-500"
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' && orderNoteInput.trim()) {
@@ -2586,7 +2082,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             setOrderNoteInput('');
                                                         }
                                                     }}
-                                                    disabled={!orderNoteInput.trim()}
+                                                    aria-label="Agregar nota interna" disabled={!orderNoteInput.trim()}
                                                     className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     <Plus size={18}/>
@@ -2598,7 +2094,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 {(selectedOrder.internalNotes || []).length === 0 ? (
                                                     <p className="text-xs text-zinc-400 text-center py-4">Sin notas internas</p>
                                                 ) : (
-                                                    (selectedOrder.internalNotes || []).slice().reverse().map((note) => (
+                                                    (Array.isArray(selectedOrder.internalNotes)?selectedOrder.internalNotes:[]).slice().reverse().map((note) => (
                                                         <div key={note.id} className="flex items-start gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
                                                             <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
                                                                 <span className="text-[10px] font-bold text-amber-600">{note.author[0]}</span>
@@ -2608,7 +2104,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                 <p className="text-[10px] text-zinc-400 mt-1">{formatDateTime(note.timestamp)}</p>
                                                             </div>
                                                             <button
-                                                                onClick={() => handleDeleteOrderNote(selectedOrder, note.id)}
+                                                                aria-label="Eliminar nota interna" onClick={() => handleDeleteOrderNote(selectedOrder, note.id)}
                                                                 className="p-1.5 text-zinc-400 hover:text-red-500 transition-colors"
                                                             >
                                                                 <Trash2 size={14}/>
@@ -2618,26 +2114,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 )}
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                                
-                                {/* RIGHT: Info Sidebar (Desktop only) */}
-                                <div className="hidden lg:block w-72 shrink-0 border-l border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-5 overflow-y-auto">
-                                    <div className="space-y-5">
-                                        {/* Single Action - Client Profile */}
-                                        <button 
-                                            onClick={() => handleGoToClient(selectedOrder.customerPhone)}
-                                            className="w-full flex items-center gap-3 p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl hover:border-amber-400 transition-all shadow-sm"
-                                        >
-                                            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
-                                                <UserCircle size={20} className="text-amber-600"/>
-                                            </div>
-                                            <div className="text-left">
-                                                <span className="text-xs text-zinc-400 uppercase block">Cliente</span>
-                                                <span className="font-bold text-sm text-zinc-900 dark:text-white">Ver Perfil</span>
-                                            </div>
-                                        </button>
-                                        
+                                        </section>
+                                        <section role="tabpanel" id="order-panel-assets" aria-labelledby="order-tab-assets" hidden={orderDetailTab!=='assets'} className="space-y-4">
+                                            <h3 className="font-bold">Archivos del diseño</h3>
+                                            <p className="text-sm text-zinc-500">Toca Ver archivo para ampliarlo sin salir del pedido.</p>
+                                            {selectedOrder.items.map((item,idx)=>(<div key={idx} className="order-info-card">
+                                                <h4>{products.find(p=>p.id===item.productId)?.name || item.productId} · Producto {idx+1}</h4>
+                                                <OrderAssetGallery item={item}/>
+                                            </div>))}
+
+                                        </section>
+                                        <section role="tabpanel" id="order-panel-payment" aria-labelledby="order-tab-payment" hidden={orderDetailTab!=='payment'} className="space-y-4">
                                         {/* Payment Summary */}
                                         <div>
                                             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Resumen de Pago</h4>
@@ -2665,39 +2152,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             </div>
                                         </div>
                                         
-                                        {/* Delivery Summary */}
-                                        {(selectedOrder.deliveryDate || selectedOrder.deliveryTime) && (
-                                            <div>
-                                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Entrega</h4>
-                                                <div className="space-y-2">
-                                                    {selectedOrder.deliveryDate && (
-                                                        <div className="flex items-center gap-2 text-sm">
-                                                            <Calendar size={14} className="text-zinc-400"/>
-                                                            <span className="text-zinc-700 dark:text-zinc-300">
-                                                                {new Date(selectedOrder.deliveryDate).toLocaleDateString('es-MX', {weekday: 'short', day: 'numeric', month: 'short'})}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {selectedOrder.deliveryTime && (
-                                                        <div className="flex items-center gap-2 text-sm">
-                                                            <Clock size={14} className="text-zinc-400"/>
-                                                            <span className="text-zinc-700 dark:text-zinc-300">{selectedOrder.deliveryTime}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                        
-                                        {/* Shipping Address */}
-                                        {selectedOrder.shippingAddress && (
-                                            <div>
-                                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Dirección / Notas</h4>
-                                                <p className="text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl">
-                                                    {selectedOrder.shippingAddress}
-                                                </p>
-                                            </div>
-                                        )}
-                                        
+                                            <button className="order-finance-button" onClick={()=>setFinanceDrawerOpen(true)}><DollarSign size={18}/> Administrar pago y entrega</button>
                                         {/* Quick Stats */}
                                         <div className="pt-4 border-t border-zinc-200 dark:border-zinc-700">
                                             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Estadísticas</h4>
@@ -2716,6 +2171,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                 </div>
                                             </div>
                                         </div>
+                                        </section>
                                     </div>
                                 </div>
                             </div>
@@ -2728,7 +2184,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <p className="text-sm mt-1">Elige una orden de la lista superior para ver sus detalles</p>
                                 {filteredOrders.length === 0 && searchQuery && (
                                     <button 
-                                        onClick={() => {setSearchQuery(''); setStatusFilter('TODOS'); setDateFilter('ALL');}}
+                                        onClick={() => {setSearchQuery(''); setStatusFilter('TODOS'); setDateFilter('ALL');setChartDate(null);}}
                                         className="mt-4 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-bold"
                                     >
                                         Limpiar filtros
@@ -2761,19 +2217,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
 
             {activeTab === 'FONTS' && (
-                <div className="space-y-6">
+                <div className="lm-fonts space-y-6">
+                    
                     {/* Header Compacto */}
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Fonts</h3>
-                            <p className="text-xs text-zinc-500 mt-1">{filteredFonts.length} de {fonts.length} fuentes</p>
+                            <h3 className="sr-only">Fuentes</h3>
+                            <details className="lm-font-provenance"><summary>{fonts.filter(f=>f.isCustom&&hasFontFile(f)).length} archivos propios · {fonts.filter(f=>f.bundled&&hasFontFile(f)).length} oficiales incluidos · {fonts.filter(f=>!hasFontFile(f)).length} referencias</summary><p>Los oficiales incluidos son las familias estándar con su archivo verificado. Las referencias se pueden ver y probar; para fabricar con ellas hace falta el archivo real correspondiente.</p></details>
                         </div>
                         <div className="flex items-center gap-2">
                             <button 
                                 onClick={() => setIsBulkFontModalOpen(true)} 
                                 className="px-4 py-2.5 bg-zinc-900 dark:bg-zinc-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2"
                             >
-                                <Layers size={14}/> Bulk
+                                <Layers size={14}/> Carga por lotes
                             </button>
                             <button 
                                 onClick={() => { setEditingFont(null); setIsFontModalOpen(true); }} 
@@ -2785,7 +2242,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
 
                     {/* Toolbar Compacta */}
-                    <div className="flex flex-col md:flex-row gap-3">
+                    <div className="lm-catalog-toolbar flex flex-col xl:flex-row gap-3">
                         {/* Búsqueda */}
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16}/>
@@ -2807,8 +2264,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                         
                         {/* Filtros en dropdowns */}
-                        <div className="flex gap-2">
-                            <select 
+                        <FilterDisclosure label="Filtros" count={[activeFontCategory!=='TODAS',fontStatusFilter!=='ALL'].filter(Boolean).length}><div className="flex gap-2">
+                            <select aria-label="Categoría de fuente"
                                 value={activeFontCategory} 
                                 onChange={(e) => setActiveFontCategory(e.target.value as any)}
                                 className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
@@ -2818,7 +2275,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 ))}
                             </select>
                             
-                            <select 
+                            <select aria-label="Estado de fuente"
                                 value={fontStatusFilter} 
                                 onChange={(e) => setFontStatusFilter(e.target.value as any)}
                                 className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 px-3 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500 cursor-pointer"
@@ -2829,7 +2286,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             </select>
                             
                             <div className="flex items-center gap-1 bg-zinc-200 dark:bg-zinc-800 rounded-xl p-1">
-                                <select 
+                                <select aria-label="Orden de fuentes"
                                     value={fontSortBy} 
                                     onChange={(e) => setFontSortBy(e.target.value as any)}
                                     className="bg-transparent border-none py-1.5 px-2 text-xs font-bold uppercase text-zinc-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
@@ -2882,8 +2339,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-xl p-1">
                                 {[
                                     { mode: 'GRID', icon: LayoutGrid },
-                                    { mode: 'LIST', icon: List },
-                                    { mode: 'COMPACT', icon: AlignLeft }
+                                    { mode: 'LIST', icon: List }
                                 ].map(({ mode, icon: Icon }) => (
                                     <button 
                                         key={mode}
@@ -2895,76 +2351,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     </button>
                                 ))}
                             </div>
-                        </div>
+                        </div></FilterDisclosure>
                     </div>
 
-                    {/* Preview Input */}
-                    <div className="relative">
+                    {/* Reference specimens do not authorize production. */}
+                    {<div className="font-preview-controls relative">
                         <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18}/>
                         <input 
                             value={fontPreviewText}
                             onChange={(e) => setFontPreviewText(e.target.value)}
-                            placeholder="Escribe aquí para probar tus fuentes..."
+                            aria-label="Texto para probar fuentes" placeholder="Escribe para comparar las fuentes…"
                             className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-12 pr-4 rounded-xl text-lg font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                         />
-                    </div>
+                    <label>Tamaño <input aria-label="Tamaño de muestra" type="range" min="20" max="64" step="2" value={fontPreviewSize} onChange={e=>setFontPreviewSize(Number(e.target.value))}/><output>{fontPreviewSize} px</output></label></div>}
                     
                     {/* Vista de fonts según el modo seleccionado */}
-                    {fontViewMode === 'GRID' && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {filteredFonts.map(font => (
-                                <div
-                                    key={font.id}
-                                    className={`bg-white/50 dark:bg-zinc-900/50 border border-zinc-200/40 dark:border-zinc-700/40 rounded-2xl overflow-hidden flex flex-col cursor-pointer group hover:border-amber-500 hover:shadow-lg transition-all ${font.active === false ? 'opacity-40' : ''}`}
-                                    onClick={() => { setEditingFont(font); setIsFontModalOpen(true); }}
-                                >
-                                    {/* Preview area */}
-                                    <div className="flex-1 flex items-center justify-center px-6 pt-8 pb-6 min-h-[160px]">
-                                        <span className={`${font.cssFamily} text-6xl md:text-7xl text-zinc-900 dark:text-white text-center leading-none select-none`}>
-                                            {fontPreviewText || 'Aa'}
-                                        </span>
-                                    </div>
-
-                                    {/* Footer */}
-                                    <div className="border-t border-zinc-200/40 dark:border-zinc-700/40 px-5 py-3 flex items-center justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-black text-amber-500 tabular-nums">#{font.id}</span>
-                                                <p className="font-bold text-xs text-zinc-900 dark:text-white uppercase tracking-wide truncate">{font.name}</p>
-                                            </div>
-                                            <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-0.5">{font.category || 'BÁSICA'}</p>
-                                        </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setEditingFont(font); setIsFontModalOpen(true); }}
-                                                className="p-2 rounded-lg text-zinc-400 hover:text-amber-500 transition-colors"
-                                                title="Editar"
-                                            >
-                                                <Edit size={15}/>
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); toggleFontActive(font); }}
-                                                className={`p-2 rounded-lg transition-colors ${font.active === false ? 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200' : 'text-green-500 hover:text-green-600'}`}
-                                                title={font.active === false ? 'Activar' : 'Desactivar'}
-                                            >
-                                                {font.active === false ? <EyeOff size={15}/> : <Eye size={15}/>}
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar esta fuente?')) onDeleteFont(font.id); }}
-                                                className="p-2 rounded-lg text-zinc-400 hover:text-red-500 transition-colors"
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 size={15}/>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {fontViewMode === 'LIST' && (
-                        <div className="space-y-3">
+                    {(
+                        <div className={`lm-font-list font-view-${fontViewMode}`}>
                             {filteredFonts.map(font => (
                                 <div
                                     key={font.id}
@@ -2973,7 +2376,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 >
                                     <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
                                         <span className={`${font.cssFamily} text-4xl text-zinc-900 dark:text-white`}>
-                                            {fontPreviewText ? fontPreviewText.charAt(0) : 'A'}
+                                            {fontPreviewText ? fontPreviewText.charAt(0) : 'Aa'}
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -2981,92 +2384,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <span className="text-sm font-black text-amber-500 tabular-nums">#{font.id}</span>
                                             <p className="font-bold text-sm text-zinc-900 dark:text-white uppercase truncate">{font.name}</p>
                                         </div>
-                                        <p className="text-xs text-zinc-500 uppercase">{font.category || 'BÁSICA'}</p>
-                                        <p className={`${font.cssFamily} text-lg text-zinc-700 dark:text-zinc-300 mt-1 truncate`}>
-                                            {fontPreviewText || ' preview text'}
+                                        <p className="text-xs text-zinc-500 uppercase">{font.category || 'BÁSICA'}</p><p className="lm-font-source">{fontSourceLabel(font).replace('. Sin archivo propio','')}</p>
+                                        <p style={{fontSize:fontPreviewSize}} className={`${font.cssFamily} lm-font-specimen text-zinc-700 dark:text-zinc-300 mt-1`}>
+                                            {fontPreviewText || 'Tu nombre'}
                                         </p>
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <RowActions label={`Acciones de ${font.name}`}>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setEditingFont(font); setIsFontModalOpen(true); }}
                                             className="p-2 rounded-lg text-zinc-400 hover:text-amber-500 transition-colors"
                                             title="Editar"
                                         >
-                                            <Edit size={18}/>
+                                            <Edit size={16}/><span>Editar</span>
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); toggleFontActive(font); }}
                                             className={`p-2 rounded-lg transition-colors ${font.active === false ? 'text-zinc-400 hover:text-zinc-600' : 'text-green-500 hover:text-green-600'}`}
-                                            title={font.active === false ? 'Activar' : 'Desactivar'}
+                                            title={!hasFontFile(font)?'Archivo pendiente':font.active === false ? 'Activar' : 'Desactivar'}
                                         >
-                                            {font.active === false ? <EyeOff size={18}/> : <Eye size={18}/>}
+                                            {font.active === false ? <EyeOff size={16}/> : <Eye size={16}/>}<span>{!hasFontFile(font)?'Archivo pendiente':font.active===false?'Activar':'Desactivar'}</span>
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar esta fuente?')) onDeleteFont(font.id); }}
                                             className="p-2 rounded-lg text-zinc-400 hover:text-red-500 transition-colors"
                                             title="Eliminar"
                                         >
-                                            <Trash2 size={18}/>
+                                            <Trash2 size={16}/><span>Eliminar</span>
                                         </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {fontViewMode === 'COMPACT' && (
-                        <div className="space-y-1">
-                            {/* Encabezados */}
-                            <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] font-bold text-zinc-500 uppercase">
-                                <div className="col-span-2">#</div>
-                                <div className="col-span-4">Nombre</div>
-                                <div className="col-span-3">Categoría</div>
-                                <div className="col-span-2 text-center">Estado</div>
-                                <div className="col-span-1"></div>
-                            </div>
-                            {filteredFonts.map(font => (
-                                <div
-                                    key={font.id}
-                                    className={`grid grid-cols-12 gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg items-center cursor-pointer group hover:border-amber-500 transition-all ${font.active === false ? 'opacity-40' : ''}`}
-                                    onClick={() => { setEditingFont(font); setIsFontModalOpen(true); }}
-                                >
-                                    <div className="col-span-2">
-                                        <span className="text-sm font-black text-amber-500 tabular-nums">#{font.id}</span>
-                                    </div>
-                                    <div className="col-span-4">
-                                        <p className="font-bold text-xs text-zinc-900 dark:text-white uppercase truncate">{font.name}</p>
-                                    </div>
-                                    <div className="col-span-3">
-                                        <span className="text-[10px] text-zinc-500 uppercase">{font.category || 'BÁSICA'}</span>
-                                    </div>
-                                    <div className="col-span-2 flex justify-center">
-                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${font.active !== false ? 'badge-success' : 'bg-zinc-100 text-zinc-500'}`}>
-                                            {font.active !== false ? 'Activa' : 'Inactiva'}
-                                        </span>
-                                    </div>
-                                    <div className="col-span-1 flex justify-end gap-1">
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setEditingFont(font); setIsFontModalOpen(true); }}
-                                            className="p-1.5 rounded text-zinc-400 hover:text-amber-500 transition-colors"
-                                            title="Editar"
-                                        >
-                                            <Edit size={14}/>
-                                        </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); toggleFontActive(font); }}
-                                            className={`p-1.5 rounded transition-colors ${font.active === false ? 'text-zinc-400 hover:text-zinc-600' : 'text-green-500 hover:text-green-600'}`}
-                                            title={font.active === false ? 'Activar' : 'Desactivar'}
-                                        >
-                                            {font.active === false ? <EyeOff size={14}/> : <Eye size={14}/>}
-                                        </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar esta fuente?')) onDeleteFont(font.id); }}
-                                            className="p-1.5 rounded text-zinc-400 hover:text-red-500 transition-colors"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 size={14}/>
-                                        </button>
-                                    </div>
+                                    </RowActions>
                                 </div>
                             ))}
                         </div>
@@ -3082,14 +2427,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
 
             {activeTab === 'CLIENTS' && (
-                <div className="flex flex-col md:flex-row gap-6 h-full">
+                <div className={`admin-clients flex flex-col md:flex-row gap-6 h-full ${selectedClient?'has-selection':''}`}>
                     {/* CLIENT LIST */}
                     <div className={`flex flex-col gap-4 overflow-y-auto pr-2 pb-12 ${selectedClient ? 'hidden md:flex md:w-[320px] shrink-0' : 'w-full md:w-[400px]'}`}>
                         {/* Header Compacto */}
                         <div className="flex items-center justify-between pb-2 gap-2">
                             <div>
-                                <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight">Clientes</h3>
-                                <p className="text-xs text-zinc-500">{filteredClients.length} clientes</p>
+                                <h3 className="sr-only">Clientes</h3>
+                                <p className="text-xs text-zinc-500">{filteredClients.length} {filteredClients.length===1?'cliente':'clientes'}</p>
                             </div>
                             <button
                                 onClick={handleExportClientsCSV}
@@ -3119,6 +2464,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             )}
                         </div>
                         
+                        {orders.some(o=>!o.customerPhone?.trim())&&<p className="lm-unidentified-orders">{orders.filter(o=>!o.customerPhone?.trim()).length} {orders.filter(o=>!o.customerPhone?.trim()).length===1?'pedido sin contacto identificado. Se conserva en Pedidos; no cuenta como cliente.':'pedidos sin contacto identificado. Se conservan en Pedidos; no cuentan como clientes.'}</p>}
                         {/* CLIENT LIST */}
                         <div className="space-y-2">
                             {filteredClients.map((client, idx) => (
@@ -3137,7 +2483,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         </div>
                                         <div className="text-right">
                                             <span className="text-sm font-bold text-amber-500">{formatCurrency(client.totalSpent)}</span>
-                                            <p className="text-[10px] text-zinc-400">{client.totalOrders} pedidos</p>
+                                            <p className="text-[10px] text-zinc-400">{client.totalOrders} {client.totalOrders===1?'pedido':'pedidos'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -3155,7 +2501,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex-1 h-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 overflow-y-auto relative">
                         {selectedClient ? (
                             <>
-                                <button onClick={() => setSelectedClient(null)} className="md:hidden absolute top-4 right-4 p-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg"><X size={18}/></button>
+                                <button aria-label="Cerrar ficha de cliente" onClick={() => setSelectedClient(null)} className="md:hidden absolute top-4 right-4 p-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg"><X size={18}/></button>
                                 
                                 {/* Header */}
                                 <div className="flex items-start gap-4 mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-800">
@@ -3220,7 +2566,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 </div>
                                 
                                 {/* Stats */}
-                                <div className="grid grid-cols-4 gap-3 mb-6">
+                                <div className="lm-client-stats grid grid-cols-4 gap-3 mb-6">
                                     <div className="bg-white dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-center">
                                         <span className="text-[10px] font-bold uppercase text-zinc-400">Total</span>
                                         <p className="text-lg font-black text-amber-500 mt-1">{formatCurrency(selectedClient.totalSpent)}</p>
@@ -3231,10 +2577,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     </div>
                                     <div className="bg-white dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-center">
                                         <span className="text-[10px] font-bold uppercase text-zinc-400">Última</span>
-                                        <p className="text-sm font-bold text-zinc-900 dark:text-white mt-1">{formatDateSimple(selectedClient.lastOrderDate)}</p>
+                                        <p className="text-sm font-bold text-zinc-900 dark:text-white mt-1">{selectedClient.lastOrderDate&&Number.isFinite(Date.parse(selectedClient.lastOrderDate))?formatDateSimple(selectedClient.lastOrderDate):'Sin pedidos'}</p>
                                     </div>
                                     <div className="bg-amber-500/10 dark:bg-amber-500/5 p-4 rounded-xl border border-amber-500/30 text-center">
-                                        <span className="text-[10px] font-bold uppercase text-amber-500">Points</span>
+                                        <span className="text-[10px] font-bold uppercase text-amber-500">Puntos</span>
                                         <p className="text-lg font-black text-amber-500 mt-1">{selectedClient.currentPoints}</p>
                                     </div>
                                 </div>
@@ -3244,7 +2590,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     <h4 className="text-xs font-bold uppercase mb-4 text-zinc-900 dark:text-white flex items-center gap-2">
                                         <Ticket size={14}/> Cupón Personal
                                     </h4>
-                                    <div className="flex gap-3 items-end mb-4">
+                                    {clientCouponError&&<p role="alert" className="text-sm text-red-500 mb-3">{clientCouponError}</p>}
+                                    <div className="lm-client-coupon-form flex gap-3 items-end mb-4">
                                         <div className="flex-1">
                                             <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Código</label>
                                             <input 
@@ -3285,7 +2632,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                             </div>
                                                         </div>
                                                         <button 
-                                                            onClick={() => onUpdateStoreConfig({...storeConfig, coupons: storeConfig.coupons.filter(x => x.code !== c.code)})}
+                                                            onClick={() => onUpdateStoreConfig({...storeConfig, coupons: (storeConfig.coupons||[]).filter(x => x.code !== c.code)})}
                                                             className="text-zinc-400 hover:text-red-500 p-1.5"
                                                         >
                                                             <Trash2 size={14}/>
@@ -3316,13 +2663,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 
                                 {/* Danger Zone */}
                                 <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                                    <button onClick={() => onDeleteClient(selectedClient.phone)} className="text-red-500 hover:text-red-600 text-[10px] font-bold uppercase flex items-center gap-1"><Trash2 size={12}/> Borrar cliente</button>
+                                    <button onClick={() => onDeleteClient(selectedClient.phone)} className="text-red-500 hover:text-red-600 text-[10px] font-bold uppercase flex items-center gap-1"><Trash2 size={12}/> Archivar cliente</button>
                                 </div>
                             </>
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full text-zinc-400">
                                 <Users size={32} className="mb-3 opacity-30"/>
-                                <p className="text-xs">Selecciona un cliente</p>
+                                <p className="text-xs">Selecciona un cliente de la lista</p>
                             </div>
                         )}
                     </div>
@@ -3330,31 +2677,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
 
             {activeTab === 'GALERIA' && (
-                <div className="space-y-6">
+                <div className="lm-gallery space-y-6">
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white uppercase">Galería de Imágenes</h3>
+                            <h3 className="sr-only">Imágenes</h3>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                 Administra logos, íconos e ilustraciones que luego usarás en el personalizador.
                             </p>
                         </div>
-                        <div className="flex flex-wrap gap-2 justify-end">
-                            {['LOGO', 'ICON', 'ILUSTRACION', 'FORMS', 'CLIPART', 'OTHER'].map(cat => (
-                                <label 
-                                    key={cat} 
-                                    className="bg-zinc-100 dark:bg-zinc-800 hover:bg-system-accent/90 hover:text-zinc-900 dark:hover:bg-system-accent dark:hover:text-zinc-900 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer flex items-center gap-1.5 transition-colors border border-zinc-200 dark:border-zinc-700"
-                                >
-                                    <Upload size={12}/> {cat}
-                                    <input 
-                                        type="file" 
-                                        hidden 
-                                        accept="image/*" 
-                                        onChange={(e) => handleGalleryUpload(e, cat)}
-                                    />
-                                </label>
-                            ))}
-                        </div>
+                        <div className="lm-gallery-upload"><select aria-label="Tipo de imagen a subir" value={galleryUploadType} onChange={e=>setGalleryUploadType(e.target.value)}>{['LOGO','ICON','ILUSTRACION','FORMS','CLIPART','OTHER'].map(cat=><option key={cat} value={cat}>{({LOGO:'Logo',ICON:'Icono',ILUSTRACION:'Ilustración',FORMS:'Forma',CLIPART:'Dibujo',OTHER:'Otra'} as Record<string,string>)[cat]}</option>)}</select><label><Upload size={16}/> Subir imagen<input type="file" hidden accept="image/*" onChange={e=>handleGalleryUpload(e,galleryUploadType)}/></label></div>
                     </div>
 
                     {/* Filtros y búsqueda */}
@@ -3372,21 +2704,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
 
                         {/* Category Filters */}
-                        <div className="flex flex-wrap gap-2">
-                            {(['TODAS', 'LOGO', 'ICON', 'ILUSTRACION', 'FORMS', 'CLIPART', 'OTHER'] as const).map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setGalleryCategory(cat)}
-                                    className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
-                                        galleryCategory === cat
-                                            ? 'bg-system-accent text-zinc-900 shadow-md'
-                                            : 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-system-accent hover:text-zinc-900 dark:hover:text-white'
-                                    }`}
-                                >
-                                    {cat === 'TODAS' ? 'Todas' : cat}
-                                </button>
-                            ))}
-                        </div>
+                        <select aria-label="Categoría de imagen" className="lm-gallery-category" value={galleryCategory} onChange={e=>setGalleryCategory(e.target.value as any)}>{['TODAS','LOGO','ICON','ILUSTRACION','FORMS','CLIPART','OTHER'].map(cat=><option key={cat} value={cat}>{({TODAS:'Todas las categorías',LOGO:'Logos',ICON:'Iconos',ILUSTRACION:'Ilustraciones',FORMS:'Formas',CLIPART:'Dibujos',OTHER:'Otras'} as Record<string,string>)[cat]}</option>)}</select>
 
                         {/* Stats */}
                         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
@@ -3481,94 +2799,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
             )}
 
-            {activeTab === 'CONTENT' && (
+            {activeTab === 'NOTES' && (<section className="lm-private-notes space-y-4"><p>Sólo para el taller. Estas notas no se muestran a los clientes.</p><label htmlFor="admin-private-notes">Escribe tus notas</label><textarea id="admin-private-notes" placeholder="Pendientes, ideas o detalles que quieras conservar…" aria-label="Notas privadas" disabled={!notesCloud.ready} value={notes} onChange={handleNoteChange} className="w-full min-h-64 rounded-xl border bg-zinc-900 p-4 text-white"/></section>)}
+
+            {activeTab==='CONTENT'&&!contentCloud.ready&&<CloudSaveStatus ready={false} dirty={false} saving={false} status={contentCloud.status} onSave={()=>{}} onRetryLoad={contentCloud.reload}/>}
+            {contentCloud.ready && <div hidden={activeTab!=='CONTENT'}>
                 <ContentManager 
                     config={contentConfig}
                     onSave={(config) => {
-                        setContentConfig(config);
-                        // Save to localStorage or Firebase
-                        localStorage.setItem('lm_content_config', JSON.stringify(config));
-                        alert('Contenido guardado correctamente');
+                        return contentCloud.save(config).then(()=>{});
                     }}
                 />
-            )}
+            </div>}
 
             {activeTab === 'SETTINGS' && (
-                <div>
-                    <div className="flex gap-4 mb-8 overflow-x-auto pb-2 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="lm-settings min-w-0">
+                    <label className="lm-settings-select">Sección de ajustes<select aria-label="Sección de ajustes" value={settingsTab} onChange={e=>setSettingsTab(e.target.value)}>{['BRANDING','COLORS','MESSAGES','FINANCE','COUPONS','INVENTORY_CATS','SYSTEM','ASSISTANT'].map(t=><option key={t} value={t}>{({BRANDING:'Marca',COLORS:'Colores',MESSAGES:'Mensajes',FINANCE:'Cobros y precios',COUPONS:'Cupones',INVENTORY_CATS:'Categorías',SYSTEM:'Sistema',ASSISTANT:'RAB'} as Record<string,string>)[t]}</option>)}</select></label><div className="lm-settings-tabs flex gap-4 mb-8 overflow-x-auto pb-2 border-b border-zinc-200 dark:border-zinc-800">
                         {['BRANDING', 'COLORS', 'MESSAGES', 'FINANCE', 'COUPONS', 'INVENTORY_CATS', 'SYSTEM', 'ASSISTANT'].map(t => (
-                            <button key={t} onClick={() => setSettingsTab(t as any)} className={`px-5 py-3 text-xs font-bold uppercase tracking-widest border-b-2 ${settingsTab === t ? 'border-yellow-400 text-zinc-900 dark:text-white' : 'border-transparent text-zinc-500'}`}>{t}</button>
+                            <button key={t} aria-pressed={settingsTab===t} onClick={() => setSettingsTab(t as any)} className={`px-5 py-3 text-xs font-bold uppercase tracking-widest border-b-2 ${settingsTab === t ? 'border-yellow-400 text-zinc-900 dark:text-white' : 'border-transparent text-zinc-500'}`}>{({BRANDING:'Marca',COLORS:'Colores',MESSAGES:'Mensajes',FINANCE:'Cobros y precios',COUPONS:'Cupones',INVENTORY_CATS:'Categorías',SYSTEM:'Sistema',ASSISTANT:'RAB'} as Record<string,string>)[t]??t}</button>
                         ))}
                     </div>
-                    {settingsTab === 'ASSISTANT' && (
-                        <div className="max-w-2xl mx-auto space-y-8">
-                            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
-                                <Sparkles className="text-amber-500" /> Configuración de RAB
-                            </h3>
-                            
-                            <div className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-6">
-                                <h4 className="text-sm font-bold uppercase text-zinc-500 tracking-widest mb-6">Atajos de Teclado</h4>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-zinc-100 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg"><Zap size={16}/></div>
-                                            <div>
-                                                <p className="font-bold text-sm text-zinc-900 dark:text-white">Abrir Spotlight</p>
-                                                <p className="text-xs text-zinc-500">Activa el asistente desde cualquier pantalla</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-1">
-                                            <kbd className="px-2 py-1 bg-white dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-500">⌘</kbd>
-                                            <kbd className="px-2 py-1 bg-white dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-500">K</kbd>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-zinc-100 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-zinc-200/50 dark:bg-zinc-800 text-zinc-500 rounded-lg"><X size={16}/></div>
-                                            <div>
-                                                <p className="font-bold text-sm text-zinc-900 dark:text-white">Cerrar</p>
-                                                <p className="text-xs text-zinc-500">Salir del asistente sin ejecutar</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-1">
-                                            <kbd className="px-2 py-1 bg-white dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-500">ESC</kbd>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-6">
-                                <h4 className="text-sm font-bold uppercase text-zinc-500 tracking-widest mb-6">Preferencias AI</h4>
-                                <div className="space-y-4">
-                                     <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="font-bold text-sm text-zinc-900 dark:text-white">Modelo de Lenguaje</p>
-                                            <p className="text-xs text-zinc-500">Selecciona la inteligencia detrás de RAB</p>
-                                        </div>
-                                        <select className="bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold uppercase p-2 outline-none">
-                                            <option>Llama 3 70B (Rápido)</option>
-                                            <option>Mixtral 8x7B</option>
-                                            <option>Gemma 7B</option>
-                                        </select>
-                                     </div>
-                                </div>
-                            </div>
-                            
-                            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-4 items-start">
-                                <Sparkles className="text-amber-500 shrink-0 mt-1" size={20}/>
-                                <div>
-                                    <p className="font-bold text-sm text-amber-600 dark:text-amber-500 mb-1">Tips Pro</p>
-                                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                                        RAB aprende de tus comandos. Intenta ser específico con nombres y fechas para obtener mejores resultados.
-                                        Puedes ver tu historial reciente directamente en la ventana de comandos.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {settingsTab === 'ASSISTANT' && <section className="space-y-6 max-w-2xl"><h3>RAB · Consultas del taller</h3><div className="lm-panel border rounded-xl p-5 space-y-3"><p className="text-sm">Modo local de sólo lectura. Consulta los pedidos, clientes y productos ya cargados en este panel. No usa un proveedor de IA generativa y no aprende de tus consultas.</p><p className="text-sm">No cobra, no crea ni modifica pedidos, no borra registros y no envía mensajes.</p><button className="bg-yellow-400 text-black rounded-lg px-4 py-3 font-semibold" onClick={()=>onOpenAssistant?.()}>Abrir consultas RAB</button></div><div className="text-sm space-y-2"><p><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>K</kbd>: abrir RAB. <kbd>Esc</kbd>: cerrar.</p><p>Consultas: pedidos pendientes, pedidos de hoy, pedidos en producción, un folio o cliente, precios de productos y stock bajo. Los periodos no soportados se indican sin inventar resultados.</p><p>Conectar un proveedor de IA requiere una integración segura de servidor y una decisión aparte sobre acceso y coste. Aquí no se piden claves ni se ofrece un selector de modelo que no funciona.</p></div></section>}
                     {settingsTab === 'SYSTEM' && (
                         <div className="space-y-10 max-w-4xl">
-                            <div className="bg-gradient-to-br from-color-info-900 to-black p-8 rounded-3xl border border-color-info-800 relative overflow-hidden shadow-2xl">
+                            <div className="lm-system-save p-6 rounded-3xl border border-color-info-800 relative overflow-hidden shadow-2xl">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-color-info-500/20 rounded-full blur-[80px]"></div>
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-4 mb-6">
@@ -3576,8 +2829,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <UploadCloud size={32}/>
                                         </div>
                                         <div>
-                                            <h3 className="text-2xl font-bold text-white uppercase">Migración a la Nube</h3>
-                                            <p className="text-blue-200 text-xs font-medium">Sincroniza tus datos locales (LocalStorage) con Firebase Real.</p>
+                                            <h3 className="text-2xl font-bold text-white uppercase">Guardado en Supabase</h3>
+                                            <p className="text-blue-200 text-xs font-medium">Guarda cambios revisados. No importa datos locales ni ejemplos automáticamente.</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-3 gap-4 mb-8">
@@ -3600,7 +2853,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <FileJson size={20}/> Descargar Backup JSON
                                         </button>
                                         <button onClick={handleCloudMigration} disabled={isMigrating} className="flex-[2] py-5 bg-color-info-50 dark:bg-color-info-900/30 text-color-info-900 dark:text-color-info-200 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-color-info-50 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-70 disabled:cursor-wait">
-                                            {isMigrating ? (<><RefreshCw className="animate-spin" size={20}/> Procesando Lotes...</>) : (<><Database size={20}/> Iniciar Sincronización Total</>)}
+                                            {isMigrating ? (<><RefreshCw className="animate-spin" size={20}/> Procesando Lotes...</>) : (<><Database size={20}/> Guardar cambios en Supabase</>)}
                                         </button>
                                     </div>
                                 </div>
@@ -3614,15 +2867,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <div className="border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/10 p-6 rounded-2xl">
                                 <div className="flex items-center gap-3 mb-4 text-red-600 dark:text-red-500">
                                     <AlertOctagon size={24}/>
-                                    <h4 className="font-bold uppercase text-sm">Zona de Peligro Local</h4>
+                                    <h4 className="font-bold uppercase text-sm">Acciones de borrado</h4>
                                 </div>
                                 <div className="space-y-3">
                                     <button onClick={() => { if(confirm("¿Seguro?")) onResetOrdersAndClients(); }} className="w-full py-4 bg-transparent border-2 border-red-500 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
-                                        <Trash2 size={16}/> Limpiar Datos Locales
+                                        <Trash2 size={16}/> Borrar pedidos y clientes del panel
                                     </button>
-                                    <button onClick={() => { if(confirm("Esto reemplazará todos los productos con los valores por defecto. ¿Continuar?")) onResetProducts?.(); }} className="w-full py-4 bg-transparent border-2 border-amber-200 dark:border-amber-800 text-amber-600 hover:bg-amber-100 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
-                                        <RefreshCw size={16}/> Resetear Productos a Default
-                                    </button>
+
                                 </div>
                             </div>
                         </div>
@@ -3631,17 +2882,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="space-y-8">
                             <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 items-start">
                                 {/* Columna izquierda: Formulario de Brand Studio */}
-                                <div className="space-y-6">
+                                <div className="space-y-6 min-w-0 w-full">
                                     <div className="space-y-2">
                                         <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                                             <Sparkles size={14} className="text-amber-500" />
-                                            Brand Studio · Identidad Visual
+                                            Identidad visual
                                         </p>
                                         <h3 className="text-2xl font-bold text-zinc-900 dark:text-white">
-                                            Configura la cara de tu marca
+                                            Marca
                                         </h3>
                                         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                            Define logo, nombre comercial, colores y fondo para que todo el sistema se sienta coherente.
+                                            Logo, nombre y apariencia de la tienda.
                                         </p>
                                     </div>
 
@@ -3665,7 +2916,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                         })
                                                     }
                                                     className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-sm font-medium placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500"
-                                                    placeholder="Ej. BLACKFLAG LASER STUDIO"
+                                                    placeholder="Ej. LASERMACHINE"
                                                 />
                                             </div>
                                             <div>
@@ -4150,7 +3401,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {settingsTab === 'COLORS' && (
                         <div className="space-y-6">
                             <h4 className="text-xl font-bold text-zinc-900 dark:text-white uppercase mb-4">Catálogo de Colores</h4>
-                            <div className="flex gap-4 items-end bg-zinc-200/20 dark:bg-zinc-800/30 p-4 rounded-xl">
+                            <div className="flex flex-wrap sm:flex-nowrap gap-4 items-end bg-zinc-200/20 dark:bg-zinc-800/30 p-4 rounded-xl">
                                 <div className="flex-1">
                                     <label className="text-xs font-bold uppercase text-zinc-500">Nombre Color</label>
                                     <input value={newColorPreset.name} onChange={e => setNewColorPreset({...newColorPreset, name: e.target.value.toUpperCase()})} className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3 rounded-lg text-sm font-bold uppercase" placeholder="EJ. DORADO"/>
@@ -4161,14 +3412,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 </div>
                                 <button onClick={handleAddGlobalColor} className="bg-amber-500 text-white px-6 py-3 rounded-lg font-bold text-xs uppercase hover:bg-amber-500/80">Agregar</button>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {storeConfig.globalColors.map(c => (
-                                    <div key={c.name} className="flex items-center justify-between p-3 border border-zinc-200/40 dark:border-zinc-700/40 rounded-xl bg-white/50 dark:bg-zinc-900/50">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full border border-zinc-200/40 dark:border-zinc-700/40 shadow-sm" style={{backgroundColor: c.hex}}></div>
-                                            <span className="font-bold text-xs">{c.name}</span>
+                            {!(storeConfig.globalColors||[]).length&&<p className="text-sm">No hay colores globales guardados. Esto no confirma las existencias de los productos.</p>}<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {(storeConfig.globalColors||[]).map(c => (
+                                    <div key={c.name} className="flex items-center justify-between gap-2 p-3 border border-zinc-200/40 dark:border-zinc-700/40 rounded-xl bg-white/50 dark:bg-zinc-900/50">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-8 h-8 shrink-0 rounded-full border border-zinc-200/40 dark:border-zinc-700/40 shadow-sm" style={{backgroundColor: c.hex}}></div>
+                                            <span className="font-bold text-xs break-words leading-tight">{c.name}</span>
                                         </div>
-                                        <button onClick={() => handleDeleteGlobalColor(c.name)} className="text-zinc-500 hover:text-red-500"><Trash2 size={16}/></button>
+                                        <button onClick={() => handleDeleteGlobalColor(c.name)} aria-label={`Eliminar color ${c.name}`} className="shrink-0 text-zinc-500 hover:text-red-500"><Trash2 size={16}/></button>
                                     </div>
                                 ))}
                             </div>
@@ -4176,11 +3427,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
                     {settingsTab === 'MESSAGES' && (
                         <div className="space-y-6 max-w-2xl">
-                            <h4 className="text-xl font-bold text-zinc-900 dark:text-white uppercase mb-4">Mensajes Predefinidos</h4>
+                            <h4 className="text-xl font-bold text-zinc-900 dark:text-white uppercase mb-4">Mensajes Predefinidos</h4>{!storeConfig.messageTemplates&&<p className="text-sm">No hay plantillas guardadas. Escribe y guarda tus mensajes antes de usar los atajos de WhatsApp.</p>}
                             {Object.entries(messages).map(([key, val]) => (
                                 <div key={key}>
-                                    <label className="block text-xs font-bold uppercase text-zinc-500 mb-2 tracking-widest">{key}</label>
-                                    <textarea value={val} onChange={e => {const newMsgs = {...messages, [key]: e.target.value}; setMessages(newMsgs); onUpdateStoreConfig({...storeConfig, messageTemplates: newMsgs});}} className="w-full bg-zinc-200/20 dark:bg-zinc-800/30 border border-zinc-200/40 dark:border-zinc-700/40 p-4 rounded-xl text-sm h-32 focus:border-amber-500 outline-none"/>
+                                    <label className="block text-xs font-bold uppercase text-zinc-500 mb-2 tracking-widest">{({confirmation:'Confirmación',production:'En producción',ready:'Listo para recoger'} as Record<string,string>)[key]??key}</label>
+                                    <textarea value={val} onChange={e => {const newMsgs = {...messages, [key]: e.target.value}; onUpdateStoreConfig({...storeConfig, messageTemplates: newMsgs});}} className="w-full bg-zinc-200/20 dark:bg-zinc-800/30 border border-zinc-200/40 dark:border-zinc-700/40 p-4 rounded-xl text-sm h-32 focus:border-amber-500 outline-none"/>
                                     <p className="text-xs text-zinc-500 mt-1">Variables: {'{NOMBRE}, {ID}, {TOTAL}, {GUIA}'}</p>
                                 </div>
                             ))}
@@ -4193,15 +3444,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <label className="text-xs font-bold text-zinc-500 uppercase">Precio Base Grabado</label>
-                                        <input type="number" value={newPricing.baseEngravingPrice} onChange={e => { const p = {...newPricing, baseEngravingPrice: Number(e.target.value)}; setNewPricing(p); onUpdatePricing(p); }} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
+                                        <input type="number" value={newPricing.baseEngravingPrice} onChange={e => { const p = {...newPricing, baseEngravingPrice: Number(e.target.value)}; onUpdatePricing(p); }} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <label className="text-xs font-bold text-zinc-500 uppercase">Costo Lado Extra</label>
-                                        <input type="number" value={newPricing.extraSidePrice} onChange={e => { const p = {...newPricing, extraSidePrice: Number(e.target.value)}; setNewPricing(p); onUpdatePricing(p); }} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
+                                        <input type="number" value={newPricing.extraSidePrice} onChange={e => { const p = {...newPricing, extraSidePrice: Number(e.target.value)}; onUpdatePricing(p); }} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <label className="text-xs font-bold text-zinc-500 uppercase">Costo por Logo</label>
-                                        <input type="number" value={newPricing.logoSurcharge} onChange={e => { const p = {...newPricing, logoSurcharge: Number(e.target.value)}; setNewPricing(p); onUpdatePricing(p); }} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
+                                        <input type="number" value={newPricing.logoSurcharge} onChange={e => { const p = {...newPricing, logoSurcharge: Number(e.target.value)}; onUpdatePricing(p); }} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
                                     </div>
                                 </div>
                             </div>
@@ -4209,7 +3460,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <h4 className="text-sm font-bold uppercase mb-4 text-amber-500">Programa de Lealtad (LaserPoints)</h4>
                                 <div className="flex justify-between items-center">
                                     <label className="text-xs font-bold text-zinc-500 uppercase">Porcentaje de Cashback (%)</label>
-                                    <input type="number" value={storeConfig.pointsPercentage || 5} onChange={e => onUpdateStoreConfig({...storeConfig, pointsPercentage: Number(e.target.value)})} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
+                                    <input type="number" value={storeConfig.pointsPercentage ?? ''} placeholder="Sin configurar" onChange={e => onUpdateStoreConfig({...storeConfig, pointsPercentage: Number(e.target.value)})} className="w-32 p-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-right font-mono font-bold"/>
                                 </div>
                                 <p className="text-xs text-zinc-500 mt-2">El cliente ganará este porcentaje del total de su compra en puntos.</p>
                             </div>
@@ -4220,11 +3471,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <Wallet size={20} className="text-zinc-500"/>
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold uppercase text-zinc-900 dark:text-white">Datos de pago por transferencia</h4>
-                                            <p className="text-xs text-zinc-500">Por seguridad, los datos bancarios no se guardan en la app</p>
+                                            <h4 className="text-sm font-bold uppercase text-zinc-900 dark:text-white">Datos Bancarios para el Cliente</h4>
+                                            <p className="text-xs text-zinc-500">Esta información aparecerá al elegir "Transferencia"</p>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-300">Te compartimos los datos de pago por WhatsApp al confirmar tu pedido. No escribas aquí cuentas, CLABEs ni datos bancarios.</p>
+                                    <textarea value={bankInfo} onChange={e => { onUpdateStoreConfig({...storeConfig, bankInfo: e.target.value}); }} className="w-full h-40 bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 p-4 rounded-xl text-sm font-mono focus:border-amber-500 outline-none" placeholder="Ej: Banco: BBVA - Cuenta: 1234567890"/>
                                 </div>
                             </div>
                         </div>
@@ -4239,7 +3490,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 {(storeConfig.productCategories || []).map(cat => (
                                     <div key={cat} className="flex justify-between items-center p-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                                         <span className="font-bold text-xs uppercase">{cat}</span>
-                                        <button onClick={() => onUpdateStoreConfig({...storeConfig, productCategories: storeConfig.productCategories.filter(c => c !== cat)})} className="text-zinc-500 hover:text-red-500"><Trash2 size={16}/></button>
+                                        <button onClick={() => onUpdateStoreConfig({...storeConfig, productCategories: (storeConfig.productCategories||[]).filter(c => c !== cat)})} className="text-zinc-500 hover:text-red-500"><Trash2 size={16}/></button>
                                     </div>
                                 ))}
                             </div>
@@ -4248,7 +3499,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {settingsTab === 'COUPONS' && (
                         <CouponManager 
                           coupons={storeConfig.coupons || []}
-                          onUpdateStoreConfig={onUpdateStoreConfig}
+                          onUpdateStoreConfig={patch=>onUpdateStoreConfig({...storeConfig,...patch})}
                         />
                       )}
                 </div>
@@ -4258,9 +3509,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       {/* Modals */}
       <ProductFormModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} product={editingProduct} onSave={(prod: Product) => { if(editingProduct) onUpdateProduct(prod); else onAddProduct(prod); setIsProductModalOpen(false); }} presetColors={storeConfig.globalColors} categories={storeConfig.productCategories}/>
-      <FontFormModal isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) { onUpdateFont(editingFont.id, font); } else onAddFont(font); setIsFontModalOpen(false); }} existingFonts={fonts} />
+      {isFontModalOpen&&<FontFormModal key={editingFont?.id??'new'} isOpen={isFontModalOpen} onClose={() => setIsFontModalOpen(false)} font={editingFont} onSave={(font: FontOption) => { if (editingFont) { onUpdateFont(editingFont.id, font); } else onAddFont(font); setIsFontModalOpen(false); }} existingFonts={fonts} />}
       <BulkDistributorModal isOpen={isBulkDistributorOpen} onClose={() => setIsBulkDistributorOpen(false)} products={products} onApplyChanges={handleBulkUpdateProducts} globalColors={storeConfig.globalColors}/>
-      <BulkFontModal isOpen={isBulkFontModalOpen} onClose={() => setIsBulkFontModalOpen(false)} onAddFonts={onAddFonts || ((fonts) => fonts.forEach(f => onAddFont(f)))} existingFonts={fonts}/>
+      {isBulkFontModalOpen&&<BulkFontModal isOpen={isBulkFontModalOpen} onClose={() => setIsBulkFontModalOpen(false)} onAddFonts={onAddFonts || ((fonts) => fonts.forEach(f => onAddFont(f)))} existingFonts={fonts}/>}
       {/* Image Cropper for Gallery */}
       {imageToCrop && (
         <ImageCropper 

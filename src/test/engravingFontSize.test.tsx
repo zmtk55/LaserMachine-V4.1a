@@ -1,0 +1,2 @@
+import React from 'react';import{render}from'@testing-library/react';import{it,expect}from'vitest';import{EngravingText}from'../../components/EngravingText';
+it('sets the base font size where font-class letter spacing is computed',()=>{for(const baseSize of [32,48]){const{container,unmount}=render(<EngravingText text={'UNO\nDOS'} baseSize={baseSize} fontCss="font-industrial"/>);expect((container.firstChild as HTMLElement).style.fontSize).toBe(baseSize+'px');expect((container.querySelector('span span') as HTMLElement).style.fontSize).toBe(baseSize+'px');unmount();}});

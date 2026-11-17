@@ -25,6 +25,7 @@ const processInBatches = async (items: any[], collectionName: string, idField: s
         });
         await batch.commit();
         batchCount++;
+        console.log(`Lote ${batchCount}/${chunks.length} de ${collectionName} migrado.`);
     }
 };
 

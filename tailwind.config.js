@@ -9,7 +9,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        yellow: { 400: '#facc15', 500: '#eab308' },
+        accent: Object.fromEntries([50,100,200,300,400,500,600,700,800,900,950].map(n => [n, `rgb(var(--lm-accent-${n}-rgb) / <alpha-value>)`])),
+        yellow: Object.fromEntries([50,100,200,300,400,500,600,700,800,900,950].map(n=>[n,`rgb(var(--lm-accent-${n}-rgb) / <alpha-value>)`])),
+        amber: Object.fromEntries([50,100,200,300,400,500,600,700,800,900,950].map(n=>[n,`rgb(var(--lm-accent-${n}-rgb) / <alpha-value>)`])),
         zinc: { 
           50: '#fafafa',
           100: '#f4f4f5',
@@ -32,9 +34,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        sans: ['var(--lm-font-ui)'],
         mono: ['JetBrains Mono', 'monospace'],
-        display: ['Plus Jakarta Sans', 'sans-serif'],
+        display: ['var(--lm-font-display)'],
         vintage: ['Playfair Display', 'serif'],
       },
       letterSpacing: {

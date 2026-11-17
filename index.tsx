@@ -1,9 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './src/styles/design-tokens.css';
+import './index.css';
+import './src/styles/interface.css';
 import App from './App';
 
+console.log('🔥 index.tsx ejecutándose...');
+
 const rootElement = document.getElementById('root');
+console.log('📦 Root element:', rootElement);
 
 if (!rootElement) {
   console.error('❌ NO SE ENCONTRÓ EL ELEMENTO ROOT');
@@ -15,20 +20,28 @@ if (!rootElement) {
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[PWA] SW registered:', registration.scope);
+      })
       .catch((error) => {
-        console.error('[PWA] SW registration failed:', error);
+        console.log('[PWA] SW registration failed:', error);
       });
   });
 }
 
 try {
+  console.log('🚀 Creando React root...');
   const root = ReactDOM.createRoot(rootElement);
+  console.log('✅ React root creado, renderizando App...');
   root.render(
     <React.StrictMode>
       <App />
     </React.StrictMode>
   );
+  console.log('✅ App renderizado');
 } catch (error) {
   console.error('💥 ERROR AL RENDERIZAR:', error);
   document.body.innerHTML = `<h1 style="color: red; padding: 20px;">ERROR: ${error}</h1>`;
 }
+
+import './src/styles/admin.css';

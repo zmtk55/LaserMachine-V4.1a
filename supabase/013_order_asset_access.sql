@@ -1,0 +1,4 @@
+BEGIN;
+CREATE POLICY lm_order_asset_admin_read ON public.lm_verified_assets FOR SELECT TO authenticated USING(public.lm_is_admin() AND EXISTS(SELECT 1 FROM public.lm_orders o WHERE o.data->>'userId'=lm_verified_assets.owner_id::text AND (EXISTS(SELECT 1 FROM jsonb_array_elements(o.data->'items') item WHERE item->>'backgroundAssetId'=lm_verified_assets.id::text) OR EXISTS(SELECT 1 FROM jsonb_array_elements(o.data->'items') item CROSS JOIN LATERAL jsonb_array_elements(coalesce(item->'frontLogos','[]')||coalesce(item->'backLogos','[]')) layer WHERE layer->>'assetId'=lm_verified_assets.id::text OR layer->>'originalAssetId'=lm_verified_assets.id::text))));
+CREATE POLICY lm_order_file_admin_read ON storage.objects FOR SELECT TO authenticated USING(bucket_id='lm-private-designs' AND public.lm_is_admin() AND EXISTS(SELECT 1 FROM public.lm_verified_assets a WHERE storage.objects.name IN(a.original_path,a.preview_path)));
+COMMIT;

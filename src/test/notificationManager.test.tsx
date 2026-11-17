@@ -1,0 +1,13 @@
+import {describe,it,expect,vi,beforeEach,afterEach} from 'vitest';import React from 'react';import {render,cleanup} from '@testing-library/react';
+const n=vi.hoisted(()=>({addNotification:vi.fn(),notifications:[],persistenceStatus:'Cargado de Supabase'}));vi.mock('../../contexts/NotificationContext',()=>({useNotifications:()=>n}));
+import {NotificationManager} from '../../components/NotificationManager';
+afterEach(cleanup);beforeEach(()=>n.addNotification.mockClear());
+const a:any={id:'old',customerName:'Old',items:[],total:1},b:any={id:'new',customerName:'New',items:[],total:2};
+describe('notification generation',()=>{
+ it('new prepended order is selected by ID, not old tail',()=>{const {rerender}=render(<NotificationManager products={[]} orders={[a]} user={{role:'ADMIN'}}/>);expect(n.addNotification).not.toHaveBeenCalled();rerender(<NotificationManager products={[]} orders={[b,a]} user={{role:'ADMIN'}}/>);expect(n.addNotification).toHaveBeenCalledWith(expect.objectContaining({title:'Nuevo pedido #new',message:'New - 2 - 0 item(s)'}));});
+ it('does not announce initial cloud order load as a new order',()=>{const {rerender}=render(<NotificationManager products={[]} orders={[]} user={{role:'ADMIN'}} businessReady={false}/>);rerender(<NotificationManager products={[]} orders={[a]} user={{role:'ADMIN'}} businessReady/>);expect(n.addNotification).not.toHaveBeenCalled();});
+ it('never generates staff stock alerts for clients',()=>{render(<NotificationManager products={[{id:'p',name:'P',colors:[{stock:1}],stockThreshold:2} as any]} orders={[]} user={{role:'CLIENT'}}/>);expect(n.addNotification).not.toHaveBeenCalled();});
+ it('waits for personal state before generating stock alerts',()=>{n.persistenceStatus='Cargando';const props:any={products:[{id:'p',name:'P',colors:[{stock:1}],stockThreshold:2}],orders:[],user:{role:'ADMIN'}};const {rerender}=render(<NotificationManager {...props}/>);expect(n.addNotification).not.toHaveBeenCalled();n.persistenceStatus='Cargado de Supabase';rerender(<NotificationManager {...props}/>);expect(n.addNotification).toHaveBeenCalledWith(expect.objectContaining({title:'Stock bajo: P'}));});
+});
+it('missing color catalog never means verified sold out',()=>{render(<NotificationManager products={[{id:'p',name:'P',colors:[],stockThreshold:2} as any]} orders={[]} user={{role:'ADMIN'}}/>);expect(n.addNotification).not.toHaveBeenCalled();});
+it('legacy error notification for verified zero stock is not duplicated',()=>{n.notifications=[{type:'error',data:{productId:'p',stock:0},read:false}] as any;render(<NotificationManager products={[{id:'p',name:'P',colors:[{stock:0}],stockThreshold:2} as any]} orders={[]} user={{role:'ADMIN'}}/>);expect(n.addNotification).not.toHaveBeenCalled();n.notifications=[];});

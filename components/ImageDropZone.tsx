@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef,useEffect } from 'react';
 import { UploadCloud, Image as ImageIcon, X, Check, Wand2, Crop, Loader2 } from 'lucide-react';
 import { removeBackground } from '../utils/imageUtils';
 
@@ -11,6 +11,7 @@ interface ImageDropZoneProps {
   aspectRatio?: 'square' | 'portrait' | 'landscape';
   showPreview?: boolean;
   onCrop?: (url: string) => void;
+  onBusyChange?: (busy: boolean) => void;
 }
 
 export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
@@ -21,12 +22,19 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
   className = '',
   aspectRatio = 'square',
   showPreview = true,
-  onCrop
+  onCrop,
+  onBusyChange
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const operation=useRef(0);
+  const busyCallback=useRef(onBusyChange);busyCallback.current=onBusyChange;
+  useEffect(()=>{busyCallback.current?.(isLoading||isProcessing);},[isLoading,isProcessing]);
+  useEffect(()=>()=>{busyCallback.current?.(false);},[]);
+  useEffect(()=>()=>{operation.current++;},[]);
+  const replaceImage=(url:string)=>{operation.current++;setIsLoading(false);setIsProcessing(false);onChange(url);};
 
   const aspectClasses = {
     square: 'aspect-square',
@@ -50,16 +58,21 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
       return;
     }
 
+    const current=++operation.current;
     setIsLoading(true);
+    setIsProcessing(false);
     const reader = new FileReader();
     reader.onload = (ev) => {
+      if(operation.current!==current)return;
       onChange(ev.target?.result as string);
       setIsLoading(false);
     };
     reader.onerror = () => {
+      if(operation.current!==current)return;
       alert('Error al cargar la imagen');
       setIsLoading(false);
     };
+    reader.onabort=()=>{if(operation.current===current)setIsLoading(false);};
     reader.readAsDataURL(file);
   }, [onChange]);
 
@@ -78,22 +91,24 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
   }, [processFile]);
 
   const handleClear = useCallback(() => {
-    onChange('');
+    operation.current++;setIsLoading(false);setIsProcessing(false);onChange('');
   }, [onChange]);
 
   const handleRemoveBackground = async () => {
     if (!value) return;
+    const current=++operation.current;
     setIsProcessing(true);
     try {
       const url = await removeBackground(value);
-      onChange(url);
+      if(operation.current===current)onChange(url);
     } catch (error: any) {
+      if(operation.current!==current)return;
       console.error('Error removing background:', error);
       // Show more specific error message
       const errorMessage = error?.message || 'Error desconocido al remover el fondo';
       alert(errorMessage);
     } finally {
-      setIsProcessing(false);
+      if(operation.current===current)setIsProcessing(false);
     }
   };
 
@@ -237,7 +252,7 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
           <input
             type="text"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => replaceImage(e.target.value)}
             placeholder="O pega una URL de imagen..."
             className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-amber-500/50"
           />

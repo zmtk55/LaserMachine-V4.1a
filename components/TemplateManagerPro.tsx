@@ -119,7 +119,7 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
   const deselectAll = () => setSelectedTemplates([]);
 
   const bulkDelete = () => {
-    if (!confirm(`Eliminar ${selectedTemplates.length} templates?`)) return;
+    if (!confirm(`Eliminar ${selectedTemplates.length} plantillas?`)) return;
     const updated = templates.filter(t => !selectedTemplates.includes(t.id));
     onUpdateStoreConfig({ ...storeConfig, designTemplates: updated });
     setSelectedTemplates([]);
@@ -158,10 +158,10 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
   const createNewTemplate = () => {
     const newTemplate: DesignTemplate = {
       id: Date.now().toString(),
-      name: 'Nuevo Template',
+      name: 'Nueva plantilla',
       occasion: 'general',
       preview: '',
-      texts: [{ content: 'TEXTO', fontFamily: 'Bebas Neue', size: 1.2, yPosition: 45, color: '#FFFFFF' }],
+      texts: [{ content: 'TEXTO', fontFamily: fonts[0]?.cssFamily||fonts[0]?.name||'sans-serif', size: 1.2, yPosition: 45 }],
       isActive: true,
       isFavorite: false,
       usageCount: 0,
@@ -195,29 +195,33 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="lm-templates h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
         <div>
-          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-3">
+          <h2 className="sr-only">
             <LayoutTemplate className="text-yellow-400" size={28} />
-            Templates de Diseño
+            Plantillas
           </h2>
           <p className="text-zinc-500 text-sm mt-1">
-            {stats.total} templates • {stats.active} activos • {stats.favorites} favoritos
+            {stats.total} plantillas • {stats.active} activas • {stats.favorites} favoritas
           </p>
         </div>
         <button
           onClick={createNewTemplate}
           className="px-6 py-3 bg-yellow-400 text-zinc-900 rounded-xl font-bold uppercase text-sm flex items-center gap-2 hover:bg-yellow-300 transition-colors"
         >
-          <Plus size={18} /> Nuevo Template
+          <Plus size={18} /> Nueva plantilla
         </button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
+        <div className="lm-template-mobile-filters">
+          <label>Colección<select aria-label="Colección" value={activeCollection} onChange={e=>setActiveCollection(e.target.value)}>{collections.map(col=><option key={col.id} value={col.id}>{col.name} ({col.count})</option>)}</select></label>
+          <label>Ocasión<select aria-label="Ocasión" value={selectedOccasion} onChange={e=>setSelectedOccasion(e.target.value)}>{OCCASIONS.map(occ=><option key={occ.id} value={occ.id}>{occ.label}</option>)}</select></label>
+        </div>
         {/* Sidebar */}
-        <div className="w-64 border-r border-zinc-800 p-6 space-y-6 overflow-y-auto">
+        <div className="lm-template-filters w-64 border-r border-zinc-800 p-6 space-y-6 overflow-y-auto">
           {/* Collections */}
           <div>
             <h3 className="text-zinc-500 text-xs font-bold uppercase mb-3">Colecciones</h3>
@@ -263,12 +267,12 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Toolbar */}
-          <div className="px-6 py-4 border-b border-zinc-800 flex items-center gap-4">
+          <div className="lm-template-toolbar px-6 py-4 border-b border-zinc-800 flex items-center gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
               <input
                 type="text"
-                placeholder="Buscar templates..."
+                aria-label="Buscar plantillas" placeholder="Buscar plantillas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-2 text-white placeholder-zinc-600 focus:border-yellow-400 focus:outline-none"
@@ -276,7 +280,7 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
             </div>
 
             <button
-              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              aria-label="Mostrar sólo favoritas" aria-pressed={showFavoritesOnly} onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
               className={`p-2 rounded-lg transition-colors ${
                 showFavoritesOnly ? 'bg-zinc-800 text-red-400' : 'text-zinc-500 hover:text-white'
               }`}
@@ -297,13 +301,13 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
 
             <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800">
               <button
-                onClick={() => setViewMode('grid')}
+                aria-label="Vista de cuadrícula" aria-pressed={viewMode==='grid'} onClick={() => setViewMode('grid')}
                 className={`p-2 rounded ${viewMode === 'grid' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}
               >
                 <Grid3X3 size={18} />
               </button>
               <button
-                onClick={() => setViewMode('list')}
+                aria-label="Vista de lista" aria-pressed={viewMode==='list'} onClick={() => setViewMode('list')}
                 className={`p-2 rounded ${viewMode === 'list' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}
               >
                 <List size={18} />
@@ -325,13 +329,11 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
           {/* Templates Grid */}
           <div className="flex-1 overflow-y-auto p-6">
             {filteredTemplates.length === 0 ? (
-              <div className="text-center py-16">
+              <div className="lm-template-empty text-center py-8">
                 <LayoutTemplate size={64} className="mx-auto text-zinc-700 mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">No hay templates</h3>
-                <p className="text-zinc-500 mb-6">Crea tu primer template para comenzar</p>
-                <button onClick={createNewTemplate} className="px-6 py-3 bg-yellow-400 text-zinc-900 rounded-xl font-bold uppercase">
-                  Crear Template
-                </button>
+                <h3 className="text-xl font-bold text-white mb-2">No hay plantillas</h3>
+                <p className="text-zinc-500 mb-6">Crea tu primera plantilla para comenzar</p>
+
               </div>
             ) : (
               <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
@@ -354,21 +356,21 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
                       </div>
 
                       {/* Overlay */}
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button onClick={() => setEditingTemplate(template)} className="p-2 bg-white text-zinc-900 rounded-lg hover:bg-yellow-400">
+                      <div className="lm-template-actions absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button aria-label={`Editar plantilla ${template.name}`} onClick={() => setEditingTemplate(template)} className="p-2 bg-white text-zinc-900 rounded-lg hover:bg-yellow-400">
                           <Edit3 size={18} />
                         </button>
-                        <button onClick={() => duplicateTemplate(template)} className="p-2 bg-white text-zinc-900 rounded-lg hover:bg-yellow-400">
+                        <button aria-label={`Duplicar plantilla ${template.name}`} onClick={() => duplicateTemplate(template)} className="p-2 bg-white text-zinc-900 rounded-lg hover:bg-yellow-400">
                           <Copy size={18} />
                         </button>
-                        <button onClick={() => toggleFavorite(template.id)} className={`p-2 rounded-lg ${template.isFavorite ? 'bg-red-500 text-white' : 'bg-white text-zinc-900'}`}>
+                        <button aria-label={`Favorita: ${template.name}`} aria-pressed={!!template.isFavorite} onClick={() => toggleFavorite(template.id)} className={`p-2 rounded-lg ${template.isFavorite ? 'bg-red-500 text-white' : 'bg-white text-zinc-900'}`}>
                           <Heart size={18} className={template.isFavorite ? 'fill-current' : ''} />
                         </button>
                       </div>
 
                       {/* Selection */}
                       <button
-                        onClick={() => toggleSelection(template.id)}
+                        aria-label={`Seleccionar plantilla ${template.name}`} aria-pressed={selectedTemplates.includes(template.id)} onClick={() => toggleSelection(template.id)}
                         className="absolute top-2 right-2 p-1.5 bg-black/50 rounded text-white hover:bg-yellow-400 hover:text-zinc-900"
                       >
                         {selectedTemplates.includes(template.id) ? <CheckSquare size={16} /> : <Square size={16} />}
@@ -377,7 +379,7 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
                       {/* Active Toggle */}
                       <div className="absolute bottom-2 right-2">
                         <button
-                          onClick={() => {
+                          aria-label={`Plantilla activa: ${template.name}`} aria-pressed={!!template.isActive} onClick={() => {
                             const updated = templates.map(t => t.id === template.id ? { ...t, isActive: !t.isActive } : t);
                             onUpdateStoreConfig({ ...storeConfig, designTemplates: updated });
                           }}
@@ -395,7 +397,7 @@ export const TemplateManagerPro: React.FC<TemplateManagerProProps> = ({
                           <h4 className="text-white font-bold">{template.name}</h4>
                           <p className="text-zinc-500 text-sm capitalize">{template.occasion?.replace('-', ' ')}</p>
                         </div>
-                        <button onClick={() => deleteTemplate(template.id)} className="text-zinc-600 hover:text-red-400">
+                        <button aria-label={`Eliminar plantilla ${template.name}`} onClick={() => deleteTemplate(template.id)} className="text-zinc-600 hover:text-red-400">
                           <Trash2 size={16} />
                         </button>
                       </div>

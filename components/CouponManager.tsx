@@ -1,3 +1,4 @@
+import {couponIdentityError} from '../utils/couponValidation';
 import React, { useState, useMemo } from 'react';
 import { 
   Ticket, Plus, Search, Trash2, Copy, ToggleLeft, ToggleRight, 
@@ -30,6 +31,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     type: 'GLOBAL' as 'GLOBAL' | 'PERSONAL'
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   // Statistics
   const stats = useMemo(() => {
@@ -76,15 +78,19 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   }, [coupons, filter, searchQuery]);
 
   const handleCreateCoupon = () => {
-    if (!newCoupon.code.trim()) return;
-    
+    const code=newCoupon.code.trim().toUpperCase();
+    const identityError=couponIdentityError(code,newCoupon.discountPercent,coupons);
+    if(identityError){setCreateError(identityError);return;}
+    if(!Number.isInteger(newCoupon.maxUses)||newCoupon.maxUses < -1){setCreateError('Los usos deben ser un entero desde 0, o -1 para ilimitados.');return;}
+    if(newCoupon.type==='PERSONAL'&&!newCoupon.assignedToPhone.trim()){setCreateError('Escribe el teléfono para el cupón personal.');return;}
+    setCreateError('');
     const coupon: Coupon = {
-      code: newCoupon.code.toUpperCase(),
+      code,
       discountPercent: newCoupon.discountPercent,
       active: true,
       maxUses: newCoupon.maxUses,
       expiryDate: newCoupon.expiryDate || undefined,
-      assignedToPhone: newCoupon.type === 'PERSONAL' ? newCoupon.assignedToPhone : undefined,
+      assignedToPhone: newCoupon.type === 'PERSONAL' ? newCoupon.assignedToPhone.trim() : undefined,
       createdAt: new Date().toISOString(),
       usedCount: 0
     };
@@ -118,7 +124,10 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   };
 
   const handleDuplicate = (coupon: Coupon) => {
-    const newCode = `${coupon.code}-COPY`;
+    const taken=new Set(coupons.map(c=>c.code.trim().toUpperCase()));
+    const base=`${coupon.code.trim()}-COPY`;
+    let newCode=base,index=2;
+    while(taken.has(newCode.toUpperCase()))newCode=`${base}-${index++}`;
     onUpdateStoreConfig({
       coupons: [...coupons, { 
         ...coupon, 
@@ -254,6 +263,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
             <span className="text-sm font-bold text-zinc-900 dark:text-white">Crear Nuevo Cupón</span>
           </div>
           
+          {createError&&<p role="alert" className="text-sm text-red-500 mb-3">{createError}</p>}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
             {/* Type Selection */}
             <div className="md:col-span-2">

@@ -37,3 +37,12 @@ dist-ssr
  ui-ux-pro-max-skill/
 
 .vercel/
+
+# Private and generated files
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+dist*/
+coverage/

@@ -1,4 +1,5 @@
-import React from 'react';
+import React,{useRef,useState} from 'react';
+import{useModalFocus}from'../utils/useModalFocus';
 import { useNotifications, NotificationType } from '../contexts/NotificationContext';
 import { 
   Bell, X, Check, CheckCheck, Trash2, 
@@ -49,7 +50,8 @@ const formatTime = (date: Date) => {
 export const NotificationPanel: React.FC = () => {
   const { 
     notifications, 
-    unreadCount, 
+    unreadCount,
+    persistenceStatus,
     markAsRead, 
     markAllAsRead, 
     dismissNotification, 
@@ -58,6 +60,10 @@ export const NotificationPanel: React.FC = () => {
     setIsPanelOpen 
   } = useNotifications();
 
+  const panelRef=useRef<HTMLDivElement>(null);
+  const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
+  useModalFocus(isPanelOpen,panelRef,()=>setIsPanelOpen(false));
+  const openNotification=(notification:typeof notifications[number])=>{markAsRead(notification.id);if(notification.actionUrl){window.dispatchEvent(new CustomEvent('notificationNavigate',{detail:{url:notification.actionUrl,data:notification.data}}));setIsPanelOpen(false);}};
   if (!isPanelOpen) return null;
 
   return (
@@ -69,7 +75,7 @@ export const NotificationPanel: React.FC = () => {
       />
       
       {/* Panel */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-[201] flex flex-col animate-in slide-in-from-right duration-300">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Notificaciones" className="lm-notifications-panel fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-[201] flex flex-col animate-in slide-in-from-right duration-300">
         {/* Header */}
         <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
           <div className="flex items-center justify-between">
@@ -81,17 +87,19 @@ export const NotificationPanel: React.FC = () => {
                 <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Notificaciones</h2>
                 <p className="text-xs text-zinc-500">
                   {unreadCount > 0 ? `${unreadCount} sin leer` : 'Todas leídas'}
+                  <span className="block text-[10px]" role="status">{persistenceStatus}</span>
                 </p>
               </div>
             </div>
             <button 
-              onClick={() => setIsPanelOpen(false)}
+              aria-label="Cerrar notificaciones" onClick={() => setIsPanelOpen(false)}
               className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-zinc-500" />
             </button>
           </div>
           
+          <p className="text-xs text-zinc-500 mt-3">Historial de avisos, no estado actual. Los avisos de stock anteriores pueden incluir existencias sin confirmar; verifica Inventario antes de reabastecer.</p>
           {/* Actions */}
           {notifications.length > 0 && (
             <div className="flex gap-2 mt-4">
@@ -133,51 +141,37 @@ export const NotificationPanel: React.FC = () => {
                 <div 
                   key={notification.id}
                   className={`
-                    group p-4 border-l-2 transition-all duration-200 cursor-pointer active:scale-[0.99] hover:translate-x-1
+                    lm-notification-item group p-4 border-l-2 transition-all duration-200 cursor-pointer active:scale-[0.99] hover:translate-x-1
                     ${getNotificationColors(notification.type, notification.read)}
                     ${!notification.read ? 'hover:bg-opacity-80' : 'hover:bg-zinc-100 dark:hover:bg-zinc-900'}
                   `}
-                  onClick={() => {
-                    markAsRead(notification.id);
-                    if (notification.actionUrl) {
-                      // Dispatch custom event for navigation
-                      window.dispatchEvent(new CustomEvent('notificationNavigate', { 
-                        detail: { url: notification.actionUrl, data: notification.data } 
-                      }));
-                      // Also close the panel
-                      setIsPanelOpen(false);
-                    }
-                  }}
+                  onClick={() => openNotification(notification)}
                 >
-                  <div className="flex gap-3">
+                  <div className="lm-notification-row">
                     <div className={`
                       w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                       ${!notification.read ? 'bg-white dark:bg-zinc-800 shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800'}
                     `}>
                       {getNotificationIcon(notification.type)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className={`text-sm font-semibold truncate ${!notification.read ? 'text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-400'}`}>
-                          {notification.title}
+                    <div className="lm-notification-body min-w-0">
+                      <div className="lm-notification-title">
+                        <h4 className={`text-sm font-semibold ${!notification.read ? 'text-zinc-900 dark:text-white' : 'text-zinc-600 dark:text-zinc-400'}`}>
+                          <button type="button" className="block w-full text-left" onClick={e=>{e.stopPropagation();openNotification(notification);}}>{notification.title}</button>
                         </h4>
                         <span className="text-[10px] text-zinc-400 shrink-0">
                           {formatTime(notification.timestamp)}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">
+                      <p className={`text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 ${notification.message.length<=90||expanded.has(notification.id)?'':'line-clamp-2'}`}>
                         {notification.message}
                       </p>
+                      {notification.message.length>90&&<button className="lm-notification-expand text-xs underline" aria-expanded={expanded.has(notification.id)} onClick={e=>{e.stopPropagation();setExpanded(previous=>{const next=new Set(previous);if(next.has(notification.id))next.delete(notification.id);else next.add(notification.id);return next;});}}>{expanded.has(notification.id)?'Mostrar menos':'Leer aviso completo'}</button>}
                       {notification.actionLabel && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (notification.actionUrl) {
-                              window.dispatchEvent(new CustomEvent('notificationNavigate', { 
-                                detail: { url: notification.actionUrl, data: notification.data } 
-                              }));
-                              setIsPanelOpen(false);
-                            }
+                            openNotification(notification);
                           }}
                           className="text-xs font-medium text-amber-500 hover:text-amber-600 mt-2 flex items-center gap-1"
                         >
@@ -185,12 +179,12 @@ export const NotificationPanel: React.FC = () => {
                         </button>
                       )}
                     </div>
-                    <button 
+                    <button aria-label={`Eliminar notificación: ${notification.title}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         dismissNotification(notification.id);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-all"
+                      className="lm-notification-dismiss opacity-100 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-all"
                     >
                       <X className="w-3.5 h-3.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200" />
                     </button>
@@ -204,7 +198,7 @@ export const NotificationPanel: React.FC = () => {
         {/* Footer */}
         <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
           <p className="text-[10px] text-zinc-400 text-center">
-            LaserMachine Notification System v1.0
+            Avisos del taller
           </p>
         </div>
       </div>

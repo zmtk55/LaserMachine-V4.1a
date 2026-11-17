@@ -1,0 +1,4 @@
+BEGIN;
+CREATE OR REPLACE FUNCTION public.lm_order_base(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT public.lm_pick(j,'id userId customerName customerPhone customerEmail total status paymentStatus paymentMethod deliveryMethod createdAt deliveryDate deliveryTime shippingProvider shippingTracking shippingAddress amountPaid couponUsed discountAmount pointsRedeemed mockupUrl reviewRequired totalConfirmed requestedPoints requestedCoupon stockReserved pointsEarned')$$;
+CREATE OR REPLACE FUNCTION public.lm_order_item(j jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$SELECT public.lm_pick(j,'id productId colorName quantity unitPrice totalPrice frontText frontText2 frontFontId frontFontId2 frontFontName frontDesignState frontDesignState2 frontLogos backText backText2 backFontId backFontId2 backFontName backDesignState backDesignState2 backLogos isClientItem clientItemBrand clientItemColor backgroundAssetId')$$;
+COMMIT;

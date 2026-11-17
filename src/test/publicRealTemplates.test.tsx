@@ -1,0 +1,2 @@
+import React from'react';import{render,screen,cleanup}from'@testing-library/react';import{it,expect,vi,afterEach}from'vitest';import{DesignTemplates}from'../../components/DesignTemplates';afterEach(cleanup);
+it('empty workshop catalog does not auto-publish bundled examples or invented usage',()=>{render(<DesignTemplates templates={[]} onSelectTemplate={vi.fn()} onClose={vi.fn()}/>);expect(screen.getByText('No se encontraron plantillas')).toBeTruthy();expect(screen.getByText(/El taller aún no ha publicado/)).toBeTruthy();expect(screen.queryByText('El Rey')).toBeNull();});

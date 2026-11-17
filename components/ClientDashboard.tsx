@@ -1,6 +1,14 @@
+import{ClientFontComparison}from'./ClientFontComparison';
+import{localCalendarDate}from'../utils/calendarDate';
+import{useModalFocus}from'../utils/useModalFocus';
+import{productionFont}from'../utils/fontProvenance';
+import{itemProductLabel,itemColorLabel}from'../utils/orderItemDisplay';
+import {productPreviewImage,productColorHex} from '../utils/productColorPreview';
+import {previewImageScale,previewInk} from '../utils/designPreview';
+import {ownedOrders} from '../utils/ownedOrders';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Order, User, OrderStatus, Product, FontOption, Coupon } from '../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Order, User, OrderStatus, Product, FontOption, Coupon, StoreConfig } from '../types';
 import { 
   Package, Clock, Search, Percent, Phone, MapPin, 
   ChevronRight, Star, Copy, CheckCircle2, Truck,
@@ -9,7 +17,7 @@ import {
   AlertTriangle, CheckCircle, Clock4, PackageCheck,
   Gift, TrendingUp, Bell, Sun, Moon, Ticket
 } from 'lucide-react';
-import { TechnicalPreview } from './TechnicalPreview';
+import {OrderItemPreviewTabs} from './OrderItemPreviewTabs';
 import { Button, Card, Tooltip } from './ui';
 // Removed unused FontShowcase import
 
@@ -19,6 +27,10 @@ interface ClientDashboardProps {
   products: Product[];
   fonts: FontOption[];
   coupons?: Coupon[];
+  storeConfig?: StoreConfig;
+  onProductSelect?: (product: Product) => void;
+  onBackToAdmin?: () => void;
+  onCreateReferral?: (code:string) => void;
   onReorder?: (order: Order) => void;
   onApproveMockup?: (orderId: string, approved: boolean) => void;
   contentConfig?: ContentConfig;
@@ -53,47 +65,16 @@ interface Promotion {
 
 type TabType = 'home' | 'orders' | 'fonts' | 'catalog' | 'coupons';
 
-// Default content - will be replaced by admin configuration
-const DEFAULT_BANNERS: Banner[] = [
-  {
-    id: '1',
-    image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&h=400&fit=crop',
-    title: 'Personalización Premium',
-    subtitle: 'Grabados láser de alta calidad',
-    active: true
-  },
-  {
-    id: '2',
-    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&h=400&fit=crop',
-    title: 'Nueva Colección',
-    subtitle: 'Descubre los nuevos modelos',
-    active: true
-  }
-];
-
-const DEFAULT_PROMOTIONS: Promotion[] = [
-  {
-    id: '1',
-    title: '2x1 en Grabados',
-    description: 'Compra un termo y el segundo grabado es GRATIS',
-    discount: '50% OFF',
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=300&fit=crop',
-    validUntil: '2026-03-15',
-    code: 'GRABADO2X1',
-    active: true
-  }
-];
-
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({ 
-  user, orders, products, fonts, coupons = [], onReorder, onApproveMockup,
-  contentConfig, isDarkMode: propIsDarkMode, toggleTheme: propToggleTheme 
+  user, orders, products, fonts, coupons = [], storeConfig, onReorder, onApproveMockup,
+  contentConfig, onProductSelect, onBackToAdmin, isDarkMode: propIsDarkMode, toggleTheme: propToggleTheme 
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  useEffect(()=>setSelectedOrderId(null),[user.id]);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [showCopied, setShowCopied] = useState<string | null>(null);
-  // State for previewing font text in the Fonts tab
-  const [previewText, setPreviewText] = useState('');
+  const [copyError,setCopyError]=useState('');
   
   // Theme - use props if provided, otherwise local state
   const [localDarkMode, setLocalDarkMode] = useState(() => {
@@ -146,17 +127,18 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   };
 
   // Get active content from config or defaults
-  const banners = contentConfig?.banners?.filter(b => b.active) || DEFAULT_BANNERS.filter(b => b.active);
-  const promotions = contentConfig?.promotions?.filter(p => p.active) || DEFAULT_PROMOTIONS.filter(p => p.active);
+  const banners = contentConfig?.banners?.filter(b => b.active) || [];
+  const promotions = contentConfig?.promotions?.filter(p => p.active) || [];
 
   // Filter user orders
-  const myOrders = useMemo(() => {
-    const filtered = user.isGuest 
-      ? orders.filter(o => o.customerPhone === user.phone)
-      : orders.filter(o => o.customerEmail?.toLowerCase() === user.email?.toLowerCase());
-    
-    return filtered.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [orders, user]);
+  const myOrders = useMemo(()=>ownedOrders(orders,user),[orders,user]);
+
+  const selectedOrder=myOrders.find(order=>order.id===selectedOrderId)||null;
+  const orderDialog=useRef<HTMLDivElement>(null);
+  const restoreOrderFocus=useRef<string|null>(null);
+  const closeOrder=()=>{restoreOrderFocus.current=selectedOrderId;setSelectedOrderId(null);};
+  useModalFocus(!!selectedOrder,orderDialog,closeOrder);
+  useEffect(()=>{if(!selectedOrder&&restoreOrderFocus.current){const id=restoreOrderFocus.current;restoreOrderFocus.current=null;[...document.querySelectorAll<HTMLButtonElement>('[data-order-opener]')].find(el=>el.dataset.orderOpener===id)?.focus();}},[selectedOrder]);
 
   const stats = useMemo(() => {
     const totalOrders = myOrders.length;
@@ -164,13 +146,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     const pendingOrders = myOrders.filter(o => 
       o.status === OrderStatus.RECEIVED || 
       o.status === OrderStatus.IN_PRODUCTION || 
-      o.status === OrderStatus.WAITING_APPROVAL
+      o.status === OrderStatus.WAITING_APPROVAL || o.status===OrderStatus.READY
     ).length;
     return { totalOrders, completedOrders, pendingOrders };
   }, [myOrders]);
 
   const getStatusConfig = (status: OrderStatus) => {
     switch(status) {
+      case OrderStatus.CANCELLED: return {color:'bg-zinc-500',bg:'bg-zinc-100 dark:bg-zinc-800',text:'text-zinc-500',border:'border-zinc-200 dark:border-zinc-700',icon:AlertTriangle,label:'Cancelado',description:'Este pedido fue cancelado'};
       case OrderStatus.COMPLETED: 
         return { 
           color: 'bg-green-500', 
@@ -189,7 +172,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           border: 'border-blue-200 dark:border-blue-800',
           icon: PackageCheck,
           label: 'Listo para entrega',
-          description: 'Puedes pasar a recoger tu pedido'
+          description: 'Tu pedido está listo para entrega'
         };
       case OrderStatus.IN_PRODUCTION: 
         return { 
@@ -225,7 +208,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-MX', { 
+    return localCalendarDate(dateStr).toLocaleDateString('es-MX', { 
       day: 'numeric', 
       month: 'long', 
       year: 'numeric' 
@@ -235,22 +218,23 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
 
-  const copyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setShowCopied(code);
-    setTimeout(() => setShowCopied(null), 2000);
+  const copyCode = async (code: string) => {
+    setCopyError('');setShowCopied(null);
+    try {await navigator.clipboard.writeText(code);setShowCopied(code);setTimeout(() => setShowCopied(null), 2000);}
+    catch {setCopyError('No se pudo copiar. Selecciona el código para copiarlo manualmente.');}
   };
 
   const openWhatsApp = (message: string) => {
-    const text = encodeURIComponent(message);
-    window.open(`https://wa.me/5210000000000?text=${text}`, '_blank');
+    const num = (storeConfig?.whatsapp || '').replace(/\D/g, '');
+    if (!num) { alert('El contacto de WhatsApp del taller aún no está confirmado. No se abrió una conversación.'); return; }
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   // Render bottom navigation
   const renderBottomNav = () => (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 z-50 safe-area-pb">
+    <div className="lm-client-bottom-nav fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 z-50 safe-area-pb" role="navigation" aria-label="Secciones del cliente">
       <div className="max-w-5xl mx-auto px-2">
-        <div className="flex items-center justify-around py-2">
+        <div className="lm-client-nav-items">
           {[
             { id: 'home', label: 'Inicio', icon: Home },
             { id: 'orders', label: 'Pedidos', icon: Package, badge: stats.pendingOrders },
@@ -260,6 +244,8 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           ].map((item) => (
             <Button
               key={item.id}
+              aria-label={item.label}
+              aria-current={activeTab===item.id?'page':undefined}
               onClick={() => setActiveTab(item.id as TabType)}
               variant="ghost"
               className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${
@@ -284,46 +270,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     </div>
   );
 
-  // HOME TAB
-  const renderHome = () => (
-    <Card className="space-y-6 p-6 bg-white dark:bg-zinc-950 rounded-2xl">
-      {/* Welcome Card */}
-      <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-black rounded-3xl p-6 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-500/10 rounded-full blur-[60px]"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-3">
-            <img 
-              src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=facc15&color=000000`}
-              alt={user.name}
-              className="w-14 h-14 rounded-2xl border-2 border-yellow-400"
-            />
-            <div>
-              <h2 className="font-bold text-lg">¡Hola, {user.name.split(' ')[0]}!</h2>
-              <p className="text-xs text-zinc-400">Bienvenido a LaserMachine</p>
-            </div>
-          </div>
-          
-          {/* Points Only */}
-          <div className="bg-white/10 backdrop-blur rounded-2xl p-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-zinc-400 mb-1">Tus puntos acumulados</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-yellow-400">{user.laserPoints || 0}</span>
-                  <span className="text-sm text-yellow-400/80">pts</span>
-                </div>
-              </div>
-              <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                <Star size={24} className="text-black" />
-              </div>
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              Usa tus puntos en tu próxima compra
-            </p>
-          </div>
-        </div>
-      </div>
-
+  // HOME TAB: the customer's current work is the starting point.
+  const renderHome=()=> <div className="client-home">
+   <header><h2>{user.name?.trim()?`Hola, ${user.name.trim().split(/\s+/)[0]}`:'Hola'}</h2><span>{user.laserPoints||0} puntos</span></header>
+   <div className="client-order-counts"><span><strong>{stats.pendingOrders}</strong> En proceso</span><span><strong>{stats.completedOrders}</strong> Entregados</span><span><strong>{stats.totalOrders}</strong> Pedidos</span></div>
+   <section><div className="ops-section-title"><h3>Tus pedidos</h3><button onClick={()=>setActiveTab('orders')}>Ver todos <ChevronRight size={15}/></button></div>{!myOrders.length&&<p className="client-home-empty">Aún no tienes pedidos. Puedes explorar el catálogo desde el menú.</p>}{[...myOrders].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,4).map(order=>{const status=getStatusConfig(order.status);return <button key={order.id} className="client-home-order" data-order-opener={order.id} onClick={()=>setSelectedOrderId(order.id)}><span><strong>{order.id}</strong><span>{formatDate(order.createdAt)}</span><small>{status.description}</small></span><span><strong>{status.label}</strong><small>{formatCurrency(Math.max(0,order.total-(order.amountPaid||0)))} pendiente</small></span><ChevronRight size={17}/></button>;})}</section>
+   <button className="client-contact" onClick={()=>openWhatsApp(`Hola LaserMachine, ${user.name?.trim()?`soy ${user.name.trim()} y `:''}tengo una pregunta sobre mi pedido.`)}><MessageCircle size={17}/><span>Contactar al taller</span><ChevronRight size={16}/></button>
       {/* Banners Carousel */}
       {banners.length > 0 && (
         <div className="space-y-3">
@@ -356,25 +308,6 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           </div>
         </div>
       )}
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 text-center">
-          <Package size={20} className="mx-auto text-blue-500 mb-2" />
-          <p className="text-xl font-black text-zinc-900 dark:text-white">{stats.totalOrders}</p>
-          <p className="text-[10px] text-zinc-500">Pedidos</p>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 text-center">
-          <CheckCircle2 size={20} className="mx-auto text-green-500 mb-2" />
-          <p className="text-xl font-black text-zinc-900 dark:text-white">{stats.completedOrders}</p>
-          <p className="text-[10px] text-zinc-500">Completados</p>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 text-center">
-          <Clock4 size={20} className="mx-auto text-amber-500 mb-2" />
-          <p className="text-xl font-black text-zinc-900 dark:text-white">{stats.pendingOrders}</p>
-          <p className="text-[10px] text-zinc-500">En proceso</p>
-        </div>
-      </div>
 
       {/* Promotions */}
       {promotions.length > 0 && (
@@ -423,55 +356,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         </div>
       )}
 
-      {/* Recent Orders Preview */}
-      {myOrders.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-zinc-900 dark:text-white">Pedidos recientes</h3>
-            <button 
-              onClick={() => setActiveTab('orders')}
-              className="text-xs text-yellow-500 font-bold flex items-center gap-1"
-            >
-              Ver todos <ChevronRight size={14} />
-            </button>
-          </div>
-          {myOrders.slice(0, 2).map((order) => {
-            const status = getStatusConfig(order.status);
-            const StatusIcon = status.icon;
-            
-            return (
-              <div 
-                key={order.id}
-                onClick={() => setSelectedOrder(order)}
-                className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-sm">Pedido #{order.id.slice(-6)}</span>
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${status.bg} ${status.text} ${status.border} border`}>
-                    {status.label}
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-500 mb-3">{formatDate(order.createdAt)}</p>
-                <div className="flex items-center gap-2 text-xs text-zinc-600">
-                  <StatusIcon size={14} className={status.text} />
-                  <span>{status.description}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Support Button */}
-      <button 
-        onClick={() => openWhatsApp(`Hola LaserMachine, soy ${user.name} y tengo una pregunta sobre mi pedido.`)}
-        className="w-full py-4 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors"
-      >
-        <MessageCircle size={20} />
-        Chatear con nosotros
-      </button>
-    </Card>
-  );
+  </div>;
 
   // ORDERS TAB
   const renderOrders = () => (
@@ -496,6 +381,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 key={order.id}
                 className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden"
               >
+                {order.reviewRequired&&!order.totalConfirmed&&<p className="px-4 pt-3 text-xs font-bold text-amber-600">Pendiente de revisión. Total estimado y entrega sin confirmar. Puntos/cupón no descontados.</p>}
                 {/* Order Header */}
                 <div 
                   onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
@@ -508,7 +394,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                       </div>
                       <div>
                         <p className="font-bold text-zinc-900 dark:text-white text-sm">
-                          Pedido #{order.id.slice(-6)}
+                          Pedido #{order.id}
                         </p>
                         <p className="text-[10px] text-zinc-500">
                           {formatDate(order.createdAt)}
@@ -529,10 +415,10 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   </div>
                   
                   {/* Estimated Delivery */}
-                  {order.estimatedDeliveryDate && (
+                  {order.deliveryDate && (
                     <div className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
                       <Truck size={14} />
-                      <span>Entrega estimada: {formatDate(order.estimatedDeliveryDate)}</span>
+                      <span>Entrega estimada: {formatDate(order.deliveryDate)}</span>
                     </div>
                   )}
                 </div>
@@ -585,9 +471,9 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-sm text-zinc-900 dark:text-white truncate">
-                                {item.productId}
+                                {itemProductLabel(item, product?.name)}
                               </p>
-                              <p className="text-xs text-zinc-500">{item.colorName} • x{item.quantity}</p>
+                              <p className="text-xs text-zinc-500">{[itemColorLabel(item),`x${item.quantity}`].filter(Boolean).join(' • ')}</p>
                             </div>
                           </div>
                         );
@@ -597,14 +483,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
                       <button 
-                        onClick={() => setSelectedOrder(order)}
+                        data-order-opener={order.id} onClick={() => setSelectedOrderId(order.id)}
                         className="flex-1 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
                       >
                         <ExternalLink size={14} />
                         Ver detalles
                       </button>
                       <button 
-                        onClick={() => openWhatsApp(`Hola, tengo una pregunta sobre mi pedido #${order.id.slice(-6)}`)}
+                        onClick={() => openWhatsApp(`Hola, tengo una pregunta sobre mi pedido #${order.id}`)}
                         className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
                       >
                         <MessageCircle size={14} />
@@ -623,17 +509,18 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
   // CATALOG TAB
   const renderCatalog = () => (
-    <div className="space-y-4">
+    <div className="lm-client-catalog space-y-4">
       <h2 className="text-xl font-black text-zinc-900 dark:text-white">Catálogo</h2>
-      <div className="grid grid-cols-2 gap-3">
-        {products.filter(p => p.isActive !== false).map((product) => (
+      {!products.length&&<p className="text-sm text-zinc-500">No hay productos para mostrar en este momento.</p>}
+      <div className="lm-client-catalog-grid grid grid-cols-2 gap-3">
+        {products.map((product) => (
           <div 
             key={product.id}
             className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800"
           >
             <div className="aspect-square bg-zinc-100 dark:bg-zinc-800">
               {product.imageUrl ? (
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                <img src={productPreviewImage(product, product.colors?.[0]?.name || 'NEGRO')} alt={product.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <Package size={32} className="text-zinc-400" />
@@ -641,11 +528,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               )}
             </div>
             <div className="p-3">
-              <h3 className="font-bold text-sm text-zinc-900 dark:text-white truncate">{product.name}</h3>
+              <h3 className="font-bold text-sm text-zinc-900 dark:text-white">{product.name}</h3>
               <p className="text-xs text-zinc-500">{product.brand}</p>
               <p className="text-sm font-black text-yellow-500 mt-1">
                 {formatCurrency(product.price)}
               </p>
+              <button onClick={()=>onProductSelect?.(product)} disabled={!onProductSelect} className="lm-client-personalize mt-2 text-xs font-bold underline disabled:opacity-50" aria-label={`Personalizar ${product.name}`}>Personalizar</button>
             </div>
           </div>
         ))}
@@ -666,7 +554,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     );
 
     return (
-      <div className="space-y-4">
+      <div className="lm-client-coupons space-y-4">
         <h2 className="text-xl font-black text-zinc-900 dark:text-white">Mis Cupones</h2>
         
         {/* Active Coupons */}
@@ -675,7 +563,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             <p className="text-sm text-zinc-500">Cupones disponibles</p>
             {activeCoupons.map((coupon) => (
               <div 
-                key={coupon.id}
+                key={coupon.code}
                 className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden"
               >
                 {/* Decorative circles for ticket effect */}
@@ -697,6 +585,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                     </div>
                     <button
                       onClick={() => copyCode(coupon.code)}
+                      aria-label={`Copiar cupón ${coupon.code}`}
                       className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black rounded-xl text-xs font-bold transition-colors flex items-center gap-2"
                     >
                       {showCopied === coupon.code ? (
@@ -716,7 +605,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   {coupon.expiryDate && (
                     <p className="text-xs text-zinc-400 mt-2 flex items-center gap-1">
                       <Calendar size={12} />
-                      Válido hasta: {new Date(coupon.expiryDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      Válido hasta: {localCalendarDate(coupon.expiryDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                   )}
                   
@@ -744,13 +633,13 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
             <div className="space-y-2">
               {expiredCoupons.slice(0, 3).map((coupon) => (
                 <div 
-                  key={coupon.id}
+                  key={coupon.code}
                   className="bg-zinc-100 dark:bg-zinc-800/50 rounded-xl p-3 opacity-60"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Ticket size={16} className="text-zinc-400" />
-                      <span className="font-mono text-zinc-500">{coupon.code}</span>
+                      <span className="lm-client-expired-code font-mono text-zinc-500">{coupon.code}</span>
                     </div>
                     <span className="text-xs text-zinc-400">Expirado</span>
                   </div>
@@ -764,43 +653,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   };
 
   // FONTS TAB
-  const renderFonts = () => (
-    <div className="space-y-4">
-      <h2 className="text-xl font-black text-zinc-900 dark:text-white">Fuentes disponibles</h2>
-      {/* Preview input */}
-      <div className="relative">
-        <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-        <input
-          value={previewText}
-          onChange={(e) => setPreviewText(e.target.value)}
-          placeholder="Escribe aquí para probar tus fuentes..."
-          className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 py-4 pl-12 pr-4 rounded-xl text-lg font-medium text-zinc-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
-        />
-      </div>
-      {/* Grid of fonts */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {fonts.filter(f => f.isActive !== false).map((font) => (
-          <div
-            key={font.id}
-            className={`bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 ${font.active === false ? 'opacity-40' : ''}`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-zinc-900 dark:text-white">{font.name}</h3>
-              <span className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-[10px] font-bold text-zinc-500">
-                {font.category}
-              </span>
-            </div>
-            <p
-              className="text-2xl text-zinc-700 dark:text-zinc-300 truncate"
-              style={{ fontFamily: font.cssFamily }}
-            >
-              {previewText || 'Aa'}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  const renderFonts = () => <ClientFontComparison fonts={fonts}/>;
 
   // ORDER DETAILS MODAL
   if (selectedOrder) {
@@ -808,17 +661,17 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
       <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-md">
         <div className="h-full overflow-y-auto">
           <div className="min-h-full p-4 flex items-start justify-center">
-            <div className="bg-white dark:bg-zinc-950 w-full max-w-2xl rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 relative my-4">
+            <div ref={orderDialog} role="dialog" aria-modal="true" aria-label={`Detalle del pedido ${selectedOrder.id}`} className="lm-client-order-detail bg-white dark:bg-zinc-950 w-full max-w-2xl rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 relative my-4">
               <button 
-                onClick={() => setSelectedOrder(null)}
+                aria-label="Cerrar detalle del pedido" onClick={closeOrder}
                 className="absolute top-4 right-4 p-2 bg-zinc-100 dark:bg-zinc-900 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
               >
                 <X size={20} />
               </button>
 
-              <div className="mb-6">
+              <div className="lm-client-order-heading mb-6">
                 <h2 className="text-2xl font-black text-zinc-900 dark:text-white">
-                  Pedido #{selectedOrder.id.slice(-6)}
+                  Pedido #{selectedOrder.id}
                 </h2>
                 <p className="text-sm text-zinc-500 mt-1">
                   {formatDate(selectedOrder.createdAt)}
@@ -829,7 +682,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               {(() => {
                 const s = getStatusConfig(selectedOrder.status);
                 return (
-                  <div className={`${s.bg} ${s.border} border rounded-2xl p-4 mb-6`}>
+                  <div className={`${s.bg} ${s.border} border rounded-2xl p-4 mb-6 lm-client-order-status`}>
                     <div className="flex items-center gap-3">
                       <s.icon size={24} className={s.text} />
                       <div>
@@ -847,43 +700,23 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   <div key={idx} className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
                     <div className="bg-zinc-50 dark:bg-zinc-900 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
                       <h4 className="font-bold text-zinc-900 dark:text-white">
-                        {item.productId} - {item.colorName}
+                        {itemProductLabel(item, products.find(p=>p.id===item.productId)?.name)}{(()=>{const c=itemColorLabel(item);return c?` - ${c}`:''})()}
                       </h4>
                     </div>
-                    <div className="p-4 grid md:grid-cols-2 gap-4">
-                      <TechnicalPreview 
-                        imageUrl={products.find(p => p.id === item.productId)?.colors.find(c => c.name === item.colorName)?.imageUrl || products.find(p => p.id === item.productId)?.imageUrl}
-                        text={item.frontText} text2={item.frontText2}
-                        fontName={item.frontFontName}
-                        fontCss={fonts.find(f => f.id === item.frontFontId)?.cssFamily || ''}
-                        logos={item.frontLogos}
-                        designState={item.frontDesignState}
-                        designState2={item.frontDesignState2}
-                        sideLabel="FRENTE"
-                      />
-                      <TechnicalPreview 
-                        imageUrl={products.find(p => p.id === item.productId)?.colors.find(c => c.name === item.colorName)?.imageUrl || products.find(p => p.id === item.productId)?.imageUrl}
-                        text={item.backText} text2={item.backText2}
-                        fontName={item.backFontName}
-                        fontCss={fonts.find(f => f.id === item.backFontId)?.cssFamily || ''}
-                        logos={item.backLogos}
-                        designState={item.backDesignState}
-                        designState2={item.backDesignState2}
-                        sideLabel="DORSO"
-                      />
-                    </div>
+                    <OrderItemPreviewTabs item={item} product={products.find(p=>p.id===item.productId)} fonts={fonts} label={`Pieza ${idx+1}`}/>
+
                   </div>
                 ))}
               </div>
 
               {/* Actions */}
-              <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 flex gap-3">
+              <div className="lm-client-order-actions mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 flex gap-3">
                 <button 
-                  onClick={() => openWhatsApp(`Hola, tengo una pregunta sobre mi pedido #${selectedOrder.id.slice(-6)}`)}
+                  onClick={() => openWhatsApp(`Hola, tengo una pregunta sobre mi pedido #${selectedOrder.id}`)}
                   className="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
                 >
                   <MessageCircle size={18} />
-                  Contactar soporte
+                  Contactar al taller
                 </button>
                 {selectedOrder.status === OrderStatus.COMPLETED && (
                   <button 
@@ -903,7 +736,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   }
 
   return (
-    <div className="min-h-full bg-zinc-50 dark:bg-black pb-24">
+    <div className="lm-client-shell min-h-full bg-zinc-50 dark:bg-black pb-24">
       {/* Header */}
       <div className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 py-4">
@@ -938,6 +771,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
         {activeTab === 'fonts' && renderFonts()}
       </div>
 
+      {copyError&&<p role="alert" className="lm-client-copy-error">{copyError}</p>}
       {/* Bottom Navigation */}
       {renderBottomNav()}
     </div>

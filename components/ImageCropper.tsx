@@ -1,5 +1,6 @@
 
-import React, { useState, useCallback } from 'react';
+import{useModalFocus}from'../utils/useModalFocus';
+import React, { useState, useCallback,useRef,useEffect } from 'react';
 import { removeBackground } from '../utils/imageUtils';
 import Cropper from 'react-easy-crop';
 import { X, Check, ZoomIn, RotateCw, Wand2, Loader2 } from 'lucide-react';
@@ -21,11 +22,12 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
   });
 
 const getCroppedImg = async (imageSrc: string, pixelCrop: any, rotation = 0): Promise<string> => {
+  if(!pixelCrop||pixelCrop.width<=0||pixelCrop.height<=0)throw Error('Recorte no disponible');
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
-  if (!ctx) return '';
+  if (!ctx) throw Error('No se pudo preparar el recorte');
 
   const maxSize = Math.max(image.width, image.height);
   const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
@@ -54,20 +56,23 @@ const getCroppedImg = async (imageSrc: string, pixelCrop: any, rotation = 0): Pr
     0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y
   );
 
-  return new Promise((resolve) => {
+  return new Promise((resolve,reject) => {
     canvas.toBlob((file) => {
         if (file) {
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onloadend = () => {
-                resolve(reader.result as string);
-            };
-        }
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(Error('No se pudo leer el recorte'));
+        }else reject(Error('No se pudo crear el recorte'));
     }, 'image/png', 1); // PNG for transparency
   });
 };
 
 export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComplete, onCancel, aspect = 5 / 6 }) => {
+  const dialogRef=useRef<HTMLDivElement>(null);useModalFocus(true,dialogRef,onCancel);
+  const active=useRef(true);useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
+  const [isSaving,setIsSaving]=useState(false);
+  const [saveError,setSaveError]=useState('');
   const [currentImage, setCurrentImage] = useState(imageSrc);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -102,16 +107,18 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
     };
 
   const handleSave = async () => {
+    if(isSaving||isProcessing||!croppedAreaPixels)return;
+    setIsSaving(true);setSaveError('');
     try {
       const croppedImage = await getCroppedImg(currentImage, croppedAreaPixels, rotation);
-      onCropComplete(croppedImage);
+      if(active.current)onCropComplete(croppedImage);
     } catch (e) {
-      console.error(e);
-    }
+      if(active.current)setSaveError('No se pudo recortar la imagen. Conservamos el original.');
+    }finally{if(active.current)setIsSaving(false);}
   };
 
   return (
-    <div className="fixed inset-0 z-[300] bg-black/95 flex flex-col animate-in fade-in duration-300">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Recortar imagen" className="fixed inset-0 z-[310] bg-black/95 flex flex-col animate-in fade-in duration-300">
       <div className="relative flex-1 bg-[#09090b] flex items-center justify-center">
         {isProcessing && (
             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -142,7 +149,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
           <div className="flex items-center gap-4 justify-center max-w-md mx-auto w-full">
               <ZoomIn size={20} className="text-zinc-400"/>
               <input 
-                type="range" 
+                type="range" aria-label="Zoom de recorte"
                 value={zoom} 
                 min={1} 
                 max={3} 
@@ -152,6 +159,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
               />
           </div>
           
+          {saveError&&<p role="alert" className="text-red-400 text-sm text-center">{saveError}</p>}
           <div className="flex justify-center gap-4 flex-wrap">
               <button onClick={onCancel} className="px-6 py-3 rounded-xl border border-zinc-700 text-zinc-400 hover:text-white font-bold uppercase text-xs transition-colors flex items-center gap-2">
                   <X size={16}/> Cancelar
@@ -169,8 +177,8 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
                   <Wand2 size={16}/> {isProcessing ? 'Procesando...' : 'Quitar Fondo'}
               </button>
 
-              <button onClick={handleSave} className="px-10 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-xs transition-colors flex items-center gap-2 shadow-lg dark:shadow-none">
-                  <Check size={16}/> Guardar
+              <button disabled={!croppedAreaPixels||isProcessing||isSaving} onClick={handleSave} className="px-10 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-xs transition-colors flex items-center gap-2 shadow-lg dark:shadow-none">
+                  <Check size={16}/>{isSaving?'Guardando...':'Guardar'}
               </button>
           </div>
       </div>

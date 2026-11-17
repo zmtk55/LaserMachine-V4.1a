@@ -1,19 +1,28 @@
+import {EngravingText} from './EngravingText';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Ruler } from 'lucide-react';
+import { Ruler, Maximize2, X } from 'lucide-react';
 import { DesignState, LogoItem } from '../types';
 
 interface TechnicalPreviewProps {
   imageUrl: string | undefined;
+  compact?:boolean;
+  imageScale?:number;
+  inkColor?:string;
   text: string;
   text2?: string;
   fontName: string | undefined;
   fontCss: string;
+  fontId?: number | string;
+  hideElementCounts?: boolean;
   font2Css?: string;
   logos: LogoItem[];
   designState: DesignState;
   designState2?: DesignState;
   sideLabel: string;
+  referencePhoto?: boolean;
+  referenceLabel?: string;
+  allowExpand?: boolean;
 }
 
 // CONSTANTS MATCHING PRODUCT VISUALIZER
@@ -21,9 +30,10 @@ const STAGE_WIDTH = 500;
 const STAGE_HEIGHT = 600;
 
 export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({ 
-  imageUrl, text, text2, fontName, fontCss, font2Css, logos, designState, designState2, sideLabel 
+  imageUrl, compact=false, imageScale=1.45,inkColor='#e4e4e7', text, text2, fontName, fontId, hideElementCounts=false, fontCss, font2Css, logos, designState, designState2, sideLabel, referencePhoto=false, referenceLabel, allowExpand=false
 }) => {
-  const [showGuides, setShowGuides] = useState(true);
+  const [showGuides, setShowGuides] = useState(!compact);
+  const [expanded, setExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scaleFactor, setScaleFactor] = useState(1);
 
@@ -32,7 +42,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
   const safeDesign2 = designState2 || { x: 50, y: 55, scale: 1, rotate: 0 };
   
   // Translation for display
-  const displayLabel = sideLabel === 'FRENTE' || sideLabel === 'LADO A' ? 'FRENTE' : 'POSTERIOR';
+  const displayLabel = sideLabel.toUpperCase().includes('FRENTE') || sideLabel.toUpperCase().includes('LADO A') ? 'FRENTE' : sideLabel.toUpperCase().includes('REVERSO') ? 'REVERSO' : 'POSTERIOR';
   const isBackView = sideLabel.toUpperCase().includes('DORSO') || sideLabel.toUpperCase().includes('POSTERIOR') || sideLabel.toUpperCase().includes('LADO B');
 
   // Auto-Scale Logic: Fit 500x600 into whatever space we have
@@ -60,25 +70,34 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
   }, []);
 
   return (
+    <>
     <div className="group relative w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col shadow-sm transition-all hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700">
        
        {/* HEADER */}
-       <div className="h-10 shrink-0 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between px-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-           <div className="flex items-center gap-2">
+       <div className="h-10 shrink-0 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between px-2 bg-zinc-50/50 dark:bg-zinc-900/50">
+           <div className="flex items-center gap-2 min-w-0">
                <div className={`w-2 h-2 rounded-full ${text || text2 || logos.length > 0 ? 'bg-green-500' : 'bg-zinc-300'}`}></div>
-               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{displayLabel}</span>
+               <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{displayLabel}</span>
            </div>
-           <button 
+           {!compact&&<button 
              onClick={() => setShowGuides(!showGuides)} 
              className={`p-1.5 rounded-md transition-colors ${showGuides ? 'bg-amber-500 text-white' : 'text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`} 
              title="Alternar Guías"
            >
              <Ruler size={12}/>
-           </button>
+           </button>}
+           {allowExpand&&<button
+             onClick={() => setExpanded(true)}
+             className="p-1.5 rounded-md transition-colors text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+             title="Ampliar vista"
+             aria-label={`Ampliar vista ${displayLabel}`}
+           >
+             <Maximize2 size={12}/>
+           </button>}
        </div>
 
-       {/* PREVIEW AREA - SCALE-DOWN VIRTUAL CANVAS WITH FORCED ASPECT RATIO */}
-       <div ref={containerRef} className="relative w-full aspect-[5/6] flex items-center justify-center p-0 bg-white dark:bg-black overflow-hidden border-t border-zinc-100 dark:border-zinc-800">
+       {/* PREVIEW AREA - SCALE-DOWN VIRTUAL CANVAS WITH FORCED ASPECT RATIO. overflow-clip: never a scroll container, canvas cannot be displaced. */}
+       <div ref={containerRef} className="relative w-full aspect-[5/6] flex items-center justify-center p-0 bg-white dark:bg-black overflow-clip border-t border-zinc-100 dark:border-zinc-800">
            
            {/* Background Grid */}
            {showGuides && (
@@ -95,7 +114,12 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                </>
            )}
 
-           {/* THE VIRTUAL STAGE - EXACTLY 500x600 PIXELS */}
+           {(referencePhoto||referenceLabel) && (
+               <span className="absolute bottom-2 left-2 z-20 text-[10px] font-black uppercase tracking-widest bg-zinc-950/80 text-white px-2 py-1 rounded-md pointer-events-none">{referenceLabel||'Foto de referencia'}</span>
+           )}
+
+           {/* THE VIRTUAL STAGE - EXACTLY 500x600 PIXELS. Absolute wrapper: the unscaled 500x600 layout box must not stretch the aspect-[5/6] container. */}
+           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
            <div 
                 style={{
                     width: `${STAGE_WIDTH}px`,
@@ -104,14 +128,14 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                     transformOrigin: 'center center',
                     boxShadow: showGuides ? '0 0 0 1px rgba(245, 158, 11, 0.3)' : 'none'
                 }}
-                className="relative flex items-center justify-center select-none"
+                className="relative flex items-center justify-center select-none shrink-0"
            >
                {imageUrl ? (
                    <>
                         {/* 1. Base Image - Contains exactly like Visualizer */}
                         <img 
-                            src={imageUrl} 
-                            className={`w-full h-full object-contain drop-shadow-xl pointer-events-none ${isBackView ? 'scale-x-[-1]' : ''}`} 
+                            src={imageUrl} style={{transform:`scale(${imageScale})`}}
+                            className={`lm-product-photo w-full h-full object-contain drop-shadow-xl pointer-events-none`} 
                             alt="Product Base"
                         />
                         
@@ -129,16 +153,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                             transform: `translate(-50%, -50%) rotate(${safeDesign.rotate}deg) scale(${safeDesign.scale})`,
                                         }}
                                     >
-                                        <span 
-                                            className={`select-none text-[#6b7280] ${fontCss} font-bold`}
-                                            style={{ 
-                                                fontSize: '48px', // MATCHES VISUALIZER FIXED PX
-                                                lineHeight: '1',
-                                                mixBlendMode: 'normal' 
-                                            }}
-                                        >
-                                            {text}
-                                        </span>
+                                        <EngravingText text={text} fontCss={fontCss} baseSize={48} color={inkColor} lineHeight={safeDesign.textLineHeight} lineSizes={safeDesign.textLineSizes}/>
                                         {showGuides && <div className="absolute -inset-2 border border-blue-400/50"></div>}
                                     </div>
                                 )}
@@ -153,15 +168,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                             transform: `translate(-50%, -50%) rotate(${safeDesign2.rotate}deg) scale(${safeDesign2.scale})`,
                                         }}
                                     >
-                                        <span 
-                                            className={`select-none text-[#6b7280] ${font2Css || fontCss} font-bold`}
-                                            style={{ 
-                                                fontSize: '32px', // MATCHES VISUALIZER FIXED PX
-                                                lineHeight: '1',
-                                            }}
-                                        >
-                                            {text2}
-                                        </span>
+                                        <EngravingText text={text2} fontCss={font2Css||fontCss} color={inkColor} lineHeight={safeDesign2.textLineHeight} lineSizes={safeDesign2.textLineSizes}/>
                                         {showGuides && <div className="absolute -inset-2 border border-blue-400/50"></div>}
                                     </div>
                                 )}
@@ -193,19 +200,36 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                    <div className="text-zinc-300 text-xs font-mono border-2 border-dashed border-zinc-200 p-4">NO IMAGE</div>
                )}
            </div>
+           </div>
        </div>
        
        {/* FOOTER METADATA */}
-       <div className="bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 p-3 grid grid-cols-2 gap-2 text-[8px] font-mono text-zinc-500 uppercase shrink-0">
+       {!compact&&<div className="bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-[10px] font-mono text-zinc-500 uppercase shrink-0">
            <div>
-               <span className="block font-bold text-zinc-400">Fuente L1</span>
-               <span className="truncate block font-black text-zinc-900 dark:text-white">{fontName || '-'}</span>
+               <span className="block font-bold text-zinc-400">Tipografía</span>
+               <span className="block font-black text-zinc-900 dark:text-white break-words leading-tight">{fontId != null ? `#${fontId}${fontName ? ' · ' + fontName : ''}` : fontName || '-'}</span>
            </div>
-           <div className="text-right">
+           {!hideElementCounts&&<div className="sm:text-right">
                <span className="block font-bold text-zinc-400">Elementos</span>
-               <span>Txt:{text ? '1' : '0'}{text2 ? '+1' : ''} | Img:{logos.length}</span>
-           </div>
-       </div>
+               <span>Textos: {(text ? 1 : 0) + (text2 ? 1 : 0)} · Imágenes: {logos.length}</span>
+           </div>}
+       </div>}
     </div>
+    {allowExpand&&expanded&&(
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={()=>setExpanded(false)}>
+        <div className="relative w-full" style={{maxWidth:'min(92vw, 480px)'}} onClick={e=>e.stopPropagation()}>
+          <button onClick={()=>setExpanded(false)} aria-label="Cerrar vista ampliada" className="absolute -top-11 right-0 p-2 rounded-lg bg-zinc-800 text-white hover:bg-zinc-700 min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <X size={18}/>
+          </button>
+          <TechnicalPreview
+            referenceLabel={referenceLabel} referencePhoto={referencePhoto} imageUrl={imageUrl} imageScale={imageScale} inkColor={inkColor}
+            text={text} text2={text2} fontName={fontName} fontId={fontId} hideElementCounts={hideElementCounts} fontCss={fontCss} font2Css={font2Css}
+            logos={logos} designState={designState} designState2={designState2}
+            sideLabel={sideLabel}
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 };

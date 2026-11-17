@@ -1,0 +1,3 @@
+import{it,expect}from'vitest';import{catalogFontId}from'../../utils/fontId';
+it('uses the same existing catalog ID for numeric and string choices on all four text slots',()=>{const fonts=[{id:15},{id:101}];for(const ids of [[15,101,15,101],['15','101','15','101']])expect(ids.map(id=>catalogFontId(fonts,id,999))).toEqual([15,101,15,101]);expect(fonts).toEqual([{id:15},{id:101}]);});
+it('does not silently substitute unknown saved IDs, and defaults only when absent',()=>{expect(catalogFontId([{id:15}],777,999)).toBe(777);expect(catalogFontId([{id:15}],'777',999)).toBe('777');expect(catalogFontId([],undefined,999)).toBe(999);expect(catalogFontId([{id:0}],'0',999)).toBe(0);});

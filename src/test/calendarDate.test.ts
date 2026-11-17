@@ -1,0 +1,2 @@
+import {describe,it,expect} from 'vitest';import {localCalendarDate,localDateKey} from '../../utils/calendarDate';
+describe('delivery calendar',()=>{it('does not move a date-only delivery to the prior day',()=>{const d=localCalendarDate('2026-11-06');expect(d.getFullYear()).toBe(2026);expect(d.getMonth()).toBe(10);expect(d.getDate()).toBe(6);expect(d.getDay()).toBe(5);expect(localDateKey(d)).toBe('2026-11-06');});});

@@ -1,0 +1,13 @@
+import {it,expect,vi} from 'vitest';
+import {createSupabaseRecordStore} from '../../services/supabaseRecordStore';
+const url='https://uhghmebvpyuwoksbaaje.supabase.co';
+const row={id:'font-1',revision:2,data:{cssFamily:'Existing engraving font',fileData:'fixture-font-data',categories:['BASICAS'],unknownFutureField:true}};
+const setup=(result:unknown,status=200)=>{const fetcher=vi.fn(async(_url:RequestInfo|URL,_init?:RequestInit)=>new Response(JSON.stringify(result),{status}));return {fetcher,store:createSupabaseRecordStore({projectUrl:url,publishableKey:'fixture-public-key',accessToken:async()=> 'fixture-session',fetcher:fetcher as typeof fetch})};};
+it('rejects other project destinations',()=>expect(()=>createSupabaseRecordStore({projectUrl:'https://another.supabase.co',publishableKey:'x',accessToken:async()=>null})).toThrow());
+it('requires real session supplier, not a local admin role',async()=>{const {fetcher}=setup([]);const s=createSupabaseRecordStore({projectUrl:url,publishableKey:'x',accessToken:async()=>null,fetcher:fetcher as typeof fetch});await expect(s.read('lm_fonts','font-1')).rejects.toMatchObject({code:'auth'});expect(fetcher).not.toHaveBeenCalled();});
+it('preserves engraving font data and unknown fields',async()=>{const {store}=setup([row]);expect(await store.read('lm_fonts','font-1')).toEqual(row);});
+it('does not turn load error into empty defaults',async()=>{const {store}=setup({},500);await expect(store.read('lm_fonts','font-1')).rejects.toMatchObject({code:'server'});});
+it('uses revision guard for existing record save',async()=>{const {store,fetcher}=setup([row]);await store.save('lm_fonts',{...row,revision:1});expect(fetcher.mock.calls[0][0]).toContain('revision=eq.1');expect(fetcher.mock.calls[0][1]?.method).toBe('PATCH');});
+it('does not overwrite conflict with upsert',async()=>{const {store,fetcher}=setup([]);await expect(store.save('lm_fonts',{...row,revision:1})).rejects.toMatchObject({code:'conflict'});expect(fetcher).toHaveBeenCalledTimes(1);});
+it('does not call malformed receipt saved',async()=>{const {store}=setup([{...row,revision:99}]);await expect(store.save('lm_fonts',{...row,revision:1})).rejects.toMatchObject({code:'invalid'});});
+it('only creates a record when explicitly given revision zero',async()=>{const {store,fetcher}=setup([{...row,revision:1}]);await store.save('lm_fonts',{...row,revision:0});expect(fetcher.mock.calls[0][1]?.method).toBe('POST');});

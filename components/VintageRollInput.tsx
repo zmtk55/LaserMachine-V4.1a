@@ -79,7 +79,7 @@ export const VintageRollInput: React.FC<VintageRollInputProps> = ({
       
       <div className="flex justify-between px-2 mt-1.5">
           <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{label}</span>
-          <span className="text-[9px] font-bold text-zinc-300 dark:text-zinc-600">{value.length} chars</span>
+          <span className="text-[9px] font-bold text-zinc-300 dark:text-zinc-600">{value.length} caracteres</span>
       </div>
     </div>
   );

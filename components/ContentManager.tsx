@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Plus, Image as ImageIcon, Trash2, Save, Eye, EyeOff, 
   Percent, Calendar, Type, Upload, Star, MessageCircle, HelpCircle,
@@ -81,7 +81,7 @@ interface ContentConfig {
 
 interface ContentManagerProps {
   config: ContentConfig;
-  onSave: (config: ContentConfig) => void;
+  onSave: (config: ContentConfig) => void | Promise<void>;
 }
 
 // =============================================================================
@@ -174,8 +174,16 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
   
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus,setSaveStatus]=useState('');
+  const contentSnapshot=JSON.stringify({banners,promotions,testimonials,faqs,featuredProducts});
+  const [savedSnapshot,setSavedSnapshot]=useState(contentSnapshot);
+  const dirty=contentSnapshot!==savedSnapshot;
+  const localState=useRef({contentSnapshot,savedSnapshot});localState.current={contentSnapshot,savedSnapshot};
+  useEffect(()=>{if(!dirty)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
 
   useEffect(() => {
+    setSavedSnapshot(JSON.stringify({banners:config.banners||[],promotions:config.promotions||[],testimonials:config.testimonials||[],faqs:config.faqs||[],featuredProducts:config.featuredProducts||[]}));
+    if(localState.current.contentSnapshot!==localState.current.savedSnapshot)return;
     setBanners(config.banners || []);
     setPromotions(config.promotions || []);
     setTestimonials(config.testimonials || []);
@@ -277,12 +285,12 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
     setFeaturedProducts(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
   };
 
-  const handleSaveAll = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      onSave({ banners, promotions, testimonials, faqs, featuredProducts });
-      setIsSaving(false);
-    }, 500);
+  const handleSaveAll = async () => {
+    if(isSaving)return;
+    setIsSaving(true);setSaveStatus('Guardando contenido…');const snapshot=contentSnapshot;
+    try{await onSave({banners,promotions,testimonials,faqs,featuredProducts});setSavedSnapshot(snapshot);setSaveStatus('Contenido guardado');}
+    catch{setSaveStatus('No se guardó el contenido. Tus cambios siguen aquí; vuelve a intentar.');}
+    finally{setIsSaving(false);}
   };
 
   // =============================================================================
@@ -300,52 +308,24 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
   const currentTab = tabs.find(t => t.id === activeTab);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-100 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-6">
-      {/* Header Premium */}
-      <div className="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 dark:from-zinc-800 dark:to-zinc-900 rounded-3xl p-8 mb-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-transparent pointer-events-none" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl" />
-        
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Sparkles size={32} className="text-black" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tight">Gestión de Contenido</h2>
-              <p className="text-zinc-400 mt-1">Administra todo el contenido de tu tienda en un solo lugar</p>
-            </div>
-          </div>
-          
-          <button
-            onClick={handleSaveAll}
-            disabled={isSaving}
-            className={`px-8 py-4 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-black font-black uppercase text-sm rounded-2xl flex items-center gap-3 transition-all transform hover:scale-105 shadow-lg ${isSaving ? 'opacity-70' : ''}`}
-          >
-            {isSaving ? (
-              <RotateCcw size={18} className="animate-spin" />
-            ) : (
-              <Save size={18} />
-            )}
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-          </button>
-        </div>
-      </div>
+    <div className="lm-content">
+      <div className="admin-module-toolbar"><p role={saveStatus.startsWith('No se')?'alert':'status'}>{saveStatus.startsWith('No se')?saveStatus:isSaving?saveStatus:dirty?'Contenido con cambios sin guardar':saveStatus||'Contenido sin cambios'}</p><button onClick={handleSaveAll} disabled={isSaving||!dirty} className="bg-yellow-400 text-black rounded-lg px-4 py-2 font-semibold flex items-center gap-2"><Save size={16}/>{isSaving?'Guardando contenido…':'Guardar contenido'}</button></div>
 
+      <label className="lm-content-select">Tipo de contenido<select value={activeTab} onChange={e=>{setActiveTab(e.target.value as TabType);setShowForm(false);}}>{tabs.map(t=><option key={t.id} value={t.id}>{t.label} ({t.count})</option>)}</select></label>
       {/* Tabs Modernas */}
-      <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
+      <div className="lm-content-tabs flex gap-3 mb-8 overflow-x-auto pb-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => { setActiveTab(tab.id); setShowForm(false); }}
             className={`relative px-6 py-4 rounded-2xl font-bold text-sm uppercase transition-all flex items-center gap-3 whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-xl transform scale-105'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
                 : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
             }`}
           >
             {activeTab === tab.id && (
-              <div className={`absolute inset-0 bg-gradient-to-r ${tab.color} opacity-20 rounded-2xl`} />
+              <div className="absolute inset-0 bg-transparent rounded-2xl" />
             )}
             <span className="relative flex items-center gap-2">
               {tab.icon}
@@ -365,7 +345,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
             banners={banners}
             editingBanner={editingBanner}
             showForm={showForm}
-            onEdit={setEditingBanner}
+            onEdit={value=>{setEditingBanner(value);setShowForm(true);}}
             onSave={handleSaveBanner}
             onDelete={handleDeleteBanner}
             onToggle={handleToggleBanner}
@@ -379,7 +359,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
             promotions={promotions}
             editingPromotion={editingPromotion}
             showForm={showForm}
-            onEdit={setEditingPromotion}
+            onEdit={value=>{setEditingPromotion(value);setShowForm(true);}}
             onSave={handleSavePromotion}
             onDelete={handleDeletePromotion}
             onToggle={handleTogglePromotion}
@@ -393,7 +373,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
             testimonials={testimonials}
             editingTestimonial={editingTestimonial}
             showForm={showForm}
-            onEdit={setEditingTestimonial}
+            onEdit={value=>{setEditingTestimonial(value);setShowForm(true);}}
             onSave={handleSaveTestimonial}
             onDelete={handleDeleteTestimonial}
             onToggle={handleToggleTestimonial}
@@ -407,7 +387,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
             faqs={faqs}
             editingFAQ={editingFAQ}
             showForm={showForm}
-            onEdit={setEditingFAQ}
+            onEdit={value=>{setEditingFAQ(value);setShowForm(true);}}
             onSave={handleSaveFAQ}
             onDelete={handleDeleteFAQ}
             onToggle={handleToggleFAQ}
@@ -421,7 +401,7 @@ export const ContentManager: React.FC<ContentManagerProps> = ({ config, onSave }
             featuredProducts={featuredProducts}
             editingFeaturedProduct={editingFeaturedProduct}
             showForm={showForm}
-            onEdit={setEditingFeaturedProduct}
+            onEdit={value=>{setEditingFeaturedProduct(value);setShowForm(true);}}
             onSave={handleSaveFeaturedProduct}
             onDelete={handleDeleteFeaturedProduct}
             onToggle={handleToggleFeaturedProduct}
@@ -474,6 +454,7 @@ const BannersSection: React.FC<{
 
     {showForm && editingBanner && (
       <BannerForm
+        key={editingBanner.id || 'new'}
         banner={editingBanner}
         onSave={onSave}
         onCancel={onCloseForm}
@@ -481,7 +462,7 @@ const BannersSection: React.FC<{
     )}
 
     <div className="grid md:grid-cols-2 gap-4">
-      {banners.sort((a, b) => a.order - b.order).map((banner) => (
+      {[...banners].sort((a, b) => a.order - b.order).map((banner) => (
         <ModernCard
           key={banner.id}
           image={banner.image}
@@ -531,6 +512,7 @@ const PromotionsSection: React.FC<{
 
     {showForm && editingPromotion && (
       <PromotionForm
+        key={editingPromotion.id || 'new'}
         promotion={editingPromotion}
         onSave={onSave}
         onCancel={onCloseForm}
@@ -641,6 +623,7 @@ const TestimonialsSection: React.FC<{
 
     {showForm && editingTestimonial && (
       <TestimonialForm
+        key={editingTestimonial.id || 'new'}
         testimonial={editingTestimonial}
         onSave={onSave}
         onCancel={onCloseForm}
@@ -740,6 +723,7 @@ const FAQsSection: React.FC<{
 
     {showForm && editingFAQ && (
       <FAQForm
+        key={editingFAQ.id || 'new'}
         faq={editingFAQ}
         onSave={onSave}
         onCancel={onCloseForm}
@@ -829,6 +813,7 @@ const FeaturedProductsSection: React.FC<{
 
     {showForm && editingFeaturedProduct && (
       <FeaturedProductForm
+        key={editingFeaturedProduct.id || 'new'}
         product={editingFeaturedProduct}
         onSave={onSave}
         onCancel={onCloseForm}

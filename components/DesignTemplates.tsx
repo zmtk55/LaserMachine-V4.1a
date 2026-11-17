@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import{useModalFocus}from'../utils/useModalFocus';
+import React, { useState, useMemo,useRef } from 'react';
 import { 
   X, Sparkles, Search, Star, Copy, Eye, GripVertical,
   TrendingUp, Heart, LayoutGrid, List as ListIcon, Filter,
@@ -189,7 +190,7 @@ const DEFAULT_TEMPLATES: DesignTemplate[] = [
   },
   { 
     id: 'default-8', 
-    name: 'Custom Name', 
+    name: 'Tu Nombre', 
     occasion: 'general', 
     preview: '✨', 
     previewColor: 'copper',
@@ -275,22 +276,15 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
   onClose,
   productImage
 }) => {
+  const dialogRef=useRef<HTMLDivElement>(null);useModalFocus(true,dialogRef,onClose);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOccasion, setSelectedOccasion] = useState<TemplateOccasion | 'TODAS'>('TODAS');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Merge custom templates with defaults
-  const allTemplates = useMemo(() => {
-    const customActive = templates.filter(t => t.isActive);
-    const defaultFiltered = DEFAULT_TEMPLATES.filter(dt => 
-      !customActive.some(ct => ct.name === dt.name)
-    );
-    return [...customActive, ...defaultFiltered].sort((a, b) => 
-      (b.usageCount || 0) - (a.usageCount || 0)
-    );
-  }, [templates]);
+  // Only real workshop templates are public. Historical defaults remain code-only.
+  const allTemplates=useMemo(()=>templates.filter(t=>t.isActive),[templates]);
 
   // Filter templates
   const filteredTemplates = useMemo(() => {
@@ -322,34 +316,32 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
 
   const handleSelect = (template: DesignTemplate) => {
     setSelectedId(template.id);
-    setTimeout(() => {
-      onSelectTemplate(template);
-      onClose();
-    }, 300);
+    onSelectTemplate(template);
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Plantillas de diseño" className="lm-templates-dialog fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-zinc-950 w-full max-w-7xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-zinc-800 shadow-2xl">
         
         {/* Header */}
-        <div className="h-20 border-b border-zinc-800 flex items-center justify-between px-8 bg-gradient-to-r from-zinc-900 to-zinc-950">
+        <div className="h-20 shrink-0 border-b border-zinc-800 flex items-center justify-between px-8 bg-gradient-to-r from-zinc-900 to-zinc-950">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
               <Sparkles className="text-zinc-900" size={24} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-white uppercase tracking-tight">
-                Templates de Diseño
+                Plantillas de Diseño
               </h2>
               <p className="text-zinc-500 text-sm">
-                {stats.filtered} de {stats.total} plantillas • {stats.popular} populares
+                {stats.filtered} de {stats.total} plantillas
               </p>
             </div>
           </div>
 
           <button
-            onClick={onClose}
+            aria-label="Cerrar plantillas" onClick={onClose}
             className="w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
           >
             <X size={20} />
@@ -357,14 +349,14 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
         </div>
 
         {/* Filters & Search */}
-        <div className="p-6 border-b border-zinc-800 bg-zinc-900/50">
+        <div className="lm-template-search p-6 shrink-0 border-b border-zinc-800 bg-zinc-900/50">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
               <input
                 type="text"
-                placeholder="Buscar templates..."
+                placeholder="Buscar plantillas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-12 pr-4 py-3 text-white placeholder-zinc-600 focus:border-yellow-400 focus:outline-none transition-colors"
@@ -372,7 +364,7 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
             </div>
 
             {/* Occasion Pills */}
-            <div className="flex flex-wrap gap-2">
+            <div className="lm-template-occasions flex flex-wrap gap-2">
               {(Object.keys(OCCASIONS) as Array<TemplateOccasion | 'TODAS'>).map((occ) => (
                 <button
                   key={occ}
@@ -412,24 +404,25 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
         </div>
 
         {/* Templates Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6">
           {filteredTemplates.length === 0 ? (
             <div className="text-center py-16">
               <div className="w-24 h-24 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Search className="text-zinc-600" size={40} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">No se encontraron templates</h3>
-              <p className="text-zinc-500">Intenta con otra búsqueda o categoría</p>
+              <h3 className="text-xl font-bold text-white mb-2">No se encontraron plantillas</h3>
+              <p className="text-zinc-500">{allTemplates.length?'Intenta con otra búsqueda o categoría':'El taller aún no ha publicado plantillas. No se cargan ejemplos automáticamente.'}</p>
             </div>
           ) : (
             <div className={`grid gap-4 ${
               viewMode === 'grid' 
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                 : 'grid-cols-1'
             }`}>
               {filteredTemplates.map((template) => (
                 <div
                   key={template.id}
+                  role="button" tabIndex={0} aria-label={"Aplicar plantilla "+template.name} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleSelect(template);}}}
                   className={`group relative bg-zinc-900 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
                     selectedId === template.id 
                       ? 'border-yellow-400 ring-4 ring-yellow-400/20' 
@@ -439,50 +432,12 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={() => handleSelect(template)}
                 >
-                  {/* Preview */}
-                  <div className={`relative ${viewMode === 'grid' ? 'aspect-[4/5]' : 'h-32'} bg-gradient-to-br from-zinc-800 to-zinc-900`}>
-                    <div className="absolute inset-0 flex items-center justify-center p-4">
-                      <TumblerPreview
-                        template={template}
-                        color={template.previewColor || 'stainless'}
-                        width={viewMode === 'grid' ? 140 : 80}
-                        height={viewMode === 'grid' ? 210 : 120}
-                      />
-                    </div>
-
-                    {/* Hover Overlay */}
-                    <div className={`absolute inset-0 bg-black/60 flex items-center justify-center gap-3 transition-opacity ${
-                      hoveredId === template.id ? 'opacity-100' : 'opacity-0'
-                    }`}>
-                      <div className="w-14 h-14 bg-yellow-400 rounded-2xl flex items-center justify-center text-zinc-900 font-bold">
-                        <ArrowRight size={28} />
-                      </div>
-                    </div>
-
-                    {/* Badges */}
-                    <div className="absolute top-3 left-3 flex flex-wrap gap-1">
-                      {template.isFavorite && (
-                        <span className="px-2 py-1 bg-red-500 text-white text-[10px] font-black uppercase rounded-full flex items-center gap-1">
-                          <Heart size={10} className="fill-current" />
-                          Fav
-                        </span>
-                      )}
-                      {(template.usageCount || 0) > 100 && (
-                        <span className="px-2 py-1 bg-orange-500 text-white text-[10px] font-black uppercase rounded-full flex items-center gap-1">
-                          <TrendingUp size={10} />
-                          Popular
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Usage Count */}
-                    <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-lg text-xs text-white font-medium">
-                      {template.usageCount || 0} usos
-                    </div>
+                  <div className={`relative flex items-center justify-center p-3 bg-zinc-900 ${viewMode==='grid'?'h-32':'h-20'}`}>
+                    <div className="w-full text-center space-y-1" aria-hidden="true">{template.texts.map((line,i)=><div key={i} className="font-bold text-zinc-100 text-sm leading-tight break-words">{typeof line==='string'?line:line.content}</div>)}</div>
                   </div>
 
                   {/* Info */}
-                  <div className="p-4">
+                  <div className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <h4 className="text-white font-bold truncate group-hover:text-yellow-400 transition-colors">
@@ -495,26 +450,6 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
                       </div>
                     </div>
 
-                    {/* Tags */}
-                    {template.tags && template.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {template.tags.slice(0, 3).map((tag, idx) => (
-                          <span 
-                            key={idx} 
-                            className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-[10px] rounded-full border border-zinc-700"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Quick Preview Text */}
-                    <div className="mt-3 pt-3 border-t border-zinc-800">
-                      <p className="text-zinc-500 text-xs line-clamp-1">
-                        {template.texts.map(t => typeof t === 'string' ? t : t.content).join(' • ')}
-                      </p>
-                    </div>
                   </div>
                 </div>
               ))}
@@ -525,12 +460,9 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
         {/* Footer */}
         <div className="h-16 border-t border-zinc-800 flex items-center justify-between px-6 bg-zinc-900/50">
           <p className="text-zinc-500 text-sm">
-            Selecciona un template para aplicarlo a tu diseño
+            Elige la composición. Ajusta el texto sobre tu termo.
           </p>
-          <div className="flex items-center gap-2 text-zinc-500 text-sm">
-            <Zap size={16} className="text-yellow-400" />
-            <span>Actualizado automáticamente</span>
-          </div>
+
         </div>
       </div>
     </div>

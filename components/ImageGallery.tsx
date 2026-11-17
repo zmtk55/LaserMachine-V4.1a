@@ -259,7 +259,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   // File select - supports images, SVG and PDF
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files:File[] = Array.from(e.target.files || []) as File[];
     files.forEach(file => {
       // Check file type
       const isImage = file.type.startsWith('image/');
