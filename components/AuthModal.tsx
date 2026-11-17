@@ -20,25 +20,15 @@ interface AuthModalProps {
 
 type AuthView = 'client-welcome' | 'guest-phone' | 'admin-login';
 
-// Simple math captcha for bot protection
-const generateMathCaptcha = () => {
-  const a = Math.floor(Math.random() * 10) + 1;
-  const b = Math.floor(Math.random() * 10) + 1;
-  return { question: `${a} + ${b} = ?`, answer: (a + b).toString() };
-};
-
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
   const [view, setView] = useState<AuthView>('client-welcome');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Guest phone state
   const [phone, setPhone] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [captcha, setCaptcha] = useState(generateMathCaptcha());
-  const [captchaInput, setCaptchaInput] = useState('');
-  const [attempts, setAttempts] = useState(0);
   
   // Admin state
   const [adminEmail, setAdminEmail] = useState('');
@@ -57,9 +47,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
         setPhone('');
         setFirstName('');
         setLastName('');
-        setCaptchaInput('');
-        setCaptcha(generateMathCaptcha());
-        setAttempts(0);
         setAdminEmail('');
         setAdminPassword('');
         setAdminClickCount(0);
@@ -93,43 +80,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
   const handleGuestLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
+    // Sin Firebase no hay sesión de invitado posible: se avisa en vez
+    // de intentar un login que siempre va a fallar.
+    if (!isFirebaseConfigured()) {
+      setError('El inicio de sesión no está configurado. Pide al administrador que configure Firebase Auth.');
+      return;
+    }
+
     // Check rate limiting
     const canProceed = checkRateLimit('guest-login');
     if (!canProceed) {
       setError('Demasiados intentos. Espera un momento e intenta de nuevo.');
       return;
     }
-    
+
     // Validate inputs
     const phoneClean = phone.replace(/\D/g, '');
     if (phoneClean.length !== 10) {
       setError('Ingresa un número de celular válido (10 dígitos)');
       return;
     }
-    
+
     if (!firstName.trim() || firstName.trim().length < 2) {
       setError('Ingresa tu nombre');
       return;
     }
-    
+
     if (!lastName.trim() || lastName.trim().length < 2) {
       setError('Ingresa tu apellido');
       return;
     }
-    
-    // Only verify captcha if attempts >= 2 (captcha is visible)
-    if (attempts >= 2 && captchaInput !== captcha.answer) {
-      setError('Respuesta de verificación incorrecta. Intenta de nuevo.');
-      setCaptcha(generateMathCaptcha());
-      setCaptchaInput('');
-      setAttempts(prev => prev + 1);
-      return;
-    }
-    
+
     setIsLoading(true);
     recordAttempt('guest-login');
-    
+
     try {
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const user = await createGuestUser(phoneClean, fullName);
@@ -139,15 +124,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
       console.error('Guest login error:', err);
       const errorMsg = err.message || 'Error al continuar. Intenta de nuevo.';
       setError(errorMsg);
-      
-      // Increment attempts on error
-      setAttempts(prev => prev + 1);
-      
-      // Generate new captcha if showing
-      if (attempts >= 1) {
-        setCaptcha(generateMathCaptcha());
-        setCaptchaInput('');
-      }
     } finally {
       setIsLoading(false);
     }
@@ -158,12 +134,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
     setError('');
     
     if (!isFirebaseConfigured()) {
-      setError('Servicio no disponible en este momento.');
+      setError('El inicio de sesión no está configurado. Pide al administrador que configure Firebase Auth.');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const user = await loginWithGoogle();
       onLogin(user);
@@ -179,7 +155,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
+    if (!isFirebaseConfigured()) {
+      setError('El inicio de sesión no está configurado. Pide al administrador que configure Firebase Auth.');
+      return;
+    }
+
     if (!adminEmail || !adminPassword) {
       setError('Ingresa correo y contraseña');
       return;
@@ -265,7 +246,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
               <div className="space-y-3">
                 <button
                   onClick={() => setView('guest-phone')}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg dark:shadow-none"
+                  disabled={!isFirebaseConfigured()}
+                  title={!isFirebaseConfigured() ? 'El inicio de sesión no está configurado' : undefined}
+                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <User size={18} />
                   Continuar como invitado
@@ -418,28 +401,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                     Te enviaremos actualizaciones de tu pedido por WhatsApp
                   </p>
                 </div>
-
-                {/* Bot Protection - Math Captcha (only after 2 attempts) */}
-                {attempts >= 2 && (
-                  <div className="p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase mb-1.5 block">
-                      Verificación de seguridad
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-mono bg-zinc-200 dark:bg-zinc-800 px-3 py-2 rounded-lg">
-                        {captcha.question}
-                      </span>
-                      <input
-                        type="text"
-                        value={captchaInput}
-                        onChange={(e) => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
-                        placeholder="?"
-                        className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2 px-3 text-sm text-center text-zinc-900 dark:text-white focus:outline-none focus:border-yellow-400"
-                        maxLength={2}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <button
                   type="submit"

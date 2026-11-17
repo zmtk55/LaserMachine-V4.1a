@@ -21,7 +21,7 @@ import {
   Flame, Ban, CheckCheck, Timer, CheckCircle, Play, MoreHorizontal, ChevronLeft, StickyNote,
   Layers, Forward, CheckSquare, Square, FileJson, EyeOff, ChevronUp, ImagePlus, Pencil, Crop,
   Paperclip, Lock, PhoneCall, Bell, CalendarClock, ShoppingBag, TrendingDown, PanelRight,
-  History, Banknote, QrCode, Grid3X3, AlignLeft, Edit2,
+  History, Banknote, Grid3X3, AlignLeft, Edit2,
   LayoutTemplate
 } from 'lucide-react';
 import { TechnicalPreview } from './TechnicalPreview';
@@ -2105,7 +2105,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     { id: 'EFECTIVO', label: 'Efectivo', icon: Banknote },
                                                     { id: 'TRANSFERENCIA', label: 'Transferencia', icon: ArrowRight },
                                                     { id: 'TARJETA', label: 'Tarjeta', icon: CreditCard },
-                                                    { id: 'MERCADOPAGO', label: 'MercadoPago', icon: QrCode },
                                                 ].map((method) => (
                                                     <button
                                                         key={method.id}
@@ -2496,12 +2495,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                         <div className="flex items-center gap-3">
                                                             <div className="text-right">
                                                                 <span className="text-[10px] text-zinc-400 uppercase block">Fuente Frente</span>
-                                                                <span className="font-mono font-bold text-zinc-900 dark:text-white">#{item.frontFontId}</span>
+                                                                <span className="font-mono font-bold text-zinc-900 dark:text-white">{fonts.find(f => f.id === item.frontFontId)?.name || `#${item.frontFontId}`}</span>
                                                             </div>
                                                             {item.backText && (
                                                                 <div className="text-right pl-3 border-l border-zinc-200 dark:border-zinc-700">
                                                                     <span className="text-[10px] text-zinc-400 uppercase block">Fuente Dorso</span>
-                                                                    <span className="font-mono font-bold text-zinc-900 dark:text-white">#{item.backFontId}</span>
+                                                                    <span className="font-mono font-bold text-zinc-900 dark:text-white">{fonts.find(f => f.id === item.backFontId)?.name || `#${item.backFontId}`}</span>
                                                                 </div>
                                                             )}
                                                         </div>

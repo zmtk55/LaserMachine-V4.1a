@@ -14,7 +14,7 @@
 - **Loyalty Program:** Points system ("Laser Points") for customer retention
 - **Referral System:** Coupon-based ambassador program
 - **WhatsApp Integration:** Automated notifications and customer communication
-- **Multi-payment Support:** Cash, transfer, card, and MercadoPago
+- **Multi-payment Support:** Cash, transfer, card (MercadoPago no es real: se eliminó la simulación en nov 2026; los pedidos quedan PENDIENTES)
 
 ---
 
@@ -33,10 +33,11 @@
 ### Backend & Services
 | Service | Purpose |
 |---------|---------|
-| Firebase Auth | User authentication (Email, Google, Anonymous) |
-| Firebase Firestore | Primary database (optional cloud sync) |
+| Firebase Auth | User authentication (Email, Google, Anonymous) — SOLO para el admin y sesiones de invitado |
+| Firebase Firestore | Perfiles de usuario y roles (`users/{uid}`); NO es la base de datos de la tienda |
 | Firebase Storage | File uploads and assets |
-| Neon PostgreSQL | Serverless SQL database (via Netlify Edge Functions) |
+| Supabase (Postgres) | Base de datos de la tienda: productos, pedidos, fuentes y configuración (`services/supabaseService.ts`) |
+| Neon PostgreSQL | Serverless SQL database (via Netlify Edge Functions) — legado, solo lo usa el asistente de comandos |
 | Groq API | AI-powered command assistant (RAB) |
 | imgly/background-removal | AI background removal for logos |
 
@@ -66,9 +67,10 @@
 │
 ├── services/             # Business logic & external APIs
 │   ├── auth.ts                  # Firebase authentication
-│   ├── firebaseService.ts       # Firestore data migration
+│   ├── firebaseService.ts       # Firestore data migration (one-time, admin)
+│   ├── supabaseService.ts       # Supabase database: products, orders, fonts, config
 │   ├── apiService.ts            # API client utilities
-│   └── neonService.ts           # PostgreSQL via Edge Functions
+│   └── neonService.ts           # PostgreSQL via Edge Functions (legacy)
 │
 ├── utils/                # Utility functions
 │   └── imageUtils.ts            # Image processing helpers
@@ -120,8 +122,10 @@ npm run build
 ### Environment Setup
 1. Copy `.env.example` to `.env.local`
 2. Configure required variables:
-   - `GROQ_API_KEY` - For AI assistant functionality
-   - `DATABASE_URL` - Optional, for Neon PostgreSQL backend
+   - `VITE_GROQ_API_KEY` - For AI assistant functionality (ojo: el código lee `VITE_GROQ_API_KEY`, no `GROQ_API_KEY`)
+   - `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` - Database (productos, pedidos, config); sin ellas la app usa solo localStorage
+   - `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` - Auth del admin y Storage; sin ellas el login muestra "El inicio de sesión no está configurado" y nadie entra como admin
+   - `DATABASE_URL` - Optional, for Neon PostgreSQL backend (server-side only; NUNCA con prefijo `VITE_`)
    - `VITE_REMOVE_BG_API_KEY` - Optional, for AI background removal
 
 ---
@@ -172,14 +176,15 @@ const [orders, setOrders] = useState<Order[]>([])
 - **Local state:** `useState` for component-level state
 - **Shared state:** React Context for cross-cutting concerns (Cart, Notifications, Background)
 - **Persistent state:** `localStorage` for offline-first data (products, orders, config)
-- **Server state:** Firebase/Firestore for cloud sync (optional)
+- **Server state:** Supabase for shared data (products, orders, fonts, config); Firebase Auth for the admin session. `App.tsx` carga desde Supabase al arrancar y sincroniza cada cambio local a la nube (debounce 800 ms); si Supabase no está configurado o las tablas no existen, todo sigue en localStorage sin romper la app.
 
 ### Data Flow
 ```
-User Action → Component → localStorage → (optional) Firebase Sync
+User Action → Component → localStorage → (debounced) Supabase sync
                     ↓
                Context Update → Re-render
 ```
+On load: `Supabase (si hay datos) → state`, si no `localStorage → state`.
 
 ### View State Management
 The app uses a single `view` state in App.tsx to control the main view:
@@ -190,10 +195,13 @@ type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMER' | 'CUSTOMIZER' |
 ```
 
 ### Authentication Flow
-1. Auth disabled in development (hardcoded admin user)
-2. Production: Firebase Auth with Email, Google, and Anonymous options
-3. Admin detection: Hardcoded emails + dynamic list from store config
-4. Guest users: Anonymous auth with phone-based lookup
+1. Sin sesión no hay usuario (`user = null`): la tienda y el personalizador son PÚBLICOS y funcionan sin login.
+2. El login es SOLO para el admin, con Firebase Auth (email/contraseña o Google) desde el modal de acceso (icono del escudo, 3 clics).
+3. El rol ADMIN se decide en `services/auth.ts` así: (a) el documento `users/{uid}` en Firestore tiene `role: 'ADMIN'`, o (b) el correo está en `adminEmails` de la configuración de la tienda. NO hay correos de admin hardcodeados en el código.
+4. Primer admin (bootstrap): crear el usuario en Firebase Console → Authentication → Add user, iniciar sesión una vez en la app, y en Firestore poner `users/{uid}.role = 'ADMIN'` (o añadir el correo a `adminEmails` en la configuración, una vez dentro como admin). Sin este paso, el login entra como CLIENT y el panel de admin deniega el acceso.
+5. Si Firebase no está configurado (sin `VITE_FIREBASE_*`), el login falla con el mensaje "El inicio de sesión no está configurado" y los botones de invitado/Google aparecen deshabilitados; nadie entra como admin.
+6. Guest users: Anonymous auth with phone-based lookup. El captcha matemático del modal fue eliminado (era solo cliente, no protegía nada); queda el rate-limit en memoria (5 intentos/min).
+7. El listener `onAuthChange` en `App.tsx` mantiene la sesión entre recargas.
 
 ---
 
@@ -240,23 +248,44 @@ El helper `?debugbg=1` fue eliminado de producción por seguridad (nov 2026). Pa
 
 ### Input Validation
 - Phone number normalization (10 digits + 52 prefix for MX)
-- Order ID format: `LM-{sequential number}`
+- Order ID format: `LM-{timestamp base36 + aleatorio}` (único entre navegadores; el contador local `nextOrderId` quedó sin uso)
 - Email validation via Firebase Auth
 
 ### Admin Access
-- Hardcoded admin emails in `services/auth.ts`
-- Dynamic admin list from store config (localStorage)
+- No hay admins hardcodeados: ni `ADMIN_USER` (quedó como constante sin uso en `constants.ts`, pendiente de borrar), ni lista de correos en `services/auth.ts`, ni usuario demo.
+- El rol ADMIN viene del documento `users/{uid}` en Firestore o de `adminEmails` en la configuración de la tienda (ver "Authentication Flow").
 - Role-based UI rendering (`user.role === UserRole.ADMIN`)
+- Solo `ADMIN_DASHBOARD` y `CLIENT_DASHBOARD` exigen sesión (guard en `App.tsx`); SHOP, FONTS_SHOWCASE y CUSTOMIZER son públicos.
 
 ### Environment Variables
 **NEVER commit `.env.local` to git.** The following are sensitive:
-- `GROQ_API_KEY`
-- `DATABASE_URL`
+- `VITE_GROQ_API_KEY` (el código lee esta, no `GROQ_API_KEY`)
+- `DATABASE_URL` — server-side only. NUNCA con prefijo `VITE_`: `VITE_DATABASE_URL` expondría la URL completa (con contraseña) dentro del bundle del navegador. Ojo: `services/neonService.ts` todavía busca `VITE_DATABASE_URL` en el navegador (líneas ~11 y ~20); esa variable no debe existir nunca. El servicio quedó así a propósito (fuera de alcance de esta tarea) y solo lo usa el asistente de comandos.
+- `VITE_SUPABASE_ANON_KEY` — segura en el navegador (el acceso lo controla RLS); NUNCA poner la `service_role` key en el frontend.
 - Firebase credentials (if using env vars)
+
+### Supabase — base de datos (productos, pedidos, fuentes, config)
+- Cliente en `services/supabaseService.ts`; variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (ver `.env.example`).
+- `App.tsx` lee de Supabase al arrancar (solo si trae datos reemplaza lo local) y sube cada cambio con debounce de 800 ms. Sin Supabase o sin tablas, la app usa localStorage y avisa en consola; nunca se rompe.
+- **El dueño debe crear las tablas a mano**: ejecutar `database/supabase-schema.sql` en Supabase Dashboard → SQL Editor. Tablas:
+  - `products` (id text PK, name, brand, category, price, stock_threshold, image_url, colors JSONB, laser_preset_id, sku, is_active, created_at, updated_at)
+  - `orders` (id text PK, user_id, customer_name, customer_company, customer_phone, customer_email, items JSONB, coupon_used, discount_amount, points_redeemed, points_earned, total, payment_status, payment_method, amount_paid, delivery_method, delivery_date, delivery_time, shipping_provider, shipping_tracking, shipping_address, status, is_priority, history JSONB, created_at, mockup_url, internal_notes JSONB, updated_at)
+  - `fonts` (id bigint PK, name, css_family, category, categories JSONB, is_custom, file_data, preview_url, is_active, created_at)
+  - `store_config` (id int PK = 1, data JSONB con todo el StoreConfig, updated_at)
+- **RLS NO se puede activar desde el código.** El mismo archivo `database/supabase-schema.sql` incluye `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` y las políticas mínimas, que se crean al ejecutar el SQL en el panel:
+  - Lectura pública de `products`, `fonts` y `store_config` (la tienda las necesita sin login).
+  - `orders`: INSERT para anónimos (el cliente crea su pedido), SELECT para anónimos (seguimiento público por nº de pedido y panel admin), UPDATE/DELETE para anónimos (los usa el admin desde el navegador).
+  - Escritura de `products`/`fonts`/`store_config` para anónimos (la usa el admin desde el navegador).
+  - Limitación conocida: como la app usa Firebase Auth y no Supabase Auth, Supabase no distingue al admin de un visitante, así que las escrituras van con la anon key. Quien inspeccione el JS podría escribir. Endurecerlo exige mover las escrituras de admin a un backend (Netlify Function con la `service_role` key) o adoptar Supabase Auth. Hasta entonces, estas políticas son el mínimo viable.
+- El `pricing` (precios de grabado) sigue solo en localStorage; no está en Supabase.
 
 ---
 
 ## Database Schema (PostgreSQL)
+
+> Este esquema es el de Neon (legado, `database/schema.sql`). La base de
+> datos activa es Supabase: ver la sección "Supabase" en Security
+> Considerations y el archivo `database/supabase-schema.sql`.
 
 ### Core Tables
 | Table | Purpose |

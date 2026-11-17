@@ -26,105 +26,76 @@ interface LandingPageProps {
 }
 
 // =============================================================================
-// DATOS — Espejo del sketch B. Se memoizan fuera del componente para evitar
-// que se recreen en cada render.
+// DATOS — Todo viene del catálogo real (`products`, que App.tsx ya pasa).
+// No hay cifras, precios ni testimonios inventados: si un dato no está en
+// los productos, no se muestra.
 // =============================================================================
 
-const HERO_SPEC = {
-  name: 'YETI Rambler 30oz',
-  badge: 'En stock',
-  rows: [
-    { k: 'Material', v: 'Acero inox 18/8' },
-    { k: 'Capacidad', v: '887 ml' },
-    { k: 'Peso', v: '499 g' },
-    { k: 'Colores', v: 'Navy · Blanco · Key Lime' },
-    { k: 'Grabado', v: 'Láser de fibra 50W · 1200 dpi' },
-    { k: 'Garantía', v: 'De por vida' },
-  ],
-  price: 899,
+// Héroe: el Travel Mug 30oz de YETI si existe, si no el primer producto.
+// Solo se muestran datos reales del producto: marca, categoría, colores y
+// precio en MXN. Nada de medidas, pesos ni garantías que no están en datos.
+const heroFromProduct = (p: Product | undefined) => {
+  if (!p) return null;
+  const stock = (p.colors || []).reduce((sum, c) => sum + (c.stock || 0), 0);
+  return {
+    name: `${p.brand} ${p.name}`,
+    badge: stock > 0 ? 'En stock' : 'Agotado',
+    rows: [
+      { k: 'Marca', v: p.brand },
+      { k: 'Categoría', v: p.category },
+      { k: 'Colores', v: (p.colors || []).map(c => c.name).join(' · ') || '—' },
+    ],
+    price: p.price,
+  };
 };
-
-const HERO_STATS = [
-  { num: '+1.200', lbl: 'Pedidos' },
-  { num: '4.9/5', lbl: 'Reseñas' },
-  { num: '48h', lbl: 'Producción' },
-  { num: '0%', lbl: 'Errores' },
-];
 
 const TIMELINE = [
   {
     n: '01',
-    title: 'Elegís el producto',
+    title: 'Elige el producto',
     body: 'YETI, Stanley, HydroFlask, Owala o un termo genérico. Cada uno con sus colores, capacidades y zonas de grabado.',
-    meta: ['Catálogo vivo', 'Stock real'],
+    meta: ['Catálogo en vivo', 'Stock real'],
   },
   {
     n: '02',
-    title: 'Diseñás en el editor',
-    body: 'Editor en vivo con preview. Texto, logos, fuentes, separación de capas. Lo que ves es lo que va.',
-    meta: ['Preview real', 'Sin descargar nada'],
+    title: 'Diseña en el editor',
+    body: 'Editor en vivo con vista previa. Texto, logos, fuentes, separación de capas. Lo que ves es lo que va.',
+    meta: ['Vista previa real', 'Sin descargar nada'],
   },
   {
     n: '03',
     title: 'Lo grabamos y te llega',
-    body: 'Láser de fibra 50W. Producción en 24-48h hábiles. Envío a todo el país o retiro en taller.',
-    meta: ['24-48h', 'Garantía de por vida'],
+    body: 'Láser de fibra. Coordinamos la producción y la entrega por WhatsApp. Envío a todo México o recolección en nuestro taller en Hermosillo.',
+    meta: ['Grabado láser de fibra', 'Hecho en Hermosillo'],
   },
 ];
 
-// Catálogo — la tabla de la Variante B. Datos de productos vienen de `products`
-// cuando los pasemos. Aquí definimos los 4 del sketch como fallback.
+// Catálogo — filas derivadas de `products` (el catálogo real). Sin fallback
+// con precios inventados: si no hay productos, se muestra un aviso.
 type CatalogRow = {
   name: string;
   desc: string;
-  cap: string;
-  material: string;
   colors: number;
   price: number;
   thumbVariant: 'dark' | 'mint' | 'default';
 };
 
-const CATALOG_FALLBACK: CatalogRow[] = [
-  { name: 'YETI Rambler 30oz',     desc: 'El clásico. Doble pared, vacío.',        cap: '887 ml',   material: 'Acero 18/8',      colors: 3, price: 899, thumbVariant: 'dark' },
-  { name: 'STANLEY Quencher',      desc: 'Con manija y straw. Acero reciclado.',   cap: '1.18 L',   material: 'Acero reciclado', colors: 2, price: 749, thumbVariant: 'default' },
-  { name: 'OWALA FreeSip',         desc: 'Boquilla dual. Liviano, fácil.',         cap: '710 ml',   material: 'Acero 18/8',      colors: 3, price: 649, thumbVariant: 'mint' },
-  { name: 'Genérico 500ml',        desc: 'Para pedidos en volumen. Mín. 10 uds.',  cap: '500 ml',   material: 'Acero 18/8',      colors: 5, price: 399, thumbVariant: 'default' },
-];
+const THUMB_VARIANTS: CatalogRow['thumbVariant'][] = ['dark', 'mint', 'default'];
 
-const TESTIMONIALS = [
-  {
-    name: 'María Galván',
-    role: 'CFO, Bodega Sur',
-    avatar: 'M',
-    source: 'Google Reviews',
-    text: '"Compré 6 termos para regalar a mi equipo y todos quedaron increíbles. El grabado se ve perfecto y el packaging es de otro nivel."',
-  },
-  {
-    name: 'Diego Romero',
-    role: 'Particular · CABA',
-    avatar: 'D',
-    source: 'WhatsApp',
-    text: '"Hice 3 cambios antes de mandar a producción. La vista previa es lo que más me decidió: no te llevás sorpresas. Llega y queda."',
-  },
-  {
-    name: 'Lucía Ferreyra',
-    role: 'Cliente recurrente',
-    avatar: 'L',
-    source: 'Instagram',
-    text: '"Ya van 4 termos. Uno para mí, tres para regalar. La atención por WhatsApp y la calidad del grabado son consistentes siempre."',
-  },
-];
+const catalogRowsFromProducts = (products: Product[]): CatalogRow[] =>
+  (products || []).map((p, i) => ({
+    name: `${p.brand} ${p.name}`,
+    desc: p.category,
+    colors: (p.colors || []).length,
+    price: p.price,
+    thumbVariant: THUMB_VARIANTS[i % THUMB_VARIANTS.length],
+  }));
+
+const formatMXN = (n: number) => `$${n.toLocaleString('es-MX')} MXN`;
 
 // =============================================================================
 // SUBCOMPONENTES
 // =============================================================================
-
-// Icono de estrella (estrella de 5 puntas). En el sketch es un SVG inline x5.
-const StarIcon: React.FC = () => (
-  <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 fill-current">
-    <path d="M10 1l2.6 5.5 6 .9-4.3 4.2 1 6L10 14.8 4.7 17.6l1-6L1.4 7.4l6-.9z" />
-  </svg>
-);
 
 // Miniatura CSS de producto (botella estilizada). Variantes: dark / mint / default
 const ProductThumb: React.FC<{ variant: CatalogRow['thumbVariant'] }> = ({ variant }) => {
@@ -155,10 +126,10 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
   // ========================================================================
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
-  // Si `products` tiene elementos, los usamos en la sección "El catálogo"
-  // combinados con el fallback para llegar a un mínimo de 4 filas.
-  // (El sketch B tiene 4 filas; respetamos esa cantidad.)
-  const catalogRows: CatalogRow[] = CATALOG_FALLBACK;
+  // Catálogo y héroe desde los productos reales que App.tsx pasa por props.
+  const catalogRows: CatalogRow[] = catalogRowsFromProducts(products);
+  const heroProduct = (products || []).find(p => p.id === 'p2') || products?.[0];
+  const hero = heroFromProduct(heroProduct);
 
   // WhatsApp del storeConfig para el CTA final
   const whatsappHref = storeConfig.whatsapp
@@ -180,11 +151,6 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
     onNavigate('CUSTOMIZER');
   };
 
-  const goToShop = (e: React.MouseEvent) => {
-    e.preventDefault();
-    onNavigate('SHOP');
-  };
-
   // ========================================================================
   // Si el usuario no quiere "Ver catálogo" como link a 'SHOP', lo dejamos
   // como scroll-interno a la sección #catalogo. Mantenemos `onNavigate('SHOP')`
@@ -197,17 +163,17 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
       <div className="bg-zinc-950 text-zinc-300 text-[13px] py-2 px-8 text-center flex justify-center gap-6 items-center flex-wrap md:flex-nowrap">
         <span className="inline-flex items-center gap-2">
           <span className="text-emerald-500 text-[10px]">▸</span>
-          Envío gratis en Mendoza capital
+          Grabado láser de fibra
         </span>
         <span className="text-zinc-500 hidden md:inline">·</span>
         <span className="inline-flex items-center gap-2">
           <span className="text-emerald-500 text-[10px]">▸</span>
-          Listo en 48h hábiles
+          Personaliza tu termo con tu nombre
         </span>
         <span className="text-zinc-500 hidden md:inline">·</span>
         <span className="inline-flex items-center gap-2">
           <span className="text-emerald-500 text-[10px]">▸</span>
-          Garantía de por vida en el grabado
+          Hermosillo, Sonora
         </span>
       </div>
 
@@ -224,7 +190,6 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
             <a href="#catalogo" onClick={scrollToId('catalogo')} className="hover:text-zinc-900 transition-colors">Catálogo</a>
             <a href="#proceso" onClick={scrollToId('proceso')} className="hover:text-zinc-900 transition-colors">Cómo se hace</a>
             <a href="#editor" onClick={scrollToId('editor')} className="hover:text-zinc-900 transition-colors">Editor</a>
-            <a href="#testimonios" onClick={scrollToId('testimonios')} className="hover:text-zinc-900 transition-colors">Reseñas</a>
           </div>
           <div className="flex justify-end gap-2 items-center">
             <button
@@ -252,14 +217,14 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
             <div>
               <span className="inline-flex gap-1.5 items-center font-mono text-[11px] uppercase tracking-[0.14em] text-emerald-700 mb-5 px-2.5 py-1 bg-emerald-50 rounded">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                Estudio · Mendoza, Argentina
+                Taller · Hermosillo, Sonora
               </span>
               <h1 className="font-vintage font-semibold text-[clamp(40px,5.4vw,72px)] leading-[1.02] tracking-[-0.025em]">
                 Grabado láser<br />
                 que <em className="italic text-emerald-700">dura para siempre.</em>
               </h1>
               <p className="mt-5 max-w-[540px] text-base leading-[1.6] text-zinc-600">
-                Personalizamos termos, botellas y mates con láser de fibra. Lo que diseñes en el editor, queda en el metal — sin stickers, sin tintas, sin pelarse.
+                Personalizamos termos, botellas y tazas con láser de fibra. Lo que diseñes en el editor queda grabado en el metal — sin stickers, sin tintas, sin pelarse.
               </p>
               <div className="mt-8 flex gap-3 items-center flex-wrap">
                 <a
@@ -279,17 +244,18 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               </div>
             </div>
 
-            {/* Columna derecha — spec table */}
+            {/* Columna derecha — spec table (datos reales del producto) */}
+            {hero && (
             <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6">
               <div className="flex justify-between items-center pb-4 mb-4 border-b border-zinc-200">
-                <span className="font-vintage font-semibold text-lg">{HERO_SPEC.name}</span>
+                <span className="font-vintage font-semibold text-lg">{hero.name}</span>
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
-                  {HERO_SPEC.badge}
+                  {hero.badge}
                 </span>
               </div>
               <table className="w-full border-collapse">
                 <tbody>
-                  {HERO_SPEC.rows.map((r) => (
+                  {hero.rows.map((r) => (
                     <tr key={r.k} className="border-t border-zinc-200 first:border-t-0">
                       <td className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 py-2.5 w-[40%]">
                         {r.k}
@@ -305,23 +271,14 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                       Por unidad
                     </td>
                     <td className="pt-4 font-vintage text-2xl text-emerald-700 text-right">
-                      <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-1">ARS</span>
-                      ${HERO_SPEC.price}
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-1">MXN</span>
+                      ${hero.price.toLocaleString('es-MX')}
                     </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-          </div>
-
-          {/* Hero stats strip */}
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-zinc-200 pt-6">
-            {HERO_STATS.map((s) => (
-              <div key={s.lbl}>
-                <div className="font-vintage italic font-semibold text-[28px] tracking-[-0.02em]">{s.num}</div>
-                <div className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-zinc-500 mt-1">{s.lbl}</div>
-              </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -376,18 +333,21 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               El catálogo,<br /><em className="italic text-emerald-500">sin marketing.</em>
             </h2>
             <p className="text-[15px] leading-[1.6] text-zinc-600">
-              Lo que ves es lo que hay. Si necesitás algo que no aparece, escribinos y lo conseguimos.
+              Lo que ves es lo que hay. Si necesitas algo que no aparece, escríbenos y lo conseguimos.
             </p>
           </div>
 
+          {catalogRows.length === 0 ? (
+            <p className="text-center text-zinc-500 py-12">
+              El catálogo no está disponible por el momento. Escríbenos por WhatsApp y te ayudamos.
+            </p>
+          ) : (
           <div className="w-full overflow-x-auto border border-zinc-200 rounded-2xl">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
                   <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 w-[70px]"></th>
                   <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200">Modelo</th>
-                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 hidden md:table-cell">Capacidad</th>
-                  <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 hidden md:table-cell">Material</th>
                   <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-left py-3.5 px-5 border-b border-zinc-200 hidden md:table-cell">Colores</th>
                   <th className="bg-zinc-50 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 font-medium text-right py-3.5 px-5 border-b border-zinc-200">Precio</th>
                 </tr>
@@ -407,22 +367,20 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                       <div className="font-semibold text-[14.5px]">{row.name}</div>
                       <div className="text-[13px] text-zinc-500 mt-0.5">{row.desc}</div>
                     </td>
-                    <td className="py-5 px-5 align-middle font-mono text-[13px] hidden md:table-cell">{row.cap}</td>
-                    <td className="py-5 px-5 align-middle font-mono text-[13px] hidden md:table-cell">{row.material}</td>
                     <td className="py-5 px-5 align-middle font-mono text-[13px] hidden md:table-cell">
                       <span className="inline-block py-[3px] px-2 bg-emerald-50 text-emerald-700 font-mono text-[10px] uppercase tracking-[0.1em] rounded">
                         {row.colors}
                       </span>
                     </td>
                     <td className="py-5 px-5 align-middle text-right font-vintage font-semibold text-[18px]">
-                      <span className="text-zinc-500 font-mono text-[13px]">$ </span>
-                      {row.price}
+                      {formatMXN(row.price)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          )}
 
           {/* CTA secundario para ir al shop */}
           <div className="mt-8 flex justify-center">
@@ -445,7 +403,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               Editor en vivo
             </span>
             <h2 className="font-vintage font-semibold text-[clamp(32px,3.8vw,48px)] leading-[1.08] tracking-[-0.02em] text-white">
-              Diseñás acá.<br /><em className="italic text-emerald-400">Queda en el metal.</em>
+              Diseñas aquí.<br /><em className="italic text-emerald-400">Queda en el metal.</em>
             </h2>
             <p className="text-[15px] leading-[1.6] text-zinc-400 mt-4">
               Sin descargar nada. El editor corre en el navegador y te muestra exactamente cómo va a quedar antes de mandar a producción.
@@ -468,10 +426,10 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
               {/* Sidebar */}
               <div className="bg-zinc-950 p-4.5 border-r border-zinc-800">
                 <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-3">Producto</h4>
-                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">YETI 30oz</div>
-                <div className="text-[13px] py-2 px-2.5 rounded bg-emerald-900 text-emerald-300">STANLEY 40oz</div>
-                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">OWALA FreeSip</div>
-                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">Genérico 500ml</div>
+                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">Rambler 20oz</div>
+                <div className="text-[13px] py-2 px-2.5 rounded bg-emerald-900 text-emerald-300">Travel Mug 30oz</div>
+                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">Quencher H2.0 40oz</div>
+                <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">FreeSip 24oz</div>
                 <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 mt-5 mb-3">Capa</h4>
                 <div className="text-[13px] py-2 px-2.5 rounded bg-emerald-900 text-emerald-300">Texto "Tu nombre"</div>
                 <div className="text-[13px] py-2 px-2.5 rounded text-zinc-300">Logo frontal</div>
@@ -490,7 +448,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                   { k: 'Fuente',     v: <>Playfair Display <span className="text-emerald-400">Italic</span></> },
                   { k: 'Tamaño',     v: '36 pt' },
                   { k: 'Posición',   v: 'Centro · 45% altura' },
-                  { k: 'Vista previa', v: <span className="text-emerald-400">Listo para producción ✓</span> },
+                  { k: 'Vista previa', v: <span className="text-emerald-400">Vista previa en vivo ✓</span> },
                 ].map((f) => (
                   <div key={f.k} className="mb-3.5">
                     <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-1.5">{f.k}</div>
@@ -513,43 +471,6 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
         </div>
       </section>
 
-      {/* ===================== TESTIMONIOS ===================== */}
-      <section id="testimonios" className="py-24 bg-zinc-50 border-y border-zinc-200">
-        <div className="max-w-[1280px] mx-auto px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-end mb-14">
-            <h2 className="font-vintage font-semibold text-[clamp(32px,3.8vw,48px)] leading-[1.08] tracking-[-0.02em]">
-              Reseñas<br /><em className="italic text-emerald-500">verificadas.</em>
-            </h2>
-            <p className="text-[15px] leading-[1.6] text-zinc-600">
-              Más de 1.200 pedidos. Acá los que más se repiten en WhatsApp y Google Reviews.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="bg-white border border-zinc-200 rounded-xl p-6">
-                <div className="flex justify-between items-center mb-3.5">
-                  <div className="flex gap-0.5 text-emerald-500">
-                    {Array.from({ length: 5 }).map((_, i) => <StarIcon key={i} />)}
-                  </div>
-                  <span className="font-mono text-[10px] text-zinc-500 uppercase tracking-[0.1em]">{t.source}</span>
-                </div>
-                <p className="text-[14.5px] leading-[1.6] text-zinc-600 mb-4">{t.text}</p>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 grid place-items-center font-vintage font-semibold text-[13px]">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <div className="text-[13.5px] font-medium">{t.name}</div>
-                    <div className="text-[11.5px] text-zinc-500">{t.role}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ===================== CTA FINAL ===================== */}
       <section className="py-24 bg-zinc-100 border-t border-zinc-200">
         <div className="max-w-[1280px] mx-auto px-8">
@@ -559,7 +480,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                 Tu próximo termo<br />empieza <em className="italic text-emerald-700">ahora.</em>
               </h2>
               <p className="text-zinc-600 text-[15.5px] mt-4 max-w-[480px]">
-                Diseñás en menos de 5 minutos. Si tenés dudas, escribinos por WhatsApp y te asesoramos sin compromiso.
+                Diseña en menos de 5 minutos. Si tienes dudas, escríbenos por WhatsApp y te asesoramos sin compromiso.
               </p>
               <div className="mt-7 flex gap-3 items-center flex-wrap">
                 <a
@@ -585,8 +506,6 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                 'Diseño en editor',
                 'Vista previa',
                 'Grabado láser',
-                'Empaque premium',
-                'Garantía de por vida',
               ].map((k) => (
                 <div key={k} className="flex justify-between items-center py-3 border-t border-zinc-200 first:border-t-0 text-[14px]">
                   <span className="text-zinc-600">{k}</span>
@@ -603,7 +522,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
       {/* ===================== FOOTER ===================== */}
       <footer className="py-12 px-8 bg-white border-t border-zinc-200">
         <div className="max-w-[1280px] mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 mb-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-10 mb-8">
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-2.5 font-semibold text-sm tracking-tight">
                 <span className="w-6 h-6 bg-zinc-900 rounded-md grid place-items-center text-white font-vintage italic font-semibold text-[13px]">
@@ -612,8 +531,13 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
                 LaserMachine
               </div>
               <p className="text-zinc-500 max-w-sm text-[13.5px] leading-relaxed">
-                Estudio de grabado láser en Mendoza. Personalización de termos, botellas y accesorios con láser de fibra.
+                Taller de grabado láser en Hermosillo, Sonora. Personalización de termos, botellas y tazas con láser de fibra.
               </p>
+            </div>
+            <div>
+              <h5 className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-900 mb-3">Contacto</h5>
+              <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="block text-[13.5px] text-zinc-500 py-0.5 hover:text-zinc-900">WhatsApp</a>
+              <span className="block text-[13.5px] text-zinc-500 py-0.5">Hermosillo, Sonora, México</span>
             </div>
             <div>
               <h5 className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-900 mb-3">Producto</h5>
@@ -628,7 +552,7 @@ export const LandingPage: React.FC<LandingPageProps> = React.memo(({
             </div>
           </div>
           <div className="pt-5 border-t border-zinc-200 flex flex-col md:flex-row items-center justify-between gap-4 font-mono text-[10.5px] text-zinc-500">
-            <span>© {new Date().getFullYear()} LaserMachine · Mendoza, Argentina</span>
+            <span>© {new Date().getFullYear()} LaserMachine · Hermosillo, Sonora, México</span>
             <span>Hecho con láser, no con plantilla</span>
           </div>
         </div>

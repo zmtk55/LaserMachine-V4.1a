@@ -1,18 +1,11 @@
 import React from 'react';
 import { useCartPanel } from '../contexts/CartContext';
 import { X, ShoppingBag, Trash2, Plus, Minus, ArrowRight, Package } from 'lucide-react';
-
-interface CartItem {
-  id: string;
-  productName: string;
-  colorName: string;
-  quantity: number;
-  price: number;
-  imageUrl?: string;
-}
+import type { OrderItem, Product } from '../types';
 
 interface CartPanelProps {
-  cartItems: CartItem[];
+  cartItems: OrderItem[];
+  products: Product[];
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveItem: (id: string) => void;
   onCheckout: () => void;
@@ -21,6 +14,7 @@ interface CartPanelProps {
 
 export const CartPanel: React.FC<CartPanelProps> = ({
   cartItems,
+  products,
   onUpdateQuantity,
   onRemoveItem,
   onCheckout,
@@ -79,12 +73,21 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             </div>
           ) : (
             <div className="divide-y divide-zinc-100 dark:divide-zinc-900">
-              {cartItems.map((item) => (
+              {cartItems.map((item) => {
+                const product = products.find(p => p.id === item.productId);
+                const color = product?.colors.find(c => c.name === item.colorName);
+                const imageUrl = color?.imageUrl || product?.imageUrl;
+                const productName = product?.name || 'Producto';
+                const detail = item.isClientItem
+                  ? `Producto propio: ${item.clientItemBrand || ''} ${item.clientItemColor || ''}`.trim()
+                  : item.colorName;
+
+                return (
                 <div key={item.id} className="p-4 flex gap-4">
                   {/* Image */}
                   <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-900 rounded-xl overflow-hidden shrink-0">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={productName} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Package className="w-8 h-8 text-zinc-300" />
@@ -95,11 +98,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                   {/* Details */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-sm text-zinc-900 dark:text-white truncate">
-                      {item.productName}
+                      {productName}
                     </h4>
-                    <p className="text-xs text-zinc-500">{item.colorName}</p>
+                    <p className="text-xs text-zinc-500">{detail}</p>
                     <p className="text-sm font-black text-zinc-900 dark:text-white mt-1">
-                      ${item.price}
+                      ${item.totalPrice} <span className="text-xs font-medium text-zinc-500">(${item.unitPrice} c/u)</span>
                     </p>
                     
                     {/* Quantity Controls */}
@@ -128,7 +131,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -147,7 +151,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               }}
               className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
             >
-              Checkout
+              Ver carrito
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

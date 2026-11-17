@@ -14,28 +14,16 @@ import { doc, setDoc, getDoc, updateDoc, serverTimestamp, collection, query, whe
 import { auth, db, googleProvider } from '../firebaseConfig';
 import { User, UserRole } from '../types';
 
-// Admin emails hardcoded (fallback)
-const ADMIN_EMAILS = [
-  'info.lasermachine@gmail.com',
-  'julian.insignia@gmail.com',
-  'admin@lasermachine.com'
-];
-
-// Rate limiting storage (in-memory, resets on page refresh)
-const attemptTracker: Record<string, { count: number; lastAttempt: number }> = {};
-
 // Check if Firebase is configured
 export const isFirebaseConfigured = (): boolean => {
   return auth !== null && db !== null;
 };
 
-// Check if email is admin
-const isAdminEmail = (email: string): boolean => {
-  const lowerEmail = email.toLowerCase().trim();
-  return ADMIN_EMAILS.map(e => e.toLowerCase()).includes(lowerEmail);
-};
-
 // Get admin emails from store config (localStorage)
+// Es la única lista de admins: la edita el administrador desde
+// Configuración de la tienda. NO hay correos hardcodeados aquí:
+// cualquiera con acceso al código podría verlos y el rol real lo
+// decide el documento del usuario en Firestore (ver syncUserWithFirestore).
 const getDynamicAdminEmails = (): string[] => {
   try {
     const saved = localStorage.getItem('lm_store_v10');
@@ -49,14 +37,13 @@ const getDynamicAdminEmails = (): string[] => {
   return [];
 };
 
-// Check if user is admin (combines hardcoded + dynamic)
+// Rate limiting storage (in-memory, resets on page refresh)
+const attemptTracker: Record<string, { count: number; lastAttempt: number }> = {};
+
+// Check if user is admin (lista dinámica de la configuración de la tienda)
 export const checkIsAdmin = (email: string): boolean => {
   const lowerEmail = email.toLowerCase().trim();
-  const allAdminEmails = [
-    ...ADMIN_EMAILS,
-    ...getDynamicAdminEmails()
-  ].map(e => e.toLowerCase());
-  return allAdminEmails.includes(lowerEmail);
+  return getDynamicAdminEmails().map(e => e.toLowerCase()).includes(lowerEmail);
 };
 
 // Rate limiting - Check if user can make another attempt
@@ -105,22 +92,26 @@ const getClientIdentifier = (): string => {
   }
 };
 
-// Verify reCAPTCHA (placeholder - implement with actual reCAPTCHA if needed)
-export const verifyRecaptcha = async (token: string): Promise<boolean> => {
-  // For now, we use math captcha client-side
-  // If you want real reCAPTCHA, add the library and implement here
-  return true;
-};
+// Mensaje estándar cuando Firebase Auth no está configurado.
+// Nunca se deja entrar a nadie en ese caso: el login simplemente falla
+// con este mensaje en español.
+export const FIREBASE_NOT_CONFIGURED_MSG =
+  'El inicio de sesión no está configurado. Pide al administrador que configure Firebase Auth.';
 
 // Create or update user in Firestore
 export const syncUserWithFirestore = async (firebaseUser: FirebaseUser, role?: UserRole, additionalData?: any): Promise<void> => {
-  if (!db) throw new Error('Firestore not initialized');
+  if (!db) throw new Error(FIREBASE_NOT_CONFIGURED_MSG);
   
   const userRef = doc(db, 'users', firebaseUser.uid);
   const userSnap = await getDoc(userRef);
   
-  const isAdmin = checkIsAdmin(firebaseUser.email || '');
-  const userRole = role || (isAdmin ? UserRole.ADMIN : UserRole.CLIENT);
+  // El rol ADMIN se decide así (en este orden):
+  // 1. El documento users/{uid} en Firestore ya tiene role='ADMIN' (el dueño
+  //    lo pone a mano en Firebase Console; es la vía recomendada).
+  // 2. El correo está en la lista adminEmails de la configuración de la tienda.
+  const existingRole = userSnap.exists() ? (userSnap.data().role as UserRole | undefined) : undefined;
+  const isAdmin = existingRole === UserRole.ADMIN || checkIsAdmin(firebaseUser.email || '');
+  const userRole = role || existingRole || (isAdmin ? UserRole.ADMIN : UserRole.CLIENT);
   
   if (!userSnap.exists()) {
     // New user - create in Firestore
@@ -199,7 +190,7 @@ export const convertToAppUser = (firebaseUser: FirebaseUser, firestoreUser?: Use
 // Create guest user with phone number
 export const createGuestUser = async (phone: string, name: string): Promise<User> => {
   if (!auth || !db) {
-    throw new Error('Firebase no está configurado. Contacta al administrador.');
+    throw new Error(FIREBASE_NOT_CONFIGURED_MSG);
   }
   
   try {
@@ -280,7 +271,7 @@ export const registerWithEmail = async (
   password: string, 
   name: string
 ): Promise<User> => {
-  if (!auth) throw new Error('Firebase Auth not initialized');
+  if (!auth) throw new Error(FIREBASE_NOT_CONFIGURED_MSG);
   
   try {
     // Create user in Firebase Auth
@@ -305,7 +296,7 @@ export const registerWithEmail = async (
 
 // Login with email/password
 export const loginWithEmail = async (email: string, password: string): Promise<User> => {
-  if (!auth) throw new Error('Firebase Auth not initialized');
+  if (!auth) throw new Error(FIREBASE_NOT_CONFIGURED_MSG);
   
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -326,7 +317,7 @@ export const loginWithEmail = async (email: string, password: string): Promise<U
 
 // Login with Google
 export const loginWithGoogle = async (): Promise<User> => {
-  if (!auth || !googleProvider) throw new Error('Firebase Auth not initialized');
+  if (!auth || !googleProvider) throw new Error(FIREBASE_NOT_CONFIGURED_MSG);
   
   try {
     const result = await signInWithPopup(auth, googleProvider);
@@ -347,7 +338,7 @@ export const loginWithGoogle = async (): Promise<User> => {
 
 // Send password reset email
 export const resetPassword = async (email: string): Promise<void> => {
-  if (!auth) throw new Error('Firebase Auth not initialized');
+  if (!auth) throw new Error(FIREBASE_NOT_CONFIGURED_MSG);
   
   try {
     await sendPasswordResetEmail(auth, email);
@@ -402,16 +393,3 @@ const getAuthErrorMessage = (code: string): string => {
   
   return errorMessages[code] || 'Error de autenticación. Intenta de nuevo.';
 };
-
-// Demo mode for when Firebase is not configured
-export const createDemoUser = (): User => ({
-  id: 'demo-admin',
-  email: 'admin@lasermachine.com',
-  name: 'Admin Demo',
-  role: UserRole.ADMIN,
-  avatarUrl: 'https://ui-avatars.com/api/?name=Admin+Demo&background=facc15&color=000000',
-  laserPoints: 0,
-  pointsHistory: [],
-  phone: '',
-  isGuest: false
-});

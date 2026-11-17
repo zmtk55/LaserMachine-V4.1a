@@ -16,7 +16,12 @@ const FONT_MAP: Record<string, string> = {
   'Anton': 'font-industrial',
   'Playfair Display': 'font-serif1',
   'Permanent Marker': 'font-script1',
-  'JetBrains Mono': 'font-mono'
+  'JetBrains Mono': 'font-mono',
+  'Special Elite': 'font-typewriter',
+  'Oswald': 'font-geometric',
+  'Dancing Script': 'font-cursive',
+  'Roboto Slab': 'font-slab',
+  'Caveat': 'font-brush'
 };
 
 // Mapeo de fuentes a estilos
@@ -26,7 +31,12 @@ const FONT_STYLES: Record<string, React.CSSProperties> = {
   'Anton': { fontFamily: 'Anton, sans-serif', letterSpacing: '0.05em' },
   'Playfair Display': { fontFamily: '"Playfair Display", serif' },
   'Permanent Marker': { fontFamily: '"Permanent Marker", cursive' },
-  'JetBrains Mono': { fontFamily: '"JetBrains Mono", monospace' }
+  'JetBrains Mono': { fontFamily: '"JetBrains Mono", monospace' },
+  'Special Elite': { fontFamily: '"Special Elite", monospace' },
+  'Oswald': { fontFamily: 'Oswald, sans-serif', letterSpacing: '0.02em' },
+  'Dancing Script': { fontFamily: '"Dancing Script", cursive' },
+  'Roboto Slab': { fontFamily: '"Roboto Slab", serif' },
+  'Caveat': { fontFamily: 'Caveat, cursive' }
 };
 
 export const TemplatePreview: React.FC<TemplatePreviewProps> = ({

@@ -268,7 +268,6 @@ export enum PaymentMethod {
   CASH = 'EFECTIVO',
   TRANSFER = 'TRANSFERENCIA',
   CARD = 'TARJETA',
-  MERCADOPAGO = 'MERCADOPAGO',
   OTHER = 'OTRO'
 }
 

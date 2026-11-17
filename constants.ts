@@ -1,27 +1,34 @@
 
-import { FontOption, Product, ProductBrand, Order, OrderStatus, User, UserRole, PaymentStatus, DeliveryMethod, PaymentMethod } from './types';
+import { FontOption, Product, ProductBrand, Order, OrderStatus, PaymentStatus, DeliveryMethod, PaymentMethod } from './types';
 
 export const FONTS: FontOption[] = [
-  // BASICAS
-  { id: 999, name: 'Google Sans Flex', cssFamily: 'font-google', category: 'BASICAS' },
+  // Cada fuente usa una familia real distinta (una sola fuente de verdad:
+  // las clases .font-* se definen en index.css y en index.html).
+  // Los IDs legacy se conservan tal cual: los diseños guardados
+  // (lm_fonts_v10, frontFontId/backFontId en pedidos) los referencian.
+  // En la galería se muestra el número de orden, no el ID interno.
+  // BÁSICAS
+  { id: 999, name: 'Plus Jakarta Sans', cssFamily: 'font-google', category: 'BASICAS' },
   { id: 101, name: 'Industrial Sans', cssFamily: 'font-industrial', category: 'BASICAS' },
   { id: 105, name: 'Minimal Mono', cssFamily: 'font-mono', category: 'BASICAS' },
-  { id: 107, name: 'Classic Typewriter', cssFamily: 'font-mono', category: 'BASICAS' },
-  
+  { id: 107, name: 'Classic Typewriter', cssFamily: 'font-typewriter', category: 'BASICAS' },
+
   // DEPORTE
   { id: 104, name: 'Condensed Impact', cssFamily: 'font-display1', category: 'DEPORTE' },
-  { id: 108, name: 'Modern Geometric', cssFamily: 'font-bold1', category: 'DEPORTE' },
-  
+  { id: 108, name: 'Modern Geometric', cssFamily: 'font-geometric', category: 'DEPORTE' },
+
   // CURSIVA
   { id: 102, name: 'Signature Script', cssFamily: 'font-script1', category: 'CURSIVA' },
-  { id: 106, name: 'Elegant Cursive', cssFamily: 'font-script2', category: 'CURSIVA' },
-  
-  // FONTS 2026
+  { id: 106, name: 'Elegant Cursive', cssFamily: 'font-cursive', category: 'CURSIVA' },
+
+  // TENDENCIA (valor guardado de la categoría: 'FONTS 2026'; en la UI se
+  // muestra como "Tendencia", ver CATEGORY_LABELS en FontShowcase)
   { id: 103, name: 'Luxury Serif', cssFamily: 'font-serif1', category: 'FONTS 2026' },
-  { id: 110, name: 'Technical Slab', cssFamily: 'font-serif1', category: 'FONTS 2026' },
-  
-  // KIDS
-  { id: 109, name: 'Artistic Brush', cssFamily: 'font-script1', category: 'KIDS' },
+  { id: 110, name: 'Technical Slab', cssFamily: 'font-slab', category: 'FONTS 2026' },
+
+  // INFANTIL (valor guardado de la categoría: 'KIDS'; en la UI se muestra
+  // como "Infantil")
+  { id: 109, name: 'Artistic Brush', cssFamily: 'font-brush', category: 'KIDS' },
 ];
 
 // Product image URLs - Local images from public folder
@@ -39,7 +46,10 @@ const IMG_YETI_30OZ_CAPE_TAUPE = '/images/products/yeti/YETI_Rambler_30oz_Cape_T
 const IMG_YETI_30OZ_KEY_LIME = '/images/products/yeti/YETI_Rambler_30oz_Key_Lime.png';
 const IMG_YETI_30OZ_RIDGE = '/images/products/yeti/YETI_Rambler_30oz_Ridgeline.png';
 
-// Placeholders for other brands (until we get real images)
+// Placeholders para las demás marcas (hasta tener fotos reales).
+// PENDIENTE DEL DUEÑO: los productos p3-p10 usan placehold.co; reemplazar
+// cada IMG_* de abajo por la foto real del producto en public/images/.
+// Fotos reales hoy: solo p1 y p2 (public/images/products/yeti/).
 const IMG_TUMBLER_BLACK = 'https://placehold.co/400x500/1a1a1a/FFF?text=Tumbler';
 const IMG_TUMBLER_WHITE = 'https://placehold.co/400x500/f5f5f5/333?text=Tumbler';
 const IMG_TUMBLER_CHARCOAL = 'https://placehold.co/400x500/374151/FFF?text=Charcoal';
@@ -66,6 +76,8 @@ const IMG_WINE_TEAL = 'https://placehold.co/400x400/14b8a6/FFF?text=Wine';
 const IMG_WINE_MINT = 'https://placehold.co/400x400/6ee7b7/333?text=Wine';
 
 export const PRODUCTS: Product[] = [
+  // FOTOS: p1 y p2 usan fotos reales (public/images/products/yeti/).
+  // PLACEHOLDERS (reemplazar por fotos reales): p3, p4, p5, p6, p7, p8, p9, p10.
   // 1. YETI Rambler 20oz - Using real product images
   {
     id: 'p1',
@@ -102,7 +114,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p2-ridge', name: 'Ridgeline', hex: '#6b8e6b', stock: 4, imageUrl: IMG_YETI_30OZ_RIDGE }
     ]
   },
-  // 3. STANLEY Quencher 40oz
+  // 3. STANLEY Quencher 40oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p3',
     name: 'Quencher H2.0 40oz',
@@ -118,7 +130,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p3-black', name: 'Black', hex: '#1a1a1a', stock: 15, imageUrl: IMG_TUMBLER_BLACK }
     ]
   },
-  // 4. STANLEY IceFlow 30oz
+  // 4. STANLEY IceFlow 30oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p4',
     name: 'IceFlow Flip 30oz',
@@ -133,7 +145,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p4-teal', name: 'Lagoon', hex: '#0d9488', stock: 8, imageUrl: IMG_TUMBLER_TEAL }
     ]
   },
-  // 5. HYDROFLASK Wide Mouth 32oz
+  // 5. HYDROFLASK Wide Mouth 32oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p5',
     name: 'Wide Mouth 32oz',
@@ -149,7 +161,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p5-white', name: 'White', hex: '#f5f5f5', stock: 8, imageUrl: IMG_TUMBLER_WHITE }
     ]
   },
-  // 6. HYDROFLASK Coffee Mug 12oz
+  // 6. HYDROFLASK Coffee Mug 12oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p6',
     name: 'Coffee Mug 12oz',
@@ -164,7 +176,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p6-pink', name: 'Carnation', hex: '#ec4899', stock: 5, imageUrl: IMG_MUG_PINK }
     ]
   },
-  // 7. OWALA FreeSip 24oz
+  // 7. OWALA FreeSip 24oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p7',
     name: 'FreeSip 24oz',
@@ -179,7 +191,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p7-pink', name: 'Very Berry', hex: '#be185d', stock: 12, imageUrl: IMG_BOTTLE_PINK }
     ]
   },
-  // 8. OWALA FreeSip 32oz
+  // 8. OWALA FreeSip 32oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p8',
     name: 'FreeSip 32oz',
@@ -194,7 +206,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p8-teal', name: 'Teal', hex: '#14b8a6', stock: 5, imageUrl: IMG_TUMBLER_TEAL }
     ]
   },
-  // 9. GENERIC Skinny Tumbler 20oz
+  // 9. GENERIC Skinny Tumbler 20oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p9',
     name: 'Skinny Tumbler 20oz',
@@ -210,7 +222,7 @@ export const PRODUCTS: Product[] = [
       { id: 'p9-holo', name: 'Holographic', hex: '#c084fc', stock: 20, imageUrl: IMG_SKINNY_HOLO }
     ]
   },
-  // 10. GENERIC Wine Tumbler 12oz
+  // 10. GENERIC Wine Tumbler 12oz - FOTO PENDIENTE: usa placeholder placehold.co
   {
     id: 'p10',
     name: 'Wine Tumbler 12oz',
@@ -227,14 +239,6 @@ export const PRODUCTS: Product[] = [
     ]
   }
 ];
-
-export const ADMIN_USER: User = {
-  id: 'u1',
-  name: 'Admin Lasermachine',
-  email: 'admin@lasermachine.com',
-  role: UserRole.ADMIN,
-  avatarUrl: 'https://picsum.photos/100/100'
-};
 
 export const MOCK_ORDERS: Order[] = [
   {

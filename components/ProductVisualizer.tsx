@@ -5,8 +5,8 @@ import {
   ArrowLeft, Type, Image as ImageIcon, RotateCcw, 
   Check, X, ChevronRight, ChevronLeft, Trash2, Wand2, Loader2,
   Maximize, RefreshCw,
-  ChevronUp, ChevronDown, Upload, Settings, TextCursor, Images, Package, Camera, Aperture, AlertOctagon, Save, Zap, Scissors,
-  LayoutTemplate, Heart, ZoomIn, ZoomOut
+  ChevronUp, ChevronDown, Upload, Settings, TextCursor, Images, Package, Aperture, AlertOctagon, Save, Zap, Scissors,
+  LayoutTemplate, Heart, ZoomIn, FolderOpen
 } from 'lucide-react';
 import { Product, FontOption, PricingConfig, OrderItem, DesignState, LogoItem, ColorPreset, FontCategory, BrandingAsset, StoreConfig } from '../types';
 import { VintageRollInput } from './VintageRollInput';
@@ -31,10 +31,75 @@ interface ProductVisualizerProps {
   storeConfig: StoreConfig;
 }
 
-type ActiveTool = 'TEXT1' | 'TEXT2' | 'IMAGES' | 'MAGIC' | 'LAYERS' | 'SETTINGS' | null;
+type ActiveTool = 'TEXT1' | 'TEXT2' | 'IMAGES' | 'MAGIC' | 'SETTINGS' | null;
 
 const STAGE_WIDTH = 500;
 const STAGE_HEIGHT = 600;
+
+const DRAFTS_KEY = 'lm_drafts';
+const PENDING_DRAFT_KEY = 'lm_pending_draft';
+const FAVORITES_KEY = 'lm_design_favorites';
+
+/** Borrador guardado: el diseño completo, no solo la posición. */
+interface SavedDraft {
+  id: string;
+  name: string;
+  savedAt: string;
+  productId: string;
+  productName: string;
+  colorName: string;
+  quantity: number;
+  isClientItem: boolean;
+  clientItemBrand: string;
+  clientItemColor: string;
+  frontText: string;
+  frontText2: string;
+  frontFontId: number;
+  frontFontId2: number;
+  frontDesign: DesignState;
+  frontDesign2: DesignState;
+  frontLogos: LogoItem[];
+  backText: string;
+  backText2: string;
+  backFontId: number;
+  backFontId2: number;
+  backDesign: DesignState;
+  backDesign2: DesignState;
+  backLogos: LogoItem[];
+  customBackgroundImage: string | null;
+}
+
+/** Diseño favorito: el diseño completo. Los favoritos viejos (solo posición) se migran solos: los campos de diseño son opcionales. */
+interface SavedDesign extends DesignState {
+  id?: string;
+  name?: string;
+  productId?: string;
+  productName?: string;
+  colorName?: string;
+  view?: 'FRONT' | 'BACK';
+  frontText?: string;
+  frontText2?: string;
+  frontFontId?: number;
+  frontFontId2?: number;
+  frontDesign?: DesignState;
+  frontDesign2?: DesignState;
+  frontLogos?: LogoItem[];
+  backText?: string;
+  backText2?: string;
+  backFontId?: number;
+  backFontId2?: number;
+  backDesign?: DesignState;
+  backDesign2?: DesignState;
+  backLogos?: LogoItem[];
+  customBackgroundImage?: string | null;
+}
+
+const loadFromStorage = <T,>(key: string, fallback: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) as T : fallback;
+  } catch { return fallback; }
+};
 
 export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   product, products = [], fonts, pricing, availableColors, initialFontId, initialState, galleryAssets, onBack, onSave, onGoToCart, onSwitchProduct, isDarkMode, storeConfig
@@ -48,12 +113,10 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const [clientItemColor, setClientItemColor] = useState(initialState?.clientItemColor || '');
   const [userUploadedImage, setUserUploadedImage] = useState<string | null>(initialState?.customBackgroundImage || null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [favorites, setFavorites] = useState<DesignState[]>(() => {
-        try {
-            const saved = localStorage.getItem('lm_design_favorites');
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
-    });
+    const [favorites, setFavorites] = useState<SavedDesign[]>(() => loadFromStorage<SavedDesign[]>(FAVORITES_KEY, []));
+    const [drafts, setDrafts] = useState<SavedDraft[]>(() => loadFromStorage<SavedDraft[]>(DRAFTS_KEY, []));
+    const [showDrafts, setShowDrafts] = useState(false);
+    const [draftNotice, setDraftNotice] = useState<string | null>(null);
     const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   // --- AI BACKGROUND REMOVAL ---
   const handleRemoveBackground = async () => {
@@ -167,6 +230,20 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
           setShowCameraHint(false);
       }
   }, [isClientItem, userUploadedImage]);
+
+  // --- EFFECT: APLICAR BORRADOR PENDIENTE (al cambiar de producto para cargar un borrador) ---
+  useEffect(() => {
+      try {
+          const pending = localStorage.getItem(PENDING_DRAFT_KEY);
+          if (!pending) return;
+          const draft = JSON.parse(pending) as SavedDraft;
+          if (draft.productId !== product.id) return;
+          localStorage.removeItem(PENDING_DRAFT_KEY);
+          applyDraft(draft);
+      } catch { /* borrador pendiente corrupto: se ignora */ }
+      // Solo al montar (el cambio de producto remonta el componente por key={product.id})
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- IMAGE LOADING ---
   const currentColorObj = product.colors.find(c => c.name === selectedColor);
@@ -311,6 +388,26 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
           reader.onload = (ev) => setUserUploadedImage(ev.target?.result as string);
           reader.readAsDataURL(file);
       }
+      e.target.value = '';
+  };
+
+  const handleRemoveUserPhoto = () => setUserUploadedImage(null);
+
+  // Máximo de caracteres por línea según la fuente: las cursivas son anchas (18),
+  // las condensadas/deportivas caben más (24), el resto 20.
+  const getTextMaxLength = (fontId: number) => {
+      const font = fonts.find(f => f.id === fontId);
+      const cat = (font?.category || 'BASICAS').toUpperCase();
+      if (cat === 'CURSIVA') return 18;
+      if (cat === 'DEPORTE') return 24;
+      return 20;
+  };
+
+  // Auto-escala: el texto se achica si es largo para que no se salga del termo.
+  const engraveFontSize = (text: string, baseSize: number) => {
+      const len = text.length;
+      if (len <= 12) return baseSize;
+      return Math.max(Math.round(baseSize * 12 / len), Math.round(baseSize * 0.45));
   };
 
   const triggerCamera = () => cameraInputRef.current?.click();
@@ -401,6 +498,82 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
       if (view === 'FRONT') setFrontLogos(update); else setBackLogos(update);
   };
 
+  // --- DRAFTS (lm_drafts): diseño completo guardado en localStorage ---
+  const buildDraft = (name?: string): SavedDraft => ({
+      id: Date.now().toString(),
+      name: name || `${product.name} · ${selectedColor || 'Sin color'} · ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}`,
+      savedAt: new Date().toISOString(),
+      productId: product.id,
+      productName: product.name,
+      colorName: selectedColor,
+      quantity,
+      isClientItem, clientItemBrand, clientItemColor,
+      frontText, frontText2, frontFontId, frontFontId2, frontDesign, frontDesign2, frontLogos,
+      backText, backText2, backFontId, backFontId2, backDesign, backDesign2, backLogos,
+      customBackgroundImage: userUploadedImage,
+  });
+
+  const applyDraft = (draft: SavedDraft) => {
+      setSelectedColor(draft.colorName);
+      setQuantity(draft.quantity || 1);
+      setIsClientItem(draft.isClientItem);
+      setClientItemBrand(draft.clientItemBrand || 'YETI');
+      setClientItemColor(draft.clientItemColor || '');
+      setUserUploadedImage(draft.customBackgroundImage || null);
+      setFrontText(draft.frontText || '');
+      setFrontText2(draft.frontText2 || '');
+      setFrontFontId(draft.frontFontId || defaultFontId);
+      setFrontFontId2(draft.frontFontId2 || defaultFontId);
+      setFrontDesign(draft.frontDesign || { x: 50, y: 40, scale: 1, rotate: 0 });
+      setFrontDesign2(draft.frontDesign2 || { x: 50, y: 60, scale: 1, rotate: 0 });
+      setFrontLogos(draft.frontLogos || []);
+      setBackText(draft.backText || '');
+      setBackText2(draft.backText2 || '');
+      setBackFontId(draft.backFontId || defaultFontId);
+      setBackFontId2(draft.backFontId2 || defaultFontId);
+      setBackDesign(draft.backDesign || { x: 50, y: 40, scale: 1, rotate: 0 });
+      setBackDesign2(draft.backDesign2 || { x: 50, y: 60, scale: 1, rotate: 0 });
+      setBackLogos(draft.backLogos || []);
+      setView('FRONT');
+      setSelectedElementId(null);
+  };
+
+  const handleSaveDraft = () => {
+      try {
+          const draft = buildDraft();
+          const updated = [draft, ...drafts];
+          localStorage.setItem(DRAFTS_KEY, JSON.stringify(updated));
+          setDrafts(updated);
+          setDraftNotice(`Borrador guardado: ${draft.name}`);
+          setTimeout(() => setDraftNotice(null), 4000);
+      } catch (e) {
+          console.error('No se pudo guardar el borrador', e);
+          alert('No se pudo guardar el borrador (almacenamiento lleno, quizá por fotos muy grandes).');
+      }
+  };
+
+  const handleLoadDraft = (draft: SavedDraft) => {
+      // El borrador es de otro producto: se cambia de producto y el diseño se aplica al remontar.
+      if (draft.productId !== product.id) {
+          const target = products.find(p => p.id === draft.productId);
+          if (!target) { alert('El producto de este borrador ya no existe en el catálogo.'); return; }
+          try { localStorage.setItem(PENDING_DRAFT_KEY, JSON.stringify(draft)); } catch { /* noop */ }
+          setShowDrafts(false);
+          onSwitchProduct(target);
+          return;
+      }
+      applyDraft(draft);
+      setShowDrafts(false);
+      setDraftNotice(`Borrador recuperado: ${draft.name}`);
+      setTimeout(() => setDraftNotice(null), 4000);
+  };
+
+  const handleDeleteDraft = (id: string) => {
+      const updated = drafts.filter(d => d.id !== id);
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify(updated));
+      setDrafts(updated);
+  };
+
   const handleSaveClick = (goToCart: boolean) => {
       if (isOutOfStock) { alert("Lo sentimos, este color se encuentra agotado."); return; }
       onSave({
@@ -430,14 +603,53 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   };
 
   const handleSaveToFavorites = () => {
-      const currentDesign = getDesignState(selectedElementId);
-      if (!currentDesign) return;
-      const newFavorites = [...favorites, { ...currentDesign, id: Date.now().toString() }];
+      // Guarda el diseño COMPLETO (textos, fuentes, color, producto, logos y posiciones),
+      // no solo la posición del elemento seleccionado.
+      const fav: SavedDesign = {
+          ...getDesignState(selectedElementId || 'text1'),
+          id: Date.now().toString(),
+          name: `${product.name} · ${selectedColor || 'Sin color'}${(view === 'FRONT' ? frontText : backText) ? ` · ${view === 'FRONT' ? frontText : backText}` : ''}`,
+          productId: product.id,
+          productName: product.name,
+          colorName: selectedColor,
+          view,
+          frontText, frontText2, frontFontId, frontFontId2, frontDesign, frontDesign2, frontLogos,
+          backText, backText2, backFontId, backFontId2, backDesign, backDesign2, backLogos,
+          customBackgroundImage: userUploadedImage,
+      };
+      const newFavorites = [fav, ...favorites];
       setFavorites(newFavorites);
-      localStorage.setItem('lm_design_favorites', JSON.stringify(newFavorites));
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(newFavorites));
   };
 
-  const handleLoadFromFavorites = (fav: DesignState) => {
+  const handleLoadFromFavorites = (fav: SavedDesign) => {
+      // Favoritos viejos (solo posición): se aplica solo la posición, como antes.
+      // Favoritos nuevos (diseño completo): se restaura todo el diseño.
+      const hasFullDesign = fav.frontText !== undefined || fav.backText !== undefined || (fav.frontLogos && fav.frontLogos.length > 0);
+      if (hasFullDesign && fav.productId === product.id) {
+          applyDraft({
+              id: fav.id || Date.now().toString(),
+              name: fav.name || 'Favorito',
+              savedAt: new Date().toISOString(),
+              productId: fav.productId || product.id,
+              productName: fav.productName || product.name,
+              colorName: fav.colorName || selectedColor,
+              quantity,
+              isClientItem, clientItemBrand, clientItemColor,
+              frontText: fav.frontText || '', frontText2: fav.frontText2 || '',
+              frontFontId: fav.frontFontId || defaultFontId, frontFontId2: fav.frontFontId2 || defaultFontId,
+              frontDesign: fav.frontDesign || { x: 50, y: 40, scale: 1, rotate: 0 },
+              frontDesign2: fav.frontDesign2 || { x: 50, y: 60, scale: 1, rotate: 0 },
+              frontLogos: fav.frontLogos || [],
+              backText: fav.backText || '', backText2: fav.backText2 || '',
+              backFontId: fav.backFontId || defaultFontId, backFontId2: fav.backFontId2 || defaultFontId,
+              backDesign: fav.backDesign || { x: 50, y: 40, scale: 1, rotate: 0 },
+              backDesign2: fav.backDesign2 || { x: 50, y: 60, scale: 1, rotate: 0 },
+              backLogos: fav.backLogos || [],
+              customBackgroundImage: fav.customBackgroundImage ?? userUploadedImage,
+          });
+          return;
+      }
       if (!selectedElementId) return;
       setDesignState(selectedElementId, { x: fav.x, y: fav.y, scale: fav.scale, rotate: fav.rotate });
   };
@@ -445,7 +657,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
   const handleRemoveFavorite = (id: string) => {
       const newFavorites = favorites.filter(f => f.id !== id);
       setFavorites(newFavorites);
-      localStorage.setItem('lm_design_favorites', JSON.stringify(newFavorites));
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(newFavorites));
   };
 
   const openFontModal = (target: 'text1' | 'text2') => { setFontModalTarget(target); setSelectedElementId(target); setIsFontModalOpen(true); };
@@ -526,9 +738,9 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                 
                 {/* FLOATING LEFT: COLORS */}
                 {showColors && (
-                    <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl p-1 md:p-3 rounded-full border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl transition-all">
+                    <div className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl p-2 md:p-3 rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl transition-all max-w-[110px]">
                         <button onClick={() => scrollColors('up')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronUp size={18}/></button>
-                        <div ref={colorContainerRef} className="flex flex-col gap-2 md:gap-4 items-center max-h-[40vh] overflow-y-auto no-scrollbar px-1 py-1 w-full"> 
+                        <div ref={colorContainerRef} className="flex flex-col gap-2 md:gap-3 items-center max-h-[40vh] overflow-y-auto px-1 py-1 w-full" style={{ scrollbarWidth: 'thin' }}>
                             {(colorOptions || []).map((c: any) => (
                                 <button key={c.id || c.name} onClick={() => setSelectedColor(c.name)} className={`w-6 h-6 md:w-8 md:h-8 rounded-full shadow-lg transition-all duration-300 relative shrink-0 ${selectedColor === c.name ? 'ring-1 ring-offset-1 ring-yellow-400 scale-110 z-10 ring-offset-white dark:ring-offset-zinc-950' : 'hover:scale-110 hover:shadow-xl hover:z-10'}`} style={{backgroundColor: c.hex}} title={c.name}>
                                     {selectedColor === c.name && <Check size={12} className="text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 drop-shadow-md invert mix-blend-difference"/>}
@@ -536,17 +748,28 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                             ))}
                         </div>
                         <button onClick={() => scrollColors('down')} className="p-1 md:p-2 text-zinc-400 hover:text-black dark:hover:text-white"><ChevronDown size={18}/></button>
+                        <div className="text-center px-1 pb-1 border-t border-zinc-200/60 dark:border-zinc-700/60 pt-1.5 w-full">
+                            <p className="text-[9px] font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate" title={selectedColor}>{selectedColor || 'Sin color'}</p>
+                            <p className="text-[8px] font-bold text-zinc-400">{colorOptions.length} {colorOptions.length === 1 ? 'color' : 'colores'}</p>
+                            <p className="text-[8px] font-medium text-zinc-400 leading-tight mt-0.5">{isClientItem ? 'Los 17 colores solo aplican a Producto Propio' : 'Colores disponibles de este producto'}</p>
+                        </div>
                     </div>
                 )}
 
                 {/* RIGHT SIDE CONTROLS */}
                 <div className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-4 pointer-events-none">
-                    <div className="pointer-events-auto relative md:hidden">
-                        <button onClick={triggerCamera} disabled={!isClientItem && !userUploadedImage} className={`w-12 h-12 rounded-full flex items-center justify-center shadow-xl border-4 transition-all duration-300 ${userUploadedImage ? 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-red-500' : isClientItem ? 'bg-yellow-400 border-yellow-200 text-black hover:scale-110 animate-pulse ring-4 ring-yellow-400/30' : 'bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-400 cursor-not-allowed grayscale'}`}>
+                    {/* Foto propia: disponible en móvil y escritorio. Si ya hay foto, permite cambiarla o quitarla. */}
+                    <div className="pointer-events-auto relative">
+                        <button onClick={triggerCamera} disabled={!isClientItem && !userUploadedImage} className={`w-12 h-12 rounded-full flex items-center justify-center shadow-xl border-4 transition-all duration-300 ${userUploadedImage ? 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-red-500' : isClientItem ? 'bg-yellow-400 border-yellow-200 text-black hover:scale-110 animate-pulse ring-4 ring-yellow-400/30' : 'bg-zinc-200 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-400 cursor-not-allowed grayscale'}`} title={userUploadedImage ? 'Cambiar foto' : 'Subir foto de tu termo'}>
                             {userUploadedImage ? <RefreshCw size={24}/> : <Aperture size={24}/>}
                         </button>
                         {showCameraHint && <div className="absolute right-16 top-1/2 -translate-y-1/2 bg-black/80 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg whitespace-nowrap animate-in slide-in-from-right-2 shadow-lg">¡Toma tu foto aquí! &rarr;</div>}
                     </div>
+                    {userUploadedImage && (
+                        <button onClick={handleRemoveUserPhoto} className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-800 border border-red-200 dark:border-red-900/50 text-red-500 rounded-full shadow-lg text-[9px] font-black uppercase tracking-wider hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Quitar foto y volver a los colores del producto">
+                            <X size={12}/> Quitar foto
+                        </button>
+                    )}
                     <div className="pointer-events-auto flex flex-col items-center gap-3 md:gap-5 bg-zinc-950/95 backdrop-blur-md text-white p-2 md:p-4 rounded-2xl md:rounded-3xl shadow-2xl border border-zinc-800">
                         <button onClick={() => setShowTemplates(true)} className="relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:scale-110" title="Plantillas"><LayoutTemplate size={20} className="md:w-6 md:h-6" /></button>
                         <button onClick={() => setShowMonograms(true)} className="relative p-2 md:p-3 rounded-xl md:rounded-2xl transition-all active:scale-90 hover:bg-zinc-800 text-white" title="Monogramas"><Type size={20} className="md:w-6 md:h-6" /></button>
@@ -588,10 +811,12 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                                 if(view === 'FRONT') { if(activeTool === 'TEXT1') setFrontText(val); else setFrontText2(val); } else { if(activeTool === 'TEXT1') setBackText(val); else setBackText2(val); }
                                             }}
                                             placeholder="Escribe..."
+                                            maxLength={getTextMaxLength(getCurrentFontId(activeTool === 'TEXT1' ? 'text1' : 'text2'))}
                                             onActionClick={() => openFontModal(activeTool === 'TEXT1' ? 'text1' : 'text2')}
                                             actionIcon={<Type size={20} />}
                                             actionLabel="FUENTE"
                                         />
+                                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider text-center">El grabado láser no lleva color · el texto se achica solo para caber en el área grabable</p>
                                         <div className="flex justify-end mt-2">
                                             <button onClick={handleResetSelected} className="text-[9px] font-bold text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 uppercase tracking-wider"><RotateCcw size={10}/> Resetear Posición</button>
                                         </div>
@@ -704,8 +929,9 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                                         <div className="flex items-center gap-2 mb-2 text-zinc-900 dark:text-white"><Heart size={14}/><span className="text-[10px] font-black uppercase tracking-widest">Mis Favoritos ({favorites.length})</span></div>
                                                         <div className="grid grid-cols-3 gap-1 max-h-24 overflow-y-auto">
                                                             {favorites.map((fav) => (
-                                                                <div key={fav.id} className="relative group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg p-1 cursor-pointer hover:border-yellow-400 transition-colors" onClick={() => handleLoadFromFavorites(fav)}>
+                                                                <div key={fav.id} className="relative group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg p-1 cursor-pointer hover:border-yellow-400 transition-colors" onClick={() => handleLoadFromFavorites(fav)} title={fav.name || 'Diseño favorito'}>
                                                                     <div className="text-[7px] text-center">
+                                                                        <div className="text-zinc-500 dark:text-zinc-300 font-bold truncate px-0.5">{fav.name || 'Diseño'}</div>
                                                                         <div className="text-yellow-500 font-black">{Math.round((fav.scale || 1) * 100)}%</div>
                                                                         <div className="text-zinc-400">{fav.rotate || 0}°</div>
                                                                     </div>
@@ -757,6 +983,8 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                         <button onClick={() => setView('BACK')} className={`px-5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${view === 'BACK' ? 'bg-yellow-400 text-black shadow-md' : 'text-zinc-500 hover:text-black dark:text-zinc-400'}`}>Dorso</button>
                     </div>
                     <button onClick={() => setIsClientItem(!isClientItem)} className={`flex items-center gap-2 px-3 py-1 rounded-full backdrop-blur-md border transition-all shadow-sm ${isClientItem ? 'bg-yellow-400/10 border-yellow-400 text-yellow-600 dark:text-yellow-400' : 'bg-white/50 dark:bg-black/50 border-white/20 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-900'}`}><div className={`w-2.5 h-2.5 rounded-full border flex items-center justify-center transition-colors ${isClientItem ? 'bg-yellow-400 border-yellow-400' : 'border-zinc-400 dark:border-zinc-500'}`}>{isClientItem && <Check size={6} className="text-black" strokeWidth={4} />}</div><span className="text-[8px] font-black uppercase tracking-widest">{clientItemLabel}</span></button>
+                    {view === 'BACK' && <span className="px-3 py-1 rounded-full bg-zinc-900/80 dark:bg-white/80 text-white dark:text-zinc-900 text-[8px] font-black uppercase tracking-widest shadow">Vista espejo · sin foto trasera real</span>}
+                    <span className="px-3 py-1 rounded-full bg-white/70 dark:bg-black/60 backdrop-blur-md border border-zinc-200/60 dark:border-zinc-700/60 text-zinc-500 dark:text-zinc-300 text-[8px] font-bold uppercase tracking-widest shadow-sm">El grabado láser no lleva color</span>
                 </div>
 
                 {/* NAVIGATION ARROWS - FIXED Z-INDEX AND POSITION */}
@@ -815,24 +1043,28 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                 onLoad={() => setIsImageLoaded(true)}
                                 className={`w-full h-full object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.5)] pointer-events-none select-none transition-all duration-700 ease-in-out relative z-10 ${view === 'BACK' ? 'scale-x-[-1]' : ''} ${isOutOfStock ? 'grayscale opacity-50' : ''} ${isImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
                             />
+                            {/* Guía del área grabable */}
+                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[300px] border-2 border-dashed border-amber-400/70 rounded-2xl pointer-events-none z-20">
+                                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-black text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap">Área grabable</span>
+                            </div>
                             <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
                                 <div className="absolute inset-0 pointer-events-auto">
-                                    {(view === 'FRONT' ? frontText : backText) && renderInteractiveElement('text1', 
-                                        <span 
-                                            style={{ fontSize: '48px' }}
-                                            className={`${fonts.find(f => f.id === (view === 'FRONT' ? frontFontId : backFontId))?.cssFamily} text-[#6b7280] whitespace-nowrap font-bold`}
+                                    {(view === 'FRONT' ? frontText : backText) && renderInteractiveElement('text1',
+                                        <span
+                                            style={{ fontSize: `${engraveFontSize(view === 'FRONT' ? frontText : backText, 48)}px` }}
+                                            className={`${fonts.find(f => f.id === (view === 'FRONT' ? frontFontId : backFontId))?.cssFamily} laser-engraved text-zinc-500 whitespace-nowrap font-bold`}
                                         >
                                             {view === 'FRONT' ? frontText : backText}
-                                        </span>, 
+                                        </span>,
                                         view === 'FRONT' ? frontDesign : backDesign
                                     )}
-                                    {(view === 'FRONT' ? frontText2 : backText2) && renderInteractiveElement('text2', 
-                                        <span 
-                                            style={{ fontSize: '32px' }}
-                                            className={`${fonts.find(f => f.id === (view === 'FRONT' ? frontFontId2 : backFontId2))?.cssFamily} text-[#6b7280] whitespace-nowrap font-bold`}
+                                    {(view === 'FRONT' ? frontText2 : backText2) && renderInteractiveElement('text2',
+                                        <span
+                                            style={{ fontSize: `${engraveFontSize(view === 'FRONT' ? frontText2 : backText2, 32)}px` }}
+                                            className={`${fonts.find(f => f.id === (view === 'FRONT' ? frontFontId2 : backFontId2))?.cssFamily} laser-engraved text-zinc-500 whitespace-nowrap font-bold`}
                                         >
                                             {view === 'FRONT' ? frontText2 : backText2}
-                                        </span>, 
+                                        </span>,
                                         view === 'FRONT' ? frontDesign2 : backDesign2
                                     )}
                                     {(view === 'FRONT' ? frontLogos : backLogos).map(logo => (
@@ -855,10 +1087,58 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                      <button onClick={() => setQuantity(quantity + 1)} className="w-6 h-6 flex items-center justify-center bg-white dark:bg-zinc-800 rounded-md text-zinc-500 hover:text-black font-bold shadow-sm active:scale-90 transition-transform text-xs" disabled={isOutOfStock}>+</button>
                 </div>
                 <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 hidden md:block"></div>
-                <button onClick={() => handleSaveClick(false)} className="p-2 text-zinc-500 hover:text-black dark:hover:text-white transition-colors active:scale-90" title="Guardar Borrador"><Save size={18}/></button>
+                {/* Total visible también en móvil */}
+                <div className="flex flex-col items-start leading-none px-1">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400">Total</span>
+                    <span className="text-sm font-black text-zinc-900 dark:text-white whitespace-nowrap">${calculatePrice() * quantity}</span>
+                </div>
+                <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800"></div>
+                <button onClick={handleSaveDraft} className="p-2 text-zinc-500 hover:text-black dark:hover:text-white transition-colors active:scale-90" title="Guardar Borrador"><Save size={18}/></button>
+                <button onClick={() => setShowDrafts(true)} className="relative p-2 text-zinc-500 hover:text-black dark:hover:text-white transition-colors active:scale-90" title="Mis Borradores"><FolderOpen size={18}/>{drafts.length > 0 && <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-yellow-400 text-black text-[8px] font-black rounded-full flex items-center justify-center">{drafts.length}</span>}</button>
                 <button onClick={() => handleSaveClick(true)} disabled={isOutOfStock} className={`flex-1 md:flex-none px-6 md:px-8 py-2 font-black uppercase text-[10px] tracking-[0.2em] rounded-lg shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-[0.98] ${isOutOfStock ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300 text-black'}`}><span className="hidden md:inline">{isOutOfStock ? 'Agotado' : 'Agregar'}</span> <Zap size={16} fill={isOutOfStock ? 'none' : 'black'}/></button>
             </div>
         </div>
+
+        {/* Draft guardado: confirmación */}
+        {draftNotice && (
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[150] bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[11px] font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-2">
+                <Check size={14} className="text-yellow-400 dark:text-yellow-600"/> {draftNotice}
+            </div>
+        )}
+
+        {/* MODAL DE BORRADORES */}
+        {showDrafts && (
+            <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDrafts(false)}></div>
+                <div className="bg-white dark:bg-zinc-950 z-10 w-full md:w-[520px] md:rounded-3xl rounded-t-[2rem] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300 overflow-hidden max-h-[80vh] border border-zinc-200 dark:border-zinc-800">
+                    <div className="h-16 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-6 shrink-0">
+                        <h2 className="text-lg font-black uppercase text-zinc-900 dark:text-white tracking-wide flex items-center gap-2"><FolderOpen size={18} className="text-yellow-500"/> Mis Borradores ({drafts.length})</h2>
+                        <button onClick={() => setShowDrafts(false)} className="p-2 bg-zinc-100 dark:bg-zinc-900 rounded-full hover:bg-zinc-200 transition-colors"><X size={18}/></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                        {drafts.length === 0 ? (
+                            <div className="text-center py-10">
+                                <FolderOpen size={40} className="mx-auto text-zinc-300 dark:text-zinc-700 mb-3"/>
+                                <p className="text-sm font-bold text-zinc-500">Aún no tienes borradores</p>
+                                <p className="text-xs text-zinc-400 mt-1">Usa el botón de guardar para conservar tu diseño y seguir después.</p>
+                            </div>
+                        ) : drafts.map(d => (
+                            <div key={d.id} className="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{d.name}</p>
+                                    <p className="text-[10px] text-zinc-400 truncate">
+                                        {d.productName} · {d.colorName || 'Sin color'} · {new Date(d.savedAt).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                        {(d.frontText || d.backText) ? ` · “${d.frontText || d.backText}”` : ''}
+                                    </p>
+                                </div>
+                                <button onClick={() => handleLoadDraft(d)} className="px-3 py-2 bg-yellow-400 hover:bg-yellow-300 text-black text-[10px] font-black uppercase rounded-lg transition-colors shrink-0">Cargar</button>
+                                <button onClick={() => handleDeleteDraft(d.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors shrink-0" title="Borrar borrador"><Trash2 size={16}/></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* FONT MODAL */}
         {isFontModalOpen && (
@@ -897,6 +1177,7 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
         {showTemplates && (
             <DesignTemplates
                 templates={storeConfig.designTemplates}
+                productImage={currentImage}
                 onSelectTemplate={(template) => {
                     if (template.texts.length > 0) {
                         // Helper to find font ID by name
@@ -980,11 +1261,6 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                                 setBackText(monogram.text);
                             }
                             setShowMonograms(false);
-                        }}
-                        onGenerateAI={async (prompt) => {
-                            // This would integrate with AI service
-                            // For now, return placeholder
-                            return '';
                         }}
                     />
                     <button

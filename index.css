@@ -55,15 +55,26 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Rubik', sans-serif;
 }
 
-/* Clases de fuentes para el grabador (Visualizer) */
+/* Clases de fuentes para el grabador (Visualizer) y la galería de fuentes.
+   ÚNICA FUENTE DE VERDAD: la galería (FontShowcase) usa estas mismas clases,
+   no un mapa inline. Cada clase es una familia real distinta; las familias
+   se importan en index.html. No reutilizar una clase para dos fuentes. */
 .font-google { font-family: 'Plus Jakarta Sans', sans-serif; }
 .font-bold1 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; }
 .font-industrial { font-family: 'Anton', sans-serif; letter-spacing: 0.05em; }
 .font-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+.font-typewriter { font-family: 'Special Elite', monospace; }
 .font-script1 { font-family: 'Permanent Marker', cursive; }
+.font-cursive { font-family: 'Dancing Script', cursive; }
 .font-serif1 { font-family: 'Playfair Display', serif; }
-.font-display1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; }
-.font-script2 { font-family: 'Permanent Marker', cursive; font-style: italic; }
+.font-slab { font-family: 'Roboto Slab', serif; }
+.font-display1 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; }
+.font-geometric { font-family: 'Oswald', sans-serif; letter-spacing: 0.02em; }
+.font-brush { font-family: 'Caveat', cursive; }
+/* Alias legacy: diseños guardados con la clase antigua 'font-script2'
+   (antes Permanent Marker itálica). Hoy equivale a la cursiva elegante;
+   no asignarla a fuentes nuevas. */
+.font-script2 { font-family: 'Dancing Script', cursive; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

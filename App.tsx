@@ -21,10 +21,12 @@ import { NotificationPanel } from './components/NotificationPanel';
 import { NotificationManager } from './components/NotificationManager';
 import { CartPanel } from './components/CartPanel';
 // import { LottieAnimation } from './components/LottieAnimation';
-import { ViewState, User, Product, ProductColor, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction } from './types';
-import { PRODUCTS as CONST_PRODUCTS, FONTS as CONST_FONTS, ADMIN_USER, MOCK_ORDERS } from './constants';
-import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, CreditCard, QrCode, Ticket, Eye, Banknote, CreditCard as CardIcon, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2 } from 'lucide-react';
-import { onAuthChange, logoutUser, isFirebaseConfigured } from './services/auth';
+import { ViewState, User, Product, OrderItem, UserRole, PricingConfig, StoreConfig, Order, OrderStatus, FontOption, PaymentStatus, DeliveryMethod, PaymentMethod, Coupon, PointTransaction } from './types';
+import { PRODUCTS as CONST_PRODUCTS, FONTS as CONST_FONTS, MOCK_ORDERS } from './constants';
+import { DEFAULT_TEMPLATES } from './components/DesignTemplates';
+import { ShoppingBag, Trash2, Zap, ArrowRight, Plus, Search, Edit2, X, Star, Ticket, Eye, Banknote, Play, ShieldCheck, Users, Wallet, TrendingUp, Loader2 } from 'lucide-react';
+import { onAuthChange, logoutUser } from './services/auth';
+import { isSupabaseConfigured, listProducts, listOrders, listFonts, getStoreConfig, syncAllToSupabase } from './services/supabaseService';
 
 // Import Lottie animation
 // import playfulAnimation from './src/lotties/playful.json';
@@ -87,6 +89,9 @@ const DEFAULT_STORE: StoreConfig = {
   globalColors: DEFAULT_COLORS,
   brandingAssets: [],
   galleryAssets: DEFAULT_GALLERY_ASSETS as any,
+  // Plantillas del personalizador: las 12 por defecto. Sin esto el admin
+  // ve "0 de 0" (TemplateManagerPro lee storeConfig.designTemplates).
+  designTemplates: [...DEFAULT_TEMPLATES],
   messageTemplates: {
       confirmation: "Hola {NOMBRE}, tu orden #{ID} ha sido recibida. Total: {TOTAL}. Seguimiento: {LINK}",
       production: "Hola {NOMBRE}, ¡Tu orden #{ID} está en producción! 🛠️. Sigue tu pedido aquí: {LINK}",
@@ -106,6 +111,9 @@ const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () =
                 )}
                 <img 
                     src={product.imageUrl} 
+                    alt={product.name}
+                    loading="lazy"
+                    decoding="async"
                     onLoad={() => setLoaded(true)}
                     className={`max-w-[85%] max-h-[85%] object-contain group-hover:scale-105 transition-transform duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`} 
                 />
@@ -124,16 +132,9 @@ const ShopProductCard = ({ product, onClick }: { product: Product, onClick: () =
 
 const App = () => {
   const [view, setView] = useState<ViewState>('LANDING');
-  // TEMPORAL: Auth desactivado para desarrollo - usar admin por defecto
-  const [user, setUser] = useState<User | null>({
-    id: 'admin-temp',
-    name: 'Admin',
-    email: 'admin@lasermachine.com',
-    role: UserRole.ADMIN,
-    avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=facc15&color=000000',
-    laserPoints: 0,
-    pointsHistory: []
-  });
+  // Sin login no hay usuario: el login es SOLO para el admin (Firebase Auth).
+  // La tienda y el personalizador funcionan sin sesión.
+  const [user, setUser] = useState<User | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [preSelectedOrderId, setPreSelectedOrderId] = useState<string | null>(null);
@@ -167,31 +168,22 @@ const App = () => {
   }, []);
   
   // Persistent State Initialization
-  // Bumped to v13 to force image refresh with YETI product images
   const [products, setProducts] = useState<Product[]>(() => {
       try {
           const saved = localStorage.getItem('lm_products_v13');
           if (saved) {
-              // Merge saved products with default images to ensure images are updated
+              // Se respeta lo guardado por el admin: imageUrl e imágenes de
+              // colores NO se sobrescriben con las de constants.ts.
               const parsed = JSON.parse(saved);
-              return parsed.map((savedProduct: Product) => {
-                  const defaultProduct = CONST_PRODUCTS.find(p => p.id === savedProduct.id);
-                  if (defaultProduct) {
-                      // Update images from default while preserving stock and other data
-                      return {
-                          ...savedProduct,
-                          imageUrl: defaultProduct.imageUrl,
-                          colors: savedProduct.colors.map((savedColor: ProductColor) => {
-                              const defaultColor = defaultProduct.colors.find(c => c.name === savedColor.name);
-                              return defaultColor ? { ...savedColor, imageUrl: defaultColor.imageUrl } : savedColor;
-                          })
-                      };
-                  }
-                  return savedProduct;
-              });
+              return Array.isArray(parsed) ? parsed : CONST_PRODUCTS;
           }
           return CONST_PRODUCTS;
-      } catch (e) { return CONST_PRODUCTS; }
+      } catch (e) {
+          // JSON corrupto o esquema viejo: se cae a los defaults (ver reporte:
+          // el aviso al admin queda pendiente de un UI de admin).
+          console.warn('[LaserMachine] lm_products_v13 corrupto o inválido, se usan los productos por defecto.', e);
+          return CONST_PRODUCTS;
+      }
   });
   
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -215,7 +207,12 @@ const App = () => {
           if (!parsed.messageTemplates) parsed.messageTemplates = DEFAULT_STORE.messageTemplates;
           if (!parsed.globalColors || parsed.globalColors.length === 0) parsed.globalColors = DEFAULT_COLORS;
           if (!parsed.brandingAssets) parsed.brandingAssets = [];
-          if (!parsed.galleryAssets) parsed.galleryAssets = DEFAULT_GALLERY_ASSETS;
+          // Un array [] guardado es truthy: reponer también cuando esté vacío.
+          if (!parsed.galleryAssets || parsed.galleryAssets.length === 0) parsed.galleryAssets = DEFAULT_GALLERY_ASSETS;
+          // Plantillas del personalizador: si no hay o están vacías, sembrar
+          // las 12 por defecto para que el admin no vea "0 de 0" y la
+          // galería del personalizador no quede en "0 total".
+          if (!parsed.designTemplates || parsed.designTemplates.length === 0) parsed.designTemplates = [...DEFAULT_TEMPLATES];
           if (parsed.pointsPercentage === undefined) parsed.pointsPercentage = 5;
           if (!parsed.themeDarkModeBg) parsed.themeDarkModeBg = DEFAULT_STORE.themeDarkModeBg;
           if (!parsed.nextOrderId) parsed.nextOrderId = 1000;
@@ -237,18 +234,23 @@ const App = () => {
       } catch (e) { return DEFAULT_PRICING; }
   });
   
-  const [cart, setCart] = useState<OrderItem[]>([]);
+  const [cart, setCart] = useState<OrderItem[]>(() => {
+      try {
+          const saved = localStorage.getItem('lm_cart_v1');
+          return saved ? JSON.parse(saved) : [];
+      } catch (e) { return []; }
+  });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', notes: '' });
   const [customerSearch, setCustomerSearch] = useState('');
   
   // CHECKOUT STATE
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CASH);
-  const [showMercadoPagoModal, setShowMercadoPagoModal] = useState(false);
   const [usePoints, setUsePoints] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>(DeliveryMethod.PICKUP);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   
   // EDITING & PREVIEW STATE
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
@@ -257,6 +259,13 @@ const App = () => {
   // New state for font flow
   const [preSelectedFontId, setPreSelectedFontId] = useState<number | null>(null);
   const [preSelectedText, setPreSelectedText] = useState<string>('');
+  // Tamaño en px elegido en la galería de fuentes; el personalizador lo
+  // recibe como escala inicial (base 48px = tamaño del texto 1 en
+  // ProductVisualizer). null = sin preferencia (escala 1).
+  const [preSelectedFontSizePx, setPreSelectedFontSizePx] = useState<number | null>(null);
+  const preSelectedFontScale = preSelectedFontSizePx
+    ? Math.min(5, Math.max(0.2, preSelectedFontSizePx / 48))
+    : 1;
 
   // Persistence Effect
   useEffect(() => {
@@ -265,7 +274,74 @@ const App = () => {
     localStorage.setItem('lm_store_v10', JSON.stringify(storeConfig));
     localStorage.setItem('lm_pricing_v10', JSON.stringify(pricing));
     localStorage.setItem('lm_fonts_v10', JSON.stringify(fonts));
-  }, [products, orders, storeConfig, pricing, fonts]);
+    localStorage.setItem('lm_cart_v1', JSON.stringify(cart));
+  }, [products, orders, storeConfig, pricing, fonts, cart]);
+
+  // Supabase como base de datos (productos, pedidos, fuentes, config).
+  // Al arrancar se lee de Supabase y, si trae datos, reemplazan lo local;
+  // si no está configurado o las tablas no existen, se sigue con
+  // localStorage sin romper nada. cloudReady se activa cuando termina la
+  // carga inicial, para no subir los datos locales por encima de la nube
+  // antes de haberla leído.
+  const [cloudReady, setCloudReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isSupabaseConfigured()) {
+        setCloudReady(true);
+        return;
+      }
+      try {
+        const [cloudProducts, cloudOrders, cloudFonts, cloudConfig] = await Promise.all([
+          listProducts(),
+          listOrders(),
+          listFonts(),
+          getStoreConfig(),
+        ]);
+        if (cancelled) return;
+        // Solo se reemplaza lo local cuando la nube trae datos: una tabla
+        // vacía en el primer arranque no debe borrar los datos locales
+        // (la sincronización de abajo los sube como siembra inicial).
+        if (cloudProducts && cloudProducts.length > 0) setProducts(cloudProducts);
+        if (cloudOrders && cloudOrders.length > 0) setOrders(cloudOrders);
+        if (cloudFonts && cloudFonts.length > 0) setFonts(cloudFonts);
+        if (cloudConfig) {
+          // Una fila vieja en la nube con designTemplates/galleryAssets en
+          // [] no debe pisar los defaults sembrados en local (igual que
+          // con las tablas vacías de arriba): se ignoran esos campos
+          // vacíos y la sincronización sube los valores locales.
+          const { designTemplates: cloudTemplates, galleryAssets: cloudGallery, ...restCloud } = cloudConfig as typeof cloudConfig & { designTemplates?: unknown[]; galleryAssets?: unknown[] };
+          setStoreConfig(prev => ({
+            ...prev,
+            ...restCloud,
+            ...(Array.isArray(cloudTemplates) && cloudTemplates.length > 0 ? { designTemplates: cloudTemplates } : {}),
+            ...(Array.isArray(cloudGallery) && cloudGallery.length > 0 ? { galleryAssets: cloudGallery } : {}),
+            bankInfo: '',
+          }));
+        }
+      } catch (e) {
+        console.warn('[Supabase] No se pudo cargar desde la nube, se sigue en local:', e);
+      } finally {
+        if (!cancelled) setCloudReady(true);
+      }
+    })();
+    return () => { cancelled = true; };
+    // Solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sincronización a Supabase: cada cambio local (un pedido nuevo del
+  // cliente, un cambio de estado del admin, un producto editado...) se
+  // sube a la nube con un pequeño debounce. Es fire-and-forget: si
+  // Supabase no está configurado o falla, los datos siguen en
+  // localStorage y la app no se entera.
+  useEffect(() => {
+    if (!cloudReady || !isSupabaseConfigured()) return;
+    const timer = setTimeout(() => {
+      void syncAllToSupabase({ products, orders, fonts, storeConfig });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [products, orders, fonts, storeConfig, cloudReady]);
 
   // Inject Fonts CSS & Theme Colors
   useEffect(() => {
@@ -319,14 +395,16 @@ const App = () => {
     styleTag.textContent = cssRules;
   }, [fonts, storeConfig.themeDarkModeBg, storeConfig.customLogoFontData]);
 
-  // Session Persistence Listener - DESACTIVADO para desarrollo
-  // TODO: Reactivar cuando se termine de probar
-  // useEffect(() => {
-  //   const unsubscribe = onAuthChange((userData) => {
-  //     setUser(userData);
-  //   });
-  //   return () => unsubscribe();
-  // }, []);
+  // Session Persistence Listener - Firebase Auth (solo admin).
+  // Al arrancar (o al cambiar la sesión) refleja el usuario de Firebase
+  // en el estado. Sin sesión, user queda en null y la tienda y el
+  // personalizador siguen funcionando sin login.
+  useEffect(() => {
+    const unsubscribe = onAuthChange((userData) => {
+      setUser(userData);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Handle URL Parameters for Tracking
   useEffect(() => {
@@ -366,10 +444,13 @@ const App = () => {
   }, []);
 
   // Auth Guard - Redirect to login if accessing protected routes without user
+    // Solo el panel de admin y el portal del cliente exigen sesión.
+    // La tienda (SHOP), el catálogo de fuentes y el personalizador son
+    // PÚBLICOS: diseñar y comprar no exige login.
     // Note: We DO NOT open the login modal when view is LANDING, to avoid
     // auto-focusing the register/login modal on page load.
     useEffect(() => {
-      const protectedViews = ['SHOP', 'FONTS_SHOWCASE', 'CUSTOMIZER', 'CLIENT_DASHBOARD', 'ADMIN_DASHBOARD'];
+      const protectedViews = ['CLIENT_DASHBOARD', 'ADMIN_DASHBOARD'];
       if (protectedViews.includes(view) && !user) {
         setView('LANDING');
         // Only open login modal if we're NOT already on LANDING
@@ -463,28 +544,49 @@ const App = () => {
       alert(`¡Código ${cleanCode} creado con éxito! Compártelo para ganar puntos.`);
   };
 
-  const handleFinalCheckout = () => {
-    if (!customerInfo.name || !customerInfo.phone) {
-      alert("Error: Identificación incompleta. Por favor ingrese nombre y teléfono.");
-      return;
-    }
+  // Validación del formulario de pedido (español neutro mexicano)
+  // Teléfono: solo dígitos; se acepta con o sin lada 52, debe quedar en 10 dígitos.
+  const normalizePhone = (raw: string) => {
+      let digits = raw.replace(/\D/g, '');
+      if (digits.length === 12 && digits.startsWith('52')) digits = digits.slice(2);
+      if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
+      return digits;
+  };
+  const isValidEmail = (email: string) => {
+      const trimmed = email.trim();
+      return trimmed === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  };
+  const phoneDigits = normalizePhone(customerInfo.phone);
+  const isNameValid = customerInfo.name.trim().length > 0;
+  const isPhoneValid = phoneDigits.length === 10;
+  const isEmailValid = isValidEmail(customerInfo.email);
+  const isAddressValid = deliveryMethod === DeliveryMethod.PICKUP || deliveryAddress.trim().length > 0;
+  const isCheckoutValid = cart.length > 0 && isNameValid && isPhoneValid && isEmailValid && isAddressValid;
 
-    if (selectedPaymentMethod === PaymentMethod.MERCADOPAGO) {
-        setShowMercadoPagoModal(true);
-        setTimeout(() => {
-            processOrderCreation();
-            setShowMercadoPagoModal(false);
-        }, 3000);
-        return;
+  // Genera un ID de pedido único entre navegadores/dispositivos:
+  // prefijo + timestamp en base36 + aleatorio (sin contador local).
+  const generateOrderId = () => {
+      const timePart = Date.now().toString(36).toUpperCase();
+      const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
+      return `LM-${timePart}${randomPart}`;
+  };
+
+  const handleFinalCheckout = () => {
+    if (!isCheckoutValid) {
+      alert("Revisa los datos del pedido: nombre completo, teléfono de 10 dígitos, correo válido (si lo escribiste) y dirección de entrega cuando no sea recolección en tienda.");
+      return;
     }
 
     processOrderCreation();
   };
 
   const processOrderCreation = () => {
-    // Validate stock availability before creating order
+    // Validate stock availability before creating order.
+    // Los productos propios del cliente no tienen stock en catálogo:
+    // se saltan la validación de color y existencias.
     const stockErrors: string[] = [];
     cart.forEach(item => {
+      if (item.isClientItem) return;
       const product = products.find(p => p.id === item.productId);
       if (!product) {
         stockErrors.push(`Producto no encontrado: ${item.productId}`);
@@ -516,7 +618,9 @@ const App = () => {
     const totalDiscount = pointsDiscount + couponDiscountAmount;
     const finalTotal = Math.max(0, subtotal - totalDiscount);
     
-    // Calculate new points earned based on CONFIG Percentage
+    // Calculate new points earned based on CONFIG Percentage.
+    // Se acreditan solo cuando el pedido se paga (ver AdminDashboard);
+    // el pedido nace PENDIENTE, así que pointsEarned queda en 0 por ahora.
     const pointsPercentage = storeConfig.pointsPercentage || 5; 
     const pointsEarned = Math.floor(finalTotal * (pointsPercentage / 100));
 
@@ -530,20 +634,19 @@ const App = () => {
         setStoreConfig({ ...storeConfig, coupons: updatedCoupons });
     }
 
-    const currentId = storeConfig.nextOrderId || 1000;
-    const newOrderId = `LM-${currentId}`;
+    const newOrderId = generateOrderId();
     
     const newOrder: Order = {
       id: newOrderId,
       userId: user?.id || 'guest',
-      customerName: customerInfo.name,
-      customerPhone: customerInfo.phone,
-      customerEmail: customerInfo.email, 
-      shippingAddress: customerInfo.notes,
+      customerName: customerInfo.name.trim(),
+      customerPhone: phoneDigits,
+      customerEmail: customerInfo.email.trim() || undefined, 
+      shippingAddress: deliveryMethod === DeliveryMethod.PICKUP ? undefined : deliveryAddress.trim(),
       items: [...cart],
       total: finalTotal,
       pointsRedeemed: pointsDiscount,
-      pointsEarned: selectedPaymentMethod === PaymentMethod.MERCADOPAGO ? pointsEarned : 0, // Solo se ganarán si ya pagó (MercadoPago)
+      pointsEarned: 0, // Se acreditan al confirmar el pago, no al crear el pedido
       couponUsed: appliedCoupon?.code,
       discountAmount: couponDiscountAmount,
       status: OrderStatus.RECEIVED,
@@ -551,15 +654,16 @@ const App = () => {
       paymentMethod: selectedPaymentMethod, 
       history: [{ timestamp: new Date().toISOString(), status: OrderStatus.RECEIVED, operator: 'SYSTEM' }],
       createdAt: new Date().toISOString(),
-      paymentStatus: selectedPaymentMethod === PaymentMethod.MERCADOPAGO ? PaymentStatus.PAID : PaymentStatus.PENDING,
-      amountPaid: selectedPaymentMethod === PaymentMethod.MERCADOPAGO ? finalTotal : 0
+      // Sin pago en línea: todos los pedidos quedan PENDIENTES de
+      // confirmación/pago. Los datos bancarios nunca van en el código:
+      // se comparten por WhatsApp al confirmar el pedido.
+      paymentStatus: PaymentStatus.PENDING,
+      amountPaid: 0
     };
     
-    setStoreConfig({ ...storeConfig, nextOrderId: currentId + 1 });
-
-    // Update Inventory - Deduct stock for each item
+    // Update Inventory - Deduct stock for each item (solo productos de catálogo)
     const updatedProducts = products.map(product => {
-      const orderItemsForProduct = cart.filter(item => item.productId === product.id);
+      const orderItemsForProduct = cart.filter(item => item.productId === product.id && !item.isClientItem);
       if (orderItemsForProduct.length === 0) return product;
       
       return {
@@ -605,13 +709,11 @@ const App = () => {
     setCart([]);
     setAppliedCoupon(null);
     setCouponCode('');
+    setDeliveryAddress('');
     setView('LANDING');
     
-    let msg = `ORDEN REGISTRADA EXITOSAMENTE: #${newOrder.id}\n`;
-    if (user && pointsEarned > 0) msg += `¡Has ganado ${pointsEarned} LaserPoints!\n`;
-    if (selectedPaymentMethod !== PaymentMethod.MERCADOPAGO) {
-        msg += `\nNos pondremos en contacto vía WhatsApp.`;
-    }
+    let msg = `Pedido registrado: #${newOrder.id}\nTu pedido quedó pendiente de confirmación.\nNos pondremos en contacto por WhatsApp para confirmarlo y compartirte los datos de pago.`;
+    if (user && pointsEarned > 0) msg += `\nAl confirmar tu pago ganarás ${pointsEarned} LaserPoints.`;
     alert(msg);
   };
 
@@ -619,8 +721,9 @@ const App = () => {
       const product = products.find(p => p.id === item.productId);
       if (product) {
           setSelectedProduct(product);
-          setEditingItem(item); 
-          setCart(prev => prev.filter(i => i.id !== item.id)); 
+          setEditingItem(item);
+          // No se elimina del carrito hasta confirmar el guardado:
+          // si el cliente cancela, el ítem sigue ahí.
           setView('CUSTOMIZER');
       }
   };
@@ -740,9 +843,9 @@ const App = () => {
             {preSelectedFontId && (
                 <div className="mb-8 p-4 bg-amber-500/10 border border-amber-500 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 shadow-sm">
                     <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2">
-                        <Zap size={14}/> Tipografía #{preSelectedFontId} seleccionada.
+                        <Zap size={14}/> Tipografía «{fonts.find(f => f.id === preSelectedFontId)?.name || 'seleccionada'}» seleccionada.
                     </span>
-                    <button onClick={() => setPreSelectedFontId(null)} className="text-[10px] font-black uppercase underline hover:text-black dark:hover:text-white">Cancelar</button>
+                    <button onClick={() => { setPreSelectedFontId(null); setPreSelectedFontSizePx(null); }} className="text-[10px] font-black uppercase underline hover:text-black dark:hover:text-white">Cancelar</button>
                 </div>
             )}
             {/* Título removido - ahora en NavBar */}
@@ -763,10 +866,16 @@ const App = () => {
         {view === 'FONTS_SHOWCASE' && (
           <FontShowcase 
             fonts={fonts} 
-            onSelectFont={(id, text) => {
+            onSelectFont={(id, text, fontSizePx) => {
               setPreSelectedFontId(id);
               setPreSelectedText(text || '');
-              setView('SHOP');
+              setPreSelectedFontSizePx(fontSizePx || null);
+              // Elegir una fuente abre el personalizador con esa fuente y el
+              // tamaño elegido como escala inicial (no se pierde en la tienda).
+              if (!selectedProduct && products.length > 0) {
+                setSelectedProduct(products[0]);
+              }
+              setView('CUSTOMIZER');
             }}
             onBack={() => setView('SHOP')}
           />
@@ -774,12 +883,13 @@ const App = () => {
 
         {view === 'CUSTOMIZER' && (
           <ProductVisualizer 
+            key={(selectedProduct || products[0])?.id}
             product={selectedProduct || products[0]} 
             fonts={fonts} 
             pricing={pricing}
             availableColors={storeConfig.globalColors}
             initialFontId={preSelectedFontId || undefined}
-            initialState={editingItem || (preSelectedText ? { frontText: preSelectedText, frontFontId: preSelectedFontId || undefined } as OrderItem : null)}
+            initialState={editingItem || (preSelectedFontId ? { frontText: preSelectedText, frontFontId: preSelectedFontId, frontDesignState: { x: 50, y: 40, scale: preSelectedFontScale, rotate: 0 } } as OrderItem : null)}
             galleryAssets={storeConfig.galleryAssets || []}
             storeConfig={storeConfig}
             onBack={() => { setView('SHOP'); setPreSelectedText(''); }} 
@@ -790,7 +900,7 @@ const App = () => {
               const productToUse = selectedProduct || products[0];
               
               const newItem: OrderItem = {
-                id: Date.now().toString(),
+                id: editingItem ? editingItem.id : Date.now().toString(),
                 productId: productToUse.id,
                 colorName: config.color,
                 frontText: config.frontText,
@@ -819,9 +929,16 @@ const App = () => {
                 customBackgroundImage: config.customBackgroundImage
               };
 
-              setCart([...cart, newItem]); 
+              // Al editar se actualiza el ítem por su ID; solo los diseños
+              // nuevos se agregan al carrito.
+              if (editingItem) {
+                  setCart(cart.map(c => c.id === editingItem.id ? newItem : c));
+              } else {
+                  setCart([...cart, newItem]);
+              }
               setPreSelectedFontId(null); 
               setPreSelectedText('');
+              setPreSelectedFontSizePx(null);
               setEditingItem(null); 
               
               if (goToCart) {
@@ -838,11 +955,11 @@ const App = () => {
 
         {view === 'CART' && (
           <div className="max-w-[95%] mx-auto px-4 md:px-10 py-12 md:py-24 min-h-screen bg-white/90 dark:bg-black/80 backdrop-blur-sm">
-            <h2 className="nike-title text-4xl md:text-5xl italic mb-10 text-zinc-900 dark:text-white uppercase tracking-tighter">Checkout Final</h2>
+            <h2 className="nike-title text-4xl md:text-5xl italic mb-10 text-zinc-900 dark:text-white uppercase tracking-tighter">Tu pedido</h2>
             {cart.length === 0 ? (
                <div className="py-40 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/10 rounded-3xl">
                   <ShoppingBag size={64} className="mx-auto text-zinc-400 dark:text-zinc-800 mb-8" />
-                  <p className="text-[11px] font-black uppercase tracking-[0.6em] text-zinc-500 dark:text-zinc-600 mb-8">Cola de activos vacía</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.6em] text-zinc-500 dark:text-zinc-600 mb-8">Tu carrito está vacío</p>
                   <button onClick={() => setView('SHOP')} className="text-amber-500 dark:text-amber-500 uppercase font-black text-[10px] tracking-[0.4em] border-b border-amber-500 dark:border-amber-500 pb-2">Regresar al catálogo</button>
                </div>
             ) : (
@@ -888,7 +1005,7 @@ const App = () => {
 
                               {/* Price Breakdown Mini */}
                               <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-4 text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase">
-                                  <span>Base Unit: <b className="text-zinc-900 dark:text-white">${basePrice}</b></span>
+                                  <span>Producto base: <b className="text-zinc-900 dark:text-white">${basePrice}</b></span>
                                   <span>+</span>
                                   <span>Personalización: <b className="text-zinc-900 dark:text-white">${unitCustomPrice}</b></span>
                               </div>
@@ -930,9 +1047,14 @@ const App = () => {
                                     onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})} 
                                     className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold uppercase text-base outline-none focus:border-amber-500 transition-colors font-mono placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
                                     type="tel" 
+                                    inputMode="tel"
                                     placeholder="10 DÍGITOS"
                                     aria-required="true"
+                                    aria-invalid={customerInfo.phone !== '' && !isPhoneValid}
                                 />
+                                {customerInfo.phone !== '' && !isPhoneValid && (
+                                    <p className="mt-2 text-xs font-bold text-red-500">El teléfono debe tener 10 dígitos.</p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="customer-email" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Email (Opcional)</label>
@@ -943,8 +1065,49 @@ const App = () => {
                                     className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold text-base outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
                                     type="email" 
                                     placeholder="PARA REGISTRO CLIENTE"
+                                    aria-invalid={customerInfo.email !== '' && !isEmailValid}
                                 />
+                                {customerInfo.email !== '' && !isEmailValid && (
+                                    <p className="mt-2 text-xs font-bold text-red-500">Revisa el formato del correo.</p>
+                                )}
                             </div>
+                        </div>
+
+                        {/* Delivery Method */}
+                        <div className="space-y-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                            <div>
+                                <label className="text-xs font-black text-zinc-500 uppercase block mb-3 tracking-widest">¿Cómo quieres recibir tu pedido?*</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { id: DeliveryMethod.PICKUP, label: 'Recolección en tienda' },
+                                        { id: DeliveryMethod.SHIPPING, label: 'Envío a domicilio' },
+                                        { id: DeliveryMethod.LOCAL_DELIVERY, label: 'Entrega local' },
+                                    ].map(m => (
+                                        <button
+                                            key={m.id}
+                                            type="button"
+                                            onClick={() => setDeliveryMethod(m.id)}
+                                            aria-pressed={deliveryMethod === m.id}
+                                            className={`p-3 rounded-xl border text-xs font-black uppercase transition-all cursor-pointer ${deliveryMethod === m.id ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent shadow-lg' : 'bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400'}`}
+                                        >
+                                            {m.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            {deliveryMethod !== DeliveryMethod.PICKUP && (
+                                <div>
+                                    <label htmlFor="delivery-address" className="text-xs font-black text-zinc-500 uppercase block mb-2 tracking-widest">Dirección de entrega*</label>
+                                    <input
+                                        id="delivery-address"
+                                        value={deliveryAddress}
+                                        onChange={e => setDeliveryAddress(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl font-bold text-base outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-300 dark:placeholder:text-zinc-700"
+                                        placeholder="CALLE, NÚMERO, COLONIA, CIUDAD"
+                                        aria-required="true"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Payment & Coupons */}
@@ -953,10 +1116,8 @@ const App = () => {
                                 <label className="text-xs font-black text-zinc-500 uppercase block mb-3 tracking-widest">Método de Pago</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
-                                        { id: PaymentMethod.CASH, label: 'Efectivo', icon: Banknote },
+                                        { id: PaymentMethod.CASH, label: 'Pago en taller', icon: Banknote },
                                         { id: PaymentMethod.TRANSFER, label: 'Transferencia', icon: ArrowRight },
-                                        { id: PaymentMethod.CARD, label: 'Tarjeta', icon: CardIcon },
-                                        { id: PaymentMethod.MERCADOPAGO, label: 'MercadoPago', icon: QrCode },
                                     ].map(m => (
                                         <button 
                                             key={m.id}
@@ -969,6 +1130,11 @@ const App = () => {
                                         </button>
                                     ))}
                                 </div>
+                                {selectedPaymentMethod === PaymentMethod.TRANSFER ? (
+                                    <p className="mt-3 text-xs font-bold text-zinc-500">Te compartimos los datos para la transferencia por WhatsApp al confirmar tu pedido.</p>
+                                ) : (
+                                    <p className="mt-3 text-xs font-bold text-zinc-500">Pagas en el taller al recoger o recibir tu pedido.</p>
+                                )}
                             </div>
 
                             {/* LASER POINTS REDEMPTION UI */}
@@ -1046,8 +1212,11 @@ const App = () => {
                             </div>
                         </div>
 
-                        <button onClick={handleFinalCheckout} className="w-full py-5 bg-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-xl hover:bg-yellow-300 shadow-lg dark:shadow-none flex items-center justify-center gap-3 transition-transform active:scale-95">
-                            Confirmar Pedido <ArrowRight size={18}/>
+                        {!isCheckoutValid && (
+                            <p className="text-xs font-bold text-amber-600 dark:text-amber-500 text-center">Completa los datos marcados con * para confirmar tu pedido.</p>
+                        )}
+                        <button onClick={handleFinalCheckout} disabled={!isCheckoutValid} className="w-full py-5 bg-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-xl hover:bg-yellow-300 shadow-lg dark:shadow-none flex items-center justify-center gap-3 transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-yellow-400 disabled:active:scale-100">
+                            Confirmar pedido <ArrowRight size={18}/>
                         </button>
                     </div>
                   </div>
@@ -1160,21 +1329,6 @@ const App = () => {
           }}
         />
 
-        {/* MercadoPago Mock Modal */}
-        {showMercadoPagoModal && (
-            <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-8 max-w-sm w-full text-center border border-zinc-200 dark:border-zinc-800">
-                    <img src="https://logotipoz.com/wp-content/uploads/2021/10/versiones-del-logo-de-mercado-pago-1.png" className="h-8 mx-auto mb-6" alt="MercadoPago"/>
-                    <div className="w-48 h-48 bg-zinc-100 dark:bg-zinc-800 mx-auto rounded-xl flex items-center justify-center mb-6">
-                        <QrCode size={120} className="text-zinc-800 dark:text-zinc-200"/>
-                    </div>
-                    <p className="text-zinc-900 dark:text-white font-bold text-lg mb-2">Escanea para pagar</p>
-                    <p className="text-zinc-500 text-xs mb-6">Abre tu app de banco o MercadoPago y escanea este código.</p>
-                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                    <p className="text-[10px] text-zinc-400 mt-4 uppercase tracking-widest">Esperando confirmación...</p>
-                </div>
-            </div>
-        )}
       </main>
           
 {/* Notification Panel */}
@@ -1185,24 +1339,18 @@ const App = () => {
           
           {/* Cart Panel */}
           <CartPanel
-            cartItems={cart.map(item => ({
-              id: item.id,
-              productName: item.productName,
-              colorName: item.colorName,
-              quantity: item.quantity,
-              price: item.price,
-              imageUrl: item.imageUrl
-            }))}
+            cartItems={cart}
+            products={products}
             onUpdateQuantity={(id, qty) => {
               if (qty === 0) {
                 setCart(cart.filter(i => i.id !== id));
               } else {
-                setCart(cart.map(i => i.id === id ? { ...i, quantity: qty } : i));
+                setCart(cart.map(i => i.id === id ? { ...i, quantity: qty, totalPrice: i.unitPrice * qty } : i));
               }
             }}
             onRemoveItem={(id) => setCart(cart.filter(i => i.id !== id))}
-            onCheckout={() => setView('CHECKOUT')}
-            total={cart.reduce((sum, i) => sum + i.price * i.quantity, 0)}
+            onCheckout={() => setView('CART')}
+            total={cart.reduce((sum, i) => sum + i.totalPrice, 0)}
           />
           
         </div>

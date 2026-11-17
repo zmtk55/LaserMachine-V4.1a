@@ -1,14 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { FontOption, FontCategory } from '../types';
-import { Type, Plus, Minus, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Type, Plus, Minus, ArrowLeft } from 'lucide-react';
 import { Card, Button } from './ui';
 
-export const ShadcnFontShowcase: React.FC<{ fonts: FontOption[]; onSelectFont: (fontId: number, text: string) => void; onBack?: () => void; }> = ({ fonts = [], onSelectFont, onBack }) => {
+// Etiquetas visibles en español neutro (el valor guardado no cambia).
+const CATEGORY_LABELS: Record<string, string> = {
+  TODAS: 'Todas',
+  BASICAS: 'Básicas',
+  DEPORTE: 'Deporte',
+  CURSIVA: 'Cursiva',
+  'FONTS 2026': 'Tendencia',
+  KIDS: 'Infantil',
+};
+
+const categoryLabel = (cat: string | undefined): string =>
+  CATEGORY_LABELS[cat || 'BASICAS'] || cat || 'Básica';
+
+export const ShadcnFontShowcase: React.FC<{ fonts: FontOption[]; onSelectFont: (fontId: number, text: string, fontSizePx?: number) => void; onBack?: () => void; }> = ({ fonts = [], onSelectFont, onBack }) => {
   const [previewText, setPreviewText] = useState('');
   const [activeCategory, setActiveCategory] = useState<FontCategory | 'TODAS'>('TODAS');
   const [globalFontSize, setGlobalFontSize] = useState(64);
-  const [selectedFontId, setSelectedFontId] = useState<number | null>(null);
-  const [individualSizes, setIndividualSizes] = useState<Record<number, number>>({});
 
   const categories: (FontCategory | 'TODAS')[] = ['TODAS', 'BASICAS', 'DEPORTE', 'CURSIVA', 'FONTS 2026', 'KIDS'];
 
@@ -20,37 +31,16 @@ export const ShadcnFontShowcase: React.FC<{ fonts: FontOption[]; onSelectFont: (
     return result;
   }, [fonts, activeCategory]);
 
-  const getFontSize = (fontId: number): number => {
-    return individualSizes[fontId] ?? globalFontSize;
+  // Número de orden en la lista completa, no el ID interno legacy.
+  const orderNumberOf = (fontId: number): number => {
+    const idx = fonts.findIndex(f => f.id === fontId);
+    return idx >= 0 ? idx + 1 : fontId;
   };
 
+  // Elegir una fuente abre el personalizador con esa fuente y el tamaño
+  // actual como escala inicial (lo resuelve App.tsx).
   const handleCardClick = (font: FontOption) => {
-    setSelectedFontId(selectedFontId === font.id ? null : font.id);
-    onSelectFont(font.id, previewText);
-  };
-
-  const adjustSelectedFontSize = (delta: number) => {
-    if (selectedFontId === null) return;
-    setIndividualSizes(prev => ({
-      ...prev,
-      [selectedFontId]: Math.max(20, Math.min(120, (prev[selectedFontId] ?? globalFontSize) + delta))
-    }));
-  };
-
-  const resetIndividualSizes = () => {
-    setIndividualSizes({});
-    setSelectedFontId(null);
-  };
-
-  const fontFamilyMap: Record<string, string> = {
-    'font-google': '"Plus Jakarta Sans", sans-serif',
-    'font-industrial': 'Anton, sans-serif',
-    'font-mono': '"JetBrains Mono", monospace',
-    'font-bold1': '"Bebas Neue", sans-serif',
-    'font-script1': '"Permanent Marker", cursive',
-    'font-script2': '"Permanent Marker", cursive',
-    'font-serif1': '"Playfair Display", serif',
-    'font-display1': '"Bebas Neue", sans-serif',
+    onSelectFont(font.id, previewText, globalFontSize);
   };
 
   return (
@@ -76,7 +66,7 @@ export const ShadcnFontShowcase: React.FC<{ fonts: FontOption[]; onSelectFont: (
                 onClick={() => setActiveCategory(cat as any)}
                 className="text-xs font-bold uppercase tracking-widest"
               >
-                {cat}
+                {categoryLabel(cat)}
               </Button>
             ))}
           </div>
@@ -100,11 +90,6 @@ export const ShadcnFontShowcase: React.FC<{ fonts: FontOption[]; onSelectFont: (
             <Plus className="w-4 h-4" />
           </Button>
           <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 w-12 text-center">{globalFontSize}px</span>
-          {(Object.keys(individualSizes).length > 0 || selectedFontId) && (
-            <Button onClick={resetIndividualSizes} variant="outline" className="ml-2 p-2 rounded-lg">
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-          )}
         </div>
       </div>
 
@@ -120,27 +105,6 @@ export const ShadcnFontShowcase: React.FC<{ fonts: FontOption[]; onSelectFont: (
         </div>
       </div>
 
-      {selectedFontId && (
-        <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
-              Ajustando: {fonts?.find(f => f.id === selectedFontId)?.name || 'Fuente'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => adjustSelectedFontSize(-8)} variant="outline" className="w-10 h-10">
-              <Minus className="w-5 h-5 text-amber-600" />
-            </Button>
-            <span className="text-sm font-bold text-amber-700 dark:text-amber-400 w-16 text-center">
-              {getFontSize(selectedFontId)}px
-            </span>
-            <Button onClick={() => adjustSelectedFontSize(8)} variant="outline" className="w-10 h-10">
-              <Plus className="w-5 h-5 text-amber-600" />
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredFonts.length === 0 && (
           <div className="col-span-full text-center py-12 text-zinc-500">
@@ -149,33 +113,33 @@ export const ShadcnFontShowcase: React.FC<{ fonts: FontOption[]; onSelectFont: (
         )}
         {filteredFonts.map(font => {
           if (!font || !font.id) return null;
-          const fontSize = getFontSize(font.id);
-          const isSelected = selectedFontId === font.id;
-          const fontFamily = fontFamilyMap[font.cssFamily || ''] || font.cssFamily || 'sans-serif';
+          // La vista previa usa la clase CSS de la fuente (index.css): es la
+          // misma clase que usa el editor, no un mapa duplicado.
+          const fontClass = font.cssFamily || '';
           return (
             <Card
               key={font.id}
-              className={`bg-white dark:bg-zinc-900 border-2 rounded-2xl overflow-hidden flex flex-col cursor-pointer group hover:border-amber-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${font.active === false ? 'opacity-40' : ''} ${isSelected ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-zinc-200 dark:border-zinc-700'}`}
+              className={`bg-white dark:bg-zinc-900 border-2 rounded-2xl overflow-hidden flex flex-col cursor-pointer group hover:border-amber-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-zinc-200 dark:border-zinc-700 ${font.active === false ? 'opacity-40' : ''}`}
               onClick={() => handleCardClick(font)}
             >
               <div className="flex-1 flex items-center justify-center px-4 py-6 min-h-[160px] bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 group-hover:from-yellow-50 group-hover:to-amber-50 dark:group-hover:from-zinc-800 dark:group-hover:to-zinc-900 transition-colors duration-300 overflow-hidden">
                 <span
-                  className="text-zinc-900 dark:text-white text-center leading-tight select-none group-hover:scale-105 transition-transform duration-300 break-words max-w-full"
-                  style={{ fontFamily, fontSize: `${fontSize}px`, lineHeight: '1.1' }}
+                  className={`text-zinc-900 dark:text-white text-center leading-tight select-none group-hover:scale-105 transition-transform duration-300 break-words max-w-full ${fontClass}`}
+                  style={{ fontSize: `${globalFontSize}px`, lineHeight: '1.1' }}
                 >
                   {previewText || 'Aa'}
                 </span>
               </div>
-              <div className={`border-t px-5 py-4 flex items-center justify-between gap-2 transition-colors duration-300 ${isSelected ? 'bg-amber-400 border-amber-400' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 group-hover:bg-yellow-400 dark:group-hover:bg-yellow-400'}`}>
+              <div className="border-t px-5 py-4 flex items-center justify-between gap-2 transition-colors duration-300 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 group-hover:bg-yellow-400 dark:group-hover:bg-yellow-400">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-lg text-xs font-black tabular-nums shadow-sm transition-colors duration-300 ${isSelected ? 'bg-black text-amber-400' : 'bg-yellow-400 text-black group-hover:bg-black group-hover:text-yellow-400'}`}>#{font.id}</span>
-                    <p className={`font-bold text-xs uppercase tracking-wide truncate transition-colors duration-300 ${isSelected ? 'text-black' : 'text-zinc-900 dark:text-white group-hover:text-black'}`}>{font.name || 'Fuente'}</p>
+                    <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-lg text-xs font-black tabular-nums shadow-sm transition-colors duration-300 bg-yellow-400 text-black group-hover:bg-black group-hover:text-yellow-400">#{orderNumberOf(font.id)}</span>
+                    <p className="font-bold text-xs uppercase tracking-wide truncate transition-colors duration-300 text-zinc-900 dark:text-white group-hover:text-black">{font.name || 'Fuente'}</p>
                   </div>
-                  <p className={`text-[10px] uppercase tracking-widest mt-1 font-bold transition-colors duration-300 ${isSelected ? 'text-black/70' : 'text-zinc-400 group-hover:text-black/70'}`}>{font.category || 'BÁSICA'}</p>
+                  <p className="text-[10px] uppercase tracking-widest mt-1 font-bold transition-colors duration-300 text-zinc-400 group-hover:text-black/70">{categoryLabel(font.category)}</p>
                 </div>
-                <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${isSelected ? 'bg-black/20' : 'bg-zinc-100 dark:bg-zinc-800 group-hover:bg-black/20'}`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-colors duration-300 ${isSelected ? 'text-black' : 'text-zinc-400 group-hover:text-black'}"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 bg-zinc-100 dark:bg-zinc-800 group-hover:bg-black/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-colors duration-300 text-zinc-400 group-hover:text-black"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </div>
               </div>
             </Card>
