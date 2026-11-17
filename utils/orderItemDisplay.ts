@@ -8,14 +8,14 @@ export interface OrderItemDisplaySource{
 }
 /** Nombre a mostrar: propio → "Producto propio · MARCA"; catálogo → nombre del producto. */
 export function itemProductLabel(item:OrderItemDisplaySource,catalogName?:string|null):string{
-  if(item.isClientItem){const brand=item.clientItemBrand?.trim();return `Producto propio${brand?` · ${brand}`:''}`;}
+  if(item.isClientItem){const brand=item.clientItemBrand?.trim();return `Producto propio${brand&&brand.toUpperCase()!=='OTRO'?` · ${brand}`:''}`;}
   return catalogName||item.productId;
 }
 /** Color a mostrar: en artículo propio manda el color real declarado por el cliente; el color de la vista previa queda marcado como referencia y nunca como color confirmado. */
 export function itemColorLabel(item:OrderItemDisplaySource):string{
   if(item.isClientItem){
     const real=item.clientItemColor?.trim();if(real)return real;
-    const ref=item.colorName?.trim();return ref?`Color referencia: ${ref}`:'';
+    const ref=item.colorName?.trim();return ref&&ref.toUpperCase()!=='OTRO'&&ref.toUpperCase()!==item.clientItemBrand?.trim().toUpperCase()?`Color referencia: ${ref}`:'';
   }
   return item.colorName?.trim()||'';
 }

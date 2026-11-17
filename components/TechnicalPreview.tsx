@@ -15,6 +15,7 @@ interface TechnicalPreviewProps {
   fontCss: string;
   fontId?: number | string;
   hideElementCounts?: boolean;
+  hideFontMetadata?: boolean;
   font2Css?: string;
   logos: LogoItem[];
   designState: DesignState;
@@ -30,7 +31,7 @@ const STAGE_WIDTH = 500;
 const STAGE_HEIGHT = 600;
 
 export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({ 
-  imageUrl, compact=false, imageScale=1.45,inkColor='#e4e4e7', text, text2, fontName, fontId, hideElementCounts=false, fontCss, font2Css, logos, designState, designState2, sideLabel, referencePhoto=false, referenceLabel, allowExpand=false
+  imageUrl, compact=false, imageScale=1.45,inkColor='#e4e4e7', text, text2, fontName, fontId, hideElementCounts=false, hideFontMetadata=false, fontCss, font2Css, logos, designState, designState2, sideLabel, referencePhoto=false, referenceLabel, allowExpand=false
 }) => {
   const [showGuides, setShowGuides] = useState(!compact);
   const [expanded, setExpanded] = useState(false);
@@ -204,11 +205,11 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
        </div>
        
        {/* FOOTER METADATA */}
-       {!compact&&<div className="bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-[10px] font-mono text-zinc-500 uppercase shrink-0">
-           <div>
+       {!compact&&!(hideFontMetadata&&hideElementCounts)&&<div className="bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 p-3 grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-[10px] font-mono text-zinc-500 uppercase shrink-0">
+           {!hideFontMetadata&&<div>
                <span className="block font-bold text-zinc-400">Tipografía</span>
                <span className="block font-black text-zinc-900 dark:text-white break-words leading-tight">{fontId != null ? `#${fontId}${fontName ? ' · ' + fontName : ''}` : fontName || '-'}</span>
-           </div>
+           </div>}
            {!hideElementCounts&&<div className="sm:text-right">
                <span className="block font-bold text-zinc-400">Elementos</span>
                <span>Textos: {(text ? 1 : 0) + (text2 ? 1 : 0)} · Imágenes: {logos.length}</span>
@@ -223,7 +224,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
           </button>
           <TechnicalPreview
             referenceLabel={referenceLabel} referencePhoto={referencePhoto} imageUrl={imageUrl} imageScale={imageScale} inkColor={inkColor}
-            text={text} text2={text2} fontName={fontName} fontId={fontId} hideElementCounts={hideElementCounts} fontCss={fontCss} font2Css={font2Css}
+            text={text} text2={text2} fontName={fontName} fontId={fontId} hideElementCounts={hideElementCounts} hideFontMetadata={hideFontMetadata} fontCss={fontCss} font2Css={font2Css}
             logos={logos} designState={designState} designState2={designState2}
             sideLabel={sideLabel}
           />
