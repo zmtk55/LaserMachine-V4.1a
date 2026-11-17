@@ -1,9 +1,9 @@
 // Remove.bg API key - get one free at https://www.remove.bg/api
-// Use environment variable or fallback to hardcoded key
-const REMOVE_BG_API_KEY = import.meta.env.VITE_REMOVE_BG_API_KEY || 'zoJ1ti8EduCpRryGhMizuLfY';
-
-// Log which API key is being used (masked for security)
-console.log('Remove.bg API Key loaded:', REMOVE_BG_API_KEY ? `${REMOVE_BG_API_KEY.substring(0, 4)}...${REMOVE_BG_API_KEY.substring(REMOVE_BG_API_KEY.length - 4)}` : 'NOT SET');
+// Solo por variable de entorno (VITE_REMOVE_BG_API_KEY): una llave escrita
+// aquí terminaría en el bundle público que cualquiera puede descargar.
+// Sin ella, las llamadas a remove.bg fallan con 403 y removeBackground
+// lanza el error correspondiente (ver manejo de errores abajo).
+const REMOVE_BG_API_KEY = import.meta.env.VITE_REMOVE_BG_API_KEY || '';
 
 // Helper function to convert data URL to Blob
 function dataURLtoBlob(dataURL: string): Blob {
@@ -20,7 +20,6 @@ function dataURLtoBlob(dataURL: string): Blob {
 
 export async function removeBackground(imageSrc: string): Promise<string> {
     try {
-        console.log('removeBackground called with:', imageSrc?.substring(0, 50) + '...');
         
         let imageBlob: Blob;
         
@@ -30,31 +29,23 @@ export async function removeBackground(imageSrc: string): Promise<string> {
         
         if (imageSrc.startsWith('data:image')) {
             // Parse base64 data URL manually
-            console.log('Processing base64 image...');
             imageBlob = dataURLtoBlob(imageSrc);
-            console.log('Blob created:', imageBlob.type, imageBlob.size, 'bytes');
         } else if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) {
             // For HTTP URLs, use remove.bg URL endpoint
-            console.log('Processing URL image...');
             return await removeBackgroundFromUrl(imageSrc);
         } else if (imageSrc.startsWith('blob:')) {
             // For blob URLs, fetch the blob
-            console.log('Processing blob URL...');
             const response = await fetch(imageSrc);
             imageBlob = await response.blob();
         } else if (imageSrc.startsWith('/')) {
             // For relative URLs (local images like /images/products/...), convert to absolute URL
-            console.log('Processing relative URL:', imageSrc);
             const absoluteUrl = window.location.origin + imageSrc;
-            console.log('Converting to absolute URL:', absoluteUrl);
             return await removeBackgroundFromUrl(absoluteUrl);
         } else if (imageSrc.startsWith('data:')) {
             // It's a data URL but not starting with 'data:image'
-            console.log('Processing non-standard data URL...');
             imageBlob = dataURLtoBlob(imageSrc);
         } else {
             // Try to treat it as a URL
-            console.log('Treating as URL:', imageSrc?.substring(0, 50));
             return await removeBackgroundFromUrl(imageSrc);
         }
 

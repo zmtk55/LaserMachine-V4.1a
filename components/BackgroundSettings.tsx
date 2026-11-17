@@ -12,13 +12,11 @@ export const BackgroundSettings: React.FC = () => {
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    console.debug('BackgroundSettings: file selected', f.name, f.size);
     setStatusMessage('Procesando archivo...');
     const reader = new FileReader();
     reader.onload = async () => {
       try {
         const dataUrl = reader.result as string;
-        console.debug('BackgroundSettings: file read complete, length=', (dataUrl || '').length);
         // Quick validation: preload image to ensure the data URL is valid
         await new Promise<void>((resolve, reject) => {
           const img = new Image();
@@ -34,7 +32,6 @@ export const BackgroundSettings: React.FC = () => {
             const r = storageRef(storage, name);
             await uploadString(r, dataUrl, 'data_url');
             const url = await getDownloadURL(r);
-            console.debug('BackgroundSettings: uploaded to firebase, url=', url);
             setBackgroundFromUrl(url);
             setStatusMessage('Subida completada (Firebase)');
             return;
@@ -56,7 +53,6 @@ export const BackgroundSettings: React.FC = () => {
 
   const chooseUnsplash = () => {
     const u = `https://source.unsplash.com/1600x900/?${encodeURIComponent(query || 'landscape')}`;
-    console.debug('BackgroundSettings: choosing unsplash url=', u);
     setStatusMessage('Cargando Unsplash...');
     // Try fetch -> blob -> objectURL for more robust loading (avoids crossOrigin issues)
     (async () => {

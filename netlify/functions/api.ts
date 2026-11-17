@@ -11,9 +11,10 @@ const getSql = () => {
   return neon(url);
 };
 
-// CORS headers
+// CORS headers: solo el origen de producción. NUNCA '*' en una tienda:
+// cualquier sitio podría leer las respuestas de la API.
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://laser-machine-v4.vercel.app",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };

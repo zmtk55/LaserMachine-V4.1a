@@ -77,7 +77,11 @@ const DEFAULT_STORE: StoreConfig = {
   whatsapp: '5216371321998',
   instagramUrl: 'lasermachine_mx',
   facebookUrl: 'lasermachinemexico',
-  bankInfo: '🏦 BBVA MÉXICO\nCLABE: 012345678901234567\nTITULAR: LASERMACHINE S.A. DE C.V.',
+  // NUNCA poner datos bancarios reales aquí: este valor termina en el
+  // bundle JS público que cualquiera puede descargar. Los datos de pago
+  // solo se comparten con el cliente después de confirmar su pedido
+  // (por WhatsApp / en el admin), nunca en el código.
+  bankInfo: '',
   shippingInfo: '',
   coupons: [],
   globalColors: DEFAULT_COLORS,
@@ -215,6 +219,11 @@ const App = () => {
           if (parsed.pointsPercentage === undefined) parsed.pointsPercentage = 5;
           if (!parsed.themeDarkModeBg) parsed.themeDarkModeBg = DEFAULT_STORE.themeDarkModeBg;
           if (!parsed.nextOrderId) parsed.nextOrderId = 1000;
+          // Seguridad: los datos bancarios nunca se guardan en la app (ni en
+          // localStorage ni en la nube). Si una configuración vieja los trae,
+          // se purgan aquí; los datos de pago se comparten por WhatsApp al
+          // confirmar cada pedido.
+          parsed.bankInfo = '';
           if (!parsed.productCategories) parsed.productCategories = DEFAULT_STORE.productCategories;
           if (!parsed.adminEmails) parsed.adminEmails = [];
           return parsed;
@@ -251,7 +260,6 @@ const App = () => {
 
   // Persistence Effect
   useEffect(() => {
-    console.log('Fonts state changed, saving to localStorage:', fonts.map(f => ({id: f.id, name: f.name})));
     localStorage.setItem('lm_products_v13', JSON.stringify(products));
     localStorage.setItem('lm_orders_v10', JSON.stringify(orders));
     localStorage.setItem('lm_store_v10', JSON.stringify(storeConfig));
@@ -1094,7 +1102,7 @@ const App = () => {
             onUpdateProduct={p => setProducts(products.map(x => x.id === p.id ? p : x))}
             onDeleteProduct={id => setProducts(products.filter(p => p.id !== id))}
             onAddFont={f => setFonts([...fonts, f])}
-            onUpdateFont={(oldId, f) => { console.log('onUpdateFont called:', oldId, f); setFonts(prev => prev.map(font => font.id === oldId ? f : font)); }}
+            onUpdateFont={(oldId, f) => { setFonts(prev => prev.map(font => font.id === oldId ? f : font)); }}
             onDeleteFont={id => setFonts(fonts.filter(f => f.id !== id))}
             onUpdateClient={updateClientDetails}
             onDeleteClient={deleteClientHistory}

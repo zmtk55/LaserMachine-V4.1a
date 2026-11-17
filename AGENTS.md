@@ -223,15 +223,14 @@ type ViewState = 'LANDING' | 'SHOP' | 'CUSTOMER' | 'CUSTOMIZER' |
 - Order status workflow: Received → Production → Ready → Completed
 
 ### Debug Mode
-Add `?debugbg=1` to URL to reveal background overlays for debugging.
+El helper `?debugbg=1` fue eliminado de producción por seguridad (nov 2026). Para depurar el fondo, inspeccionar la variable CSS `--app-bg` en DevTools.
 
 ---
 
 ## Security Considerations
 
 ### Firebase Configuration
-- Production credentials are hardcoded in `firebaseConfig.ts`
-- Can be overridden via `localStorage` for development
+- Toda la configuración viene de variables de entorno (`VITE_FIREBASE_*`, ver `.env.example`). NUNCA hardcodear credenciales en `firebaseConfig.ts` y NUNCA permitir sobrescribir la configuración desde `localStorage` (se eliminó en nov 2026).
 - Validation ensures API keys start with "AIza"
 
 ### Rate Limiting
@@ -348,7 +347,7 @@ localStorage.clear(); // Remove all app data
 ```
 
 ### Background Not Showing
-Add `?debugbg=1` to URL to reveal overlay issues. Check `--app-bg` CSS variable.
+Check `--app-bg` CSS variable. (El helper `?debugbg=1` fue eliminado de producción por seguridad.)
 
 ### Build Errors
 - Ensure Node.js version compatibility

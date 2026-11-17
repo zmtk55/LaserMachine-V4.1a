@@ -27,7 +27,6 @@ export const BackgroundProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       if (bgUrl) {
-        console.debug('BackgroundContext: applying bgUrl', (bgUrl || '').slice?.(0, 120));
         // Store raw URL in CSS variable; CSS uses url(var(--app-bg))
         document.documentElement.style.setProperty('--app-bg', bgUrl);
         // Also apply inline body/background as a defensive fallback
@@ -41,7 +40,6 @@ export const BackgroundProvider = ({ children }: { children: ReactNode }) => {
         document.body.classList.add('has-app-bg');
         localStorage.setItem('appBackground', bgUrl);
       } else {
-        console.debug('BackgroundContext: clearing background');
         document.documentElement.style.removeProperty('--app-bg');
         (document.body as HTMLBodyElement).style.backgroundImage = '';
         (document.documentElement as HTMLElement).style.backgroundImage = '';
@@ -61,7 +59,6 @@ export const BackgroundProvider = ({ children }: { children: ReactNode }) => {
       try {
         const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%232b6cff'/><stop offset='1' stop-color='%2318b7a6'/></linearGradient></defs><rect width='100%' height='100%' fill='url(%23g)'/><g fill='%23ffffff' opacity='0.06'><circle cx='200' cy='120' r='180'/><circle cx='1400' cy='700' r='220'/></g></svg>`;
         const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-        console.debug('BackgroundContext: applying default background');
         setBgUrl(dataUrl);
       } catch (err) {
         console.warn('BackgroundContext: failed to apply default background', err);

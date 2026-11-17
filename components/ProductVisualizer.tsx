@@ -984,7 +984,6 @@ export const ProductVisualizer: React.FC<ProductVisualizerProps> = ({
                         onGenerateAI={async (prompt) => {
                             // This would integrate with AI service
                             // For now, return placeholder
-                            console.log('AI prompt:', prompt);
                             return '';
                         }}
                     />
