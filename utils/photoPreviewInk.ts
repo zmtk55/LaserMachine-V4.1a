@@ -12,7 +12,7 @@ export function useOwnPhotoInk(photo:string|undefined|null,fallback:string){
  useEffect(()=>{
   if(!photo?.startsWith('data:image/'))return;
   let active=true;const image=new Image();
-  image.onload=()=>{try{const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(image,image.naturalWidth*.25,image.naturalHeight*.2,image.naturalWidth*.5,image.naturalHeight*.65,0,0,32,32);const ink=photoPreviewInk(ctx.getImageData(0,0,32,32).data,fallback);if(active)setSample({photo,ink});}catch{/* Keep existing tone when the image cannot be sampled. */}};
+  image.onload=()=>{try{const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(image,image.naturalWidth*.45,image.naturalHeight*.35,image.naturalWidth*.1,image.naturalHeight*.3,0,0,32,32);const ink=photoPreviewInk(ctx.getImageData(0,0,32,32).data,fallback);if(active)setSample({photo,ink});}catch{/* Keep existing tone when the image cannot be sampled. */}};
   image.src=photo;return()=>{active=false;image.onload=null;};
  },[photo,fallback]);
  return photo&&sample?.photo===photo?sample.ink:fallback;
