@@ -121,7 +121,7 @@ export const SimpleOrderModal: React.FC<SimpleOrderModalProps> = ({
   const createDraft = ():OrderItem => ({
       id: Date.now().toString(),
       productId: product.id,
-      colorName: ownItem ? `${ownBrand}${ownColor.trim() ? ' ' + ownColor.trim() : ''}` : colorName,
+      colorName: colorName || (product.illustrativeImage ? 'NEGRO' : ''),
       frontText: text,
       frontFontId: fontId,
       frontFontName: font?.name || 'Default',
