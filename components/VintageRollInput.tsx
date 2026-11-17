@@ -8,6 +8,7 @@ interface VintageRollInputProps {
   label?: string;
   placeholder?: string;
   className?: string;
+  maxLength?: number;
   onActionClick?: () => void;
   actionIcon?: React.ReactNode;
   actionLabel?: string;
@@ -19,6 +20,7 @@ export const VintageRollInput: React.FC<VintageRollInputProps> = ({
   label = "TEXTO", 
   placeholder = "Escribe aquí...",
   className = "",
+  maxLength,
   onActionClick,
   actionIcon,
   actionLabel
@@ -36,6 +38,7 @@ export const VintageRollInput: React.FC<VintageRollInputProps> = ({
                     value={value}
                     onChange={onChange}
                     placeholder={placeholder}
+                    maxLength={maxLength}
                     className="
                         w-full 
                         pl-14 pr-4 py-3
@@ -79,7 +82,7 @@ export const VintageRollInput: React.FC<VintageRollInputProps> = ({
       
       <div className="flex justify-between px-2 mt-1.5">
           <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{label}</span>
-          <span className="text-[9px] font-bold text-zinc-300 dark:text-zinc-600">{value.length} chars</span>
+          <span className={`text-[9px] font-bold ${maxLength && value.length >= maxLength ? 'text-amber-500' : 'text-zinc-300 dark:text-zinc-600'}`}>{value.length}{maxLength ? `/${maxLength}` : ''} caracteres</span>
       </div>
     </div>
   );

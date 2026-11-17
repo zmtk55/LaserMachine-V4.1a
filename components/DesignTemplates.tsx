@@ -73,7 +73,7 @@ interface DesignTemplatesProps {
 }
 
 // Default templates con estructura profesional
-const DEFAULT_TEMPLATES: DesignTemplate[] = [
+export const DEFAULT_TEMPLATES: DesignTemplate[] = [
   { 
     id: 'default-1', 
     name: 'El Rey', 
@@ -445,6 +445,7 @@ export const DesignTemplates: React.FC<DesignTemplatesProps> = ({
                       <TumblerPreview
                         template={template}
                         color={template.previewColor || 'stainless'}
+                        productImage={productImage}
                         width={viewMode === 'grid' ? 140 : 80}
                         height={viewMode === 'grid' ? 210 : 120}
                       />

@@ -7,20 +7,12 @@ interface TumblerPreviewProps {
   className?: string;
   width?: number;
   height?: number;
+  /** Foto real del producto (la del catálogo / la seleccionada en el editor). Sin ella se usa el SVG genérico. */
+  productImage?: string;
 }
 
-// URL de imágenes de vasos reales - usando imágenes simples de placeholder
-// En producción, estas serían imágenes reales de producto
-const TUMBLER_IMAGES: Record<string, string> = {
-  stainless: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&h=600&fit=crop',
-  black: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=400&h=600&fit=crop',
-  navy: 'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=400&h=600&fit=crop',
-  white: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&h=600&fit=crop&sat=-100',
-  pink: 'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=400&h=600&fit=crop',
-  teal: 'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=400&h=600&fit=crop',
-  copper: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&h=600&fit=crop',
-  forest: 'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=400&h=600&fit=crop',
-};
+// El grabado láser no lleva color: mismo render que el editor (.laser-engraved de index.css).
+const LASER_TEXT_CLASS = 'laser-engraved';
 
 // Fallback: SVG simple de vaso estilo YETI
 const SimpleTumblerSVG: React.FC<{ color: string; texts: any[] }> = ({ color, texts }) => {
@@ -72,8 +64,8 @@ const SimpleTumblerSVG: React.FC<{ color: string; texts: any[] }> = ({ color, te
           const fontFamily = typeof text === 'string' ? 'Bebas Neue' : (text.fontFamily || 'Bebas Neue');
           const size = typeof text === 'string' ? 20 : ((text.size || 1) * 20);
           const yOffset = typeof text === 'string' ? (idx - 1) * 30 : ((text.yPosition || 50) - 50) * 1.5;
-          // Grabado laser - siempre negro/gris oscuro sobre metal
-          const textColor = '#1a1a1a';
+          // Grabado láser: mismo render que el editor (clase .laser-engraved, gris, sin color)
+          const textColor = '#6b7280';
           
           return (
             <text
@@ -85,7 +77,7 @@ const SimpleTumblerSVG: React.FC<{ color: string; texts: any[] }> = ({ color, te
               fontSize={size}
               fontWeight="bold"
               fill={textColor}
-              opacity="0.85"
+              className={LASER_TEXT_CLASS}
               style={{ 
                 letterSpacing: '1px'
               }}
@@ -104,13 +96,16 @@ export const TumblerPreview: React.FC<TumblerPreviewProps> = ({
   color = 'stainless',
   className = '',
   width = 200,
-  height = 320
+  height = 320,
+  productImage
 }) => {
   const [imageError, setImageError] = React.useState(false);
   const texts = template.texts || [];
 
-  // Si la imagen falla o no hay URL, usar SVG simple
-  const useSVG = imageError || !TUMBLER_IMAGES[color];
+  // Foto real del producto cuando se pasa; si no, SVG genérico (ya no hay fotos de Unsplash).
+  const useSVG = imageError || !productImage;
+  // Escala del texto igual que en el editor: línea 1 = 48px y línea 2 = 32px en un escenario de 500px de ancho.
+  const textScale = width / 500;
 
   if (useSVG) {
     return (
@@ -125,16 +120,16 @@ export const TumblerPreview: React.FC<TumblerPreviewProps> = ({
       className={`relative ${className}`} 
       style={{ width, height }}
     >
-      {/* Imagen del vaso */}
+      {/* Foto real del producto */}
       <img
-        src={TUMBLER_IMAGES[color]}
+        src={productImage}
         alt="Tumbler"
         className="w-full h-full object-contain"
         onError={() => setImageError(true)}
         style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' }}
       />
       
-      {/* Textos superpuestos */}
+      {/* Textos superpuestos: mismo tamaño relativo y mismo render láser que el editor */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div 
           className="text-center"
@@ -143,24 +138,25 @@ export const TumblerPreview: React.FC<TumblerPreviewProps> = ({
             maxWidth: '70%'
           }}
         >
-          {/* Grabado laser - texto siempre oscuro */}
           {texts.map((text, idx) => {
             const content = typeof text === 'string' ? text : text.content;
             const fontFamily = typeof text === 'string' ? 'Bebas Neue' : (text.fontFamily || 'Bebas Neue');
-            const size = typeof text === 'string' ? 1.2 : (text.size || 1);
+            const baseSize = idx === 0 ? 48 : 32;
+            const size = typeof text === 'string' ? baseSize : baseSize * (text.size || 1);
             
             return (
               <div
                 key={idx}
+                className={LASER_TEXT_CLASS}
                 style={{
                   fontFamily,
-                  fontSize: `${size}rem`,
-                  color: '#1a1a1a', // Grabado laser oscuro
+                  fontSize: `${size * textScale}px`,
+                  color: '#6b7280',
                   fontWeight: 'bold',
-                  opacity: 0.85,
                   letterSpacing: '1px',
                   lineHeight: 1.2,
-                  marginBottom: '0.25rem'
+                  marginBottom: '0.25rem',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {content}

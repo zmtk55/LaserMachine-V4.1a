@@ -30,6 +30,13 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
   // Fallback defaults
   const safeDesign = designState || { x: 50, y: 50, scale: 1, rotate: 0 };
   const safeDesign2 = designState2 || { x: 50, y: 55, scale: 1, rotate: 0 };
+
+  // Auto-escala igual que en el editor: el texto se achica si es largo para caber en el área grabable.
+  const engraveFontSize = (t: string, baseSize: number) => {
+      const len = t.length;
+      if (len <= 12) return baseSize;
+      return Math.max(Math.round(baseSize * 12 / len), Math.round(baseSize * 0.45));
+  };
   
   // Translation for display
   const displayLabel = sideLabel === 'FRENTE' || sideLabel === 'LADO A' ? 'FRENTE' : 'POSTERIOR';
@@ -67,6 +74,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
            <div className="flex items-center gap-2">
                <div className={`w-2 h-2 rounded-full ${text || text2 || logos.length > 0 ? 'bg-green-500' : 'bg-zinc-300'}`}></div>
                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{displayLabel}</span>
+               {isBackView && <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-[8px] font-black uppercase tracking-widest">Vista espejo</span>}
            </div>
            <button 
              onClick={() => setShowGuides(!showGuides)} 
@@ -93,6 +101,14 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                 <div className="absolute top-0 bottom-0 left-1/2 w-px bg-red-500/20 z-0"></div>
                 <div className="absolute left-0 right-0 top-1/2 h-px bg-red-500/20 z-0"></div>
                </>
+           )}
+
+           {/* Engravable area guide (same 260x300 box as the editor stage) */}
+           {showGuides && (
+               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
+                    style={{ width: `${260 * scaleFactor}px`, height: `${300 * scaleFactor}px`, border: '2px dashed rgba(245,158,11,0.7)', borderRadius: '16px' }}>
+                   <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-black text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full whitespace-nowrap">Área grabable</span>
+               </div>
            )}
 
            {/* THE VIRTUAL STAGE - EXACTLY 500x600 PIXELS */}
@@ -130,9 +146,9 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                         }}
                                     >
                                         <span 
-                                            className={`select-none text-[#6b7280] ${fontCss} font-bold`}
+                                            className={`select-none laser-engraved text-zinc-500 ${fontCss} font-bold`}
                                             style={{ 
-                                                fontSize: '48px', // MATCHES VISUALIZER FIXED PX
+                                                fontSize: `${engraveFontSize(text, 48)}px`, // IGUAL QUE EL EDITOR (con auto-escala)
                                                 lineHeight: '1',
                                                 mixBlendMode: 'normal' 
                                             }}
@@ -154,9 +170,9 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                                         }}
                                     >
                                         <span 
-                                            className={`select-none text-[#6b7280] ${font2Css || fontCss} font-bold`}
+                                            className={`select-none laser-engraved text-zinc-500 ${font2Css || fontCss} font-bold`}
                                             style={{ 
-                                                fontSize: '32px', // MATCHES VISUALIZER FIXED PX
+                                                fontSize: `${engraveFontSize(text2, 32)}px`, // IGUAL QUE EL EDITOR (con auto-escala)
                                                 lineHeight: '1',
                                             }}
                                         >
@@ -205,6 +221,7 @@ export const TechnicalPreview: React.FC<TechnicalPreviewProps> = ({
                <span className="block font-bold text-zinc-400">Elementos</span>
                <span>Txt:{text ? '1' : '0'}{text2 ? '+1' : ''} | Img:{logos.length}</span>
            </div>
+           <div className="col-span-2 text-center text-zinc-400 normal-case tracking-normal font-sans">El grabado láser no lleva color</div>
        </div>
     </div>
   );

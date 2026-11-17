@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>LaserMachine - Operaciones Industriales</title>
+    <title>LaserMachine - Grabado láser personalizado en Hermosillo</title>
     <link rel="icon" type="image/svg+xml" href="/assets/icons/svgagenticon.svg">
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png">
@@ -14,7 +14,10 @@
     <meta name="theme-color" content="#f59e0b">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700&family=Permanent+Marker&family=Bebas+Neue&family=Anton&family=Rubik:wght@300;400;500;600;700&family=Nunito+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Familias que se usan de verdad: UI (Plus Jakarta Sans, Rubik,
+         Nunito Sans) + las 11 fuentes del grabador (constants.ts FONTS).
+         Inter se quitó: solo era fallback en design-tokens.css. -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700&family=Permanent+Marker&family=Bebas+Neue&family=Anton&family=Rubik:wght@300;400;500;600;700&family=Nunito+Sans:wght@300;400;500;600;700&family=Special+Elite&family=Oswald:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles/design-tokens.css">
     <link rel="stylesheet" href="/index.css">
     <script>
@@ -56,15 +59,23 @@
         font-family: 'JetBrains Mono', monospace;
       }
       
-      /* Clases de fuentes para el grabador (Visualizer) */
+      /* Clases de fuentes para el grabador (Visualizer) — ESPEJO de index.css.
+         Mantener ambos bloques idénticos: este <style> carga después de
+         index.css y gana en caso de conflicto. La galería usa estas clases. */
       .font-google { font-family: 'Plus Jakarta Sans', sans-serif; }
       .font-bold1 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; }
       .font-industrial { font-family: 'Anton', sans-serif; letter-spacing: 0.05em; }
       .font-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+      .font-typewriter { font-family: 'Special Elite', monospace; }
       .font-script1 { font-family: 'Permanent Marker', cursive; }
+      .font-cursive { font-family: 'Dancing Script', cursive; }
       .font-serif1 { font-family: 'Playfair Display', serif; }
-      .font-display1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; }
-      .font-script2 { font-family: 'Permanent Marker', cursive; font-style: italic; }
+      .font-slab { font-family: 'Roboto Slab', serif; }
+      .font-display1 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; }
+      .font-geometric { font-family: 'Oswald', sans-serif; letter-spacing: 0.02em; }
+      .font-brush { font-family: 'Caveat', cursive; }
+      /* Alias legacy para diseños guardados con 'font-script2'. */
+      .font-script2 { font-family: 'Dancing Script', cursive; }
 
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
